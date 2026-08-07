@@ -1,0 +1,521 @@
+/* ============================================================
+   JEDIDA Marketplace — Premium Floating Glass Navigation
+   Built on top of the existing forest/amber/cream palette and
+   --glass-bg/--glass-border tokens from theme.css (light + dark).
+   Signature motif: an amber "growth" underline that expands from
+   center, and a rain-drop ripple on tap — a nod to the harvest/
+   irrigation language of an agriculture-forward marketplace.
+   ============================================================ */
+
+.jd-header-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 80;
+  padding: 14px 16px 0;
+}
+
+.jd-header {
+  position: relative;
+  max-width: 1360px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  gap: 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border-radius: 22px;
+  padding: 10px 16px;
+  box-shadow: 0 10px 36px rgba(22, 32, 27, 0.12);
+  transition: box-shadow .25s ease, background-color .25s ease, border-color .25s ease;
+}
+
+/* A hairline gradient sweep along the top edge — quiet by default,
+   brightens on hover so the whole bar reads as one lit surface. */
+.jd-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  padding: 1px;
+  background: linear-gradient(90deg, transparent, rgba(139, 197, 63, 0.35), transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity .35s ease;
+  pointer-events: none;
+}
+.jd-header:hover::before { opacity: 1; }
+
+.jd-logo-link { flex-shrink: 0; display: flex; align-items: center; transition: transform .18s ease; }
+.jd-logo-link:hover { transform: scale(1.04); }
+
+/* ===== Inline nav links ===== */
+.jd-nav { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.jd-nav-link {
+  position: relative;
+  padding: 9px 14px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  transition: color .18s ease, background-color .18s ease;
+}
+.jd-nav-link::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: calc(100% - 24px);
+  height: 2px;
+  border-radius: 2px;
+  background: var(--amber);
+  transform: translateX(-50%) scaleX(0);
+  transform-origin: center;
+  transition: transform .28s cubic-bezier(.34,1.56,.64,1);
+}
+.jd-nav-link:hover { color: var(--forest); background: rgba(11,61,36,0.07); }
+.jd-nav-link:hover::after,
+.jd-nav-link.is-active::after { transform: translateX(-50%) scaleX(1); }
+.jd-nav-link.is-active { color: var(--forest); font-weight: 700; }
+
+.jd-auth-links { display: flex; align-items: center; gap: 8px; }
+.jd-cta-btn {
+  padding: 9px 18px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--cream);
+  background: linear-gradient(135deg, var(--forest) 0%, var(--forest-dark) 100%);
+  box-shadow: 0 4px 14px rgba(11,61,36,0.25);
+  transition: transform .18s ease, box-shadow .18s ease;
+  white-space: nowrap;
+}
+.jd-cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(11,61,36,0.34); }
+
+/* ===== Inline AI search ===== */
+.jd-inline-search { flex: 1; min-width: 0; }
+.jd-mobile-search-row { display: none; }
+
+/* ===== Icon control cluster ===== */
+.jd-header-controls { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 4px; flex-shrink: 0; margin-left: auto; }
+
+.jd-search-toggle-btn { display: none; }
+
+/* Shared icon button: lift + glow on hover, animated border ring,
+   icon-level micro-animation, all layered so effects compose cleanly. */
+.jd-icon-btn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  overflow: hidden;
+  transition: color .18s ease, border-color .22s ease, transform .18s ease, box-shadow .22s ease, background-color .18s ease;
+}
+.jd-icon-btn:hover,
+.jd-icon-btn.is-active {
+  color: var(--forest);
+  background: rgba(11,61,36,0.08);
+  border-color: rgba(139,197,63,0.45);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(11,61,36,0.16), 0 0 0 4px rgba(139,197,63,0.10);
+}
+.jd-icon-btn-glyph { display: inline-flex; transition: transform .22s ease; }
+.jd-icon-btn:hover .jd-icon-btn-glyph { transform: scale(1.12) rotate(-6deg); }
+.jd-icon-btn.is-active .jd-icon-btn-glyph { transform: scale(1.08); }
+
+.jd-nav-trigger {
+  width: auto;
+  height: 38px;
+  padding: 0 12px 0 10px;
+  gap: 6px;
+}
+.jd-nav-trigger-label { font-size: 0.85rem; font-weight: 600; }
+.jd-chevron { transition: transform .22s ease; }
+.jd-chevron.is-open { transform: rotate(180deg); }
+
+/* Ripple: expands from the exact click point then fades — a droplet
+   landing, in keeping with the marketplace's harvest/rain motif. */
+.jd-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139,197,63,0.45) 0%, rgba(139,197,63,0) 70%);
+  transform: scale(0);
+  animation: jd-ripple-anim .6s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes jd-ripple-anim {
+  to { transform: scale(1); opacity: 0; }
+}
+
+.jd-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  background: var(--terracotta);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  box-shadow: 0 0 0 2px var(--surface, #fff);
+}
+.jd-badge-pulse { animation: jd-badge-pulse 2s ease-in-out infinite; }
+@keyframes jd-badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--surface, #fff), 0 0 0 0 rgba(46,125,50,0.5); }
+  50% { box-shadow: 0 0 0 2px var(--surface, #fff), 0 0 0 4px rgba(46,125,50,0); }
+}
+
+/* ===== Avatar ===== */
+.jd-avatar-trigger {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  transition: border-color .2s ease, transform .18s ease, box-shadow .2s ease;
+}
+.jd-avatar-trigger:hover,
+.jd-avatar-trigger.is-active {
+  border-color: var(--amber);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(139,197,63,0.28);
+}
+.jd-avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.jd-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--forest) 0%, var(--forest-dark) 100%);
+  color: var(--cream);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.jd-avatar-fallback-lg { width: 44px; height: 44px; font-size: 0.95rem; flex-shrink: 0; overflow: hidden; }
+
+/* ===== Dropdown shell: glassmorphism ===== */
+.jd-dropdown-root { position: relative; }
+.jd-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  min-width: 260px;
+  max-width: 90vw;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-radius: 18px;
+  box-shadow: 0 20px 48px rgba(22,32,27,0.20);
+  overflow: hidden;
+  z-index: 100;
+  animation: jd-panel-in .2s cubic-bezier(.2,.8,.3,1);
+}
+.jd-dropdown-panel.align-right { right: 0; }
+.jd-dropdown-panel.align-left { left: 0; }
+.jd-dropdown-panel-glow {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--amber), transparent);
+}
+@keyframes jd-panel-in {
+  from { opacity: 0; transform: translateY(-6px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.jd-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-soft);
+}
+.jd-menu-header-action {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--forest);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.jd-menu-header-action:hover { text-decoration: underline; }
+
+.jd-menu-list { max-height: 360px; overflow-y: auto; padding: 6px; }
+.jd-menu-empty { padding: 20px 14px; text-align: center; font-size: 0.85rem; color: var(--text-muted); }
+
+.jd-menu-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px 10px 14px;
+  border-radius: 12px;
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .2s ease, transform .15s ease;
+}
+.jd-menu-row:hover { background: var(--surface-alt); border-left-color: var(--amber); transform: translateX(2px); }
+.jd-menu-row-static { cursor: default; }
+.jd-menu-row-static:hover { transform: none; }
+.jd-menu-row.is-unread { background: rgba(139,197,63,0.08); }
+.jd-menu-row-dot {
+  width: 6px; height: 6px; border-radius: 50%; margin-top: 6px; flex-shrink: 0;
+  background: transparent;
+}
+.jd-menu-row.is-unread .jd-menu-row-dot { background: var(--amber); }
+.jd-menu-row-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.jd-menu-row-title { font-size: 0.86rem; font-weight: 600; }
+.jd-menu-row-sub { font-size: 0.78rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jd-menu-row-time { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+
+.jd-menu-footer-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--forest);
+  background: var(--surface-alt);
+  border: none;
+  border-top: 1px solid var(--border-soft);
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+.jd-menu-footer-action:hover { background: rgba(139,197,63,0.14); }
+.jd-logout { color: var(--terracotta); }
+
+/* ===== Categories mega-menu ===== */
+.jd-cat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; padding: 10px; }
+.jd-cat-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: none;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, transform .15s ease;
+}
+.jd-cat-tile:hover {
+  background: var(--surface-alt);
+  border-color: rgba(139,197,63,0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(22,32,27,0.10);
+}
+.jd-cat-tile-glyph { font-size: 1.1rem; }
+
+/* ===== Wishlist rows ===== */
+.jd-wish-row { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 12px; transition: background-color .15s ease; }
+.jd-wish-row:hover { background: var(--surface-alt); }
+.jd-wish-row-main { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; background: none; border: none; cursor: pointer; text-align: left; padding: 4px; }
+.jd-wish-thumb { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; background: var(--surface-sunken); flex-shrink: 0; }
+.jd-wish-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.jd-wish-price { font-size: 0.78rem; font-weight: 700; color: var(--forest); }
+.jd-wish-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.jd-wish-action {
+  width: 28px; height: 28px; border-radius: 9px; border: none;
+  background: var(--surface-sunken); color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: background-color .15s ease, color .15s ease, transform .15s ease;
+}
+.jd-wish-action:hover { background: var(--forest); color: var(--cream); transform: scale(1.08); }
+.jd-wish-action-remove:hover { background: var(--terracotta); }
+
+/* ===== Language menu ===== */
+.jd-lang-row { align-items: center; gap: 10px; }
+.jd-lang-flag { font-size: 1.1rem; }
+.jd-lang-row.is-active { background: rgba(139,197,63,0.12); border-left-color: var(--amber); }
+.jd-lang-check { margin-left: auto; color: var(--forest); font-weight: 700; }
+
+/* ===== User card ===== */
+.jd-user-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.jd-user-card-name { font-size: 0.92rem; font-weight: 700; color: var(--text-primary); }
+.jd-user-card-email { font-size: 0.76rem; color: var(--text-muted); }
+
+/* ===== Responsive ===== */
+@media (max-width: 1080px) {
+  .jd-nav-trigger-label { display: none; }
+}
+@media (max-width: 900px) {
+  .jd-nav { display: none; }
+}
+@media (max-width: 760px) {
+  .jd-inline-search { display: none; }
+  .jd-search-toggle-btn { display: inline-flex; }
+  .jd-mobile-search-row { display: block; margin: 10px auto 0; max-width: 1360px; padding: 0 16px; }
+  .jd-dropdown-panel { position: fixed; left: 12px; right: 12px; top: 78px; width: auto !important; max-width: none; }
+  .jd-dropdown-panel.align-left, .jd-dropdown-panel.align-right { left: 12px; right: 12px; }
+  /* Below this width the icon cluster no longer fits alongside the logo,
+     categories and delivery picker on one line — drop it to a clean
+     second row inside the same glass card instead of letting it push the
+     header wider than the viewport. */
+  .jd-header-controls { flex-basis: 100%; justify-content: center; padding-top: 6px; border-top: 1px solid var(--glass-border); }
+}
+@media (max-width: 640px) {
+  /* Dark mode toggle stays reachable on mobile — shrink it slightly
+     instead of hiding it, since the controls row already wraps below
+     760px and has room. */
+  .theme-toggle button { padding: 5px 6px; }
+}
+@media (max-width: 480px) {
+  .jd-header { padding: 8px 10px; gap: 8px; }
+  .jd-cat-grid { grid-template-columns: 1fr; }
+  .jd-icon-btn, .jd-avatar-trigger { width: 34px; height: 34px; }
+}
+
+/* ===== Deliver-to location picker ===== */
+.jd-deliver-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 1.5px solid transparent;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color .18s ease, border-color .22s ease, transform .18s ease;
+}
+.jd-deliver-trigger:hover, .jd-deliver-trigger.is-active {
+  background: rgba(11,61,36,0.08);
+  border-color: rgba(139,197,63,0.45);
+  transform: translateY(-2px);
+}
+.jd-deliver-text { display: flex; flex-direction: column; line-height: 1.15; text-align: left; }
+.jd-deliver-label { font-size: 0.66rem; color: var(--text-muted); font-weight: 600; }
+.jd-deliver-value { font-size: 0.82rem; font-weight: 700; white-space: nowrap; }
+
+/* ===== Labeled icon stats (Wishlist / Cart / Messages) ===== */
+.jd-icon-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color .18s ease, color .18s ease, transform .18s ease;
+}
+.jd-icon-stat:hover, .jd-icon-stat.is-active {
+  color: var(--forest);
+  background: rgba(11,61,36,0.08);
+  transform: translateY(-2px);
+}
+.jd-icon-stat-icon { position: relative; display: inline-flex; align-items: center; justify-content: center; overflow: visible; }
+.jd-icon-stat-icon .jd-badge {
+  position: absolute;
+  top: -10px;
+  right: -8px;
+  background: var(--forest);
+  box-shadow: 0 0 0 2px var(--surface, #fff);
+}
+.jd-icon-stat-label { font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+
+/* ===== Avatar + "Hi, Name / Role" greeting ===== */
+.jd-user-block { display: flex; align-items: center; gap: 8px; padding-left: 4px; flex-shrink: 0; }
+.jd-user-greeting { display: none; flex-direction: column; line-height: 1.2; }
+.jd-user-greeting-name { font-size: 0.82rem; font-weight: 700; color: var(--text-primary); white-space: nowrap; }
+.jd-user-greeting-role { font-size: 0.7rem; color: var(--text-muted); }
+@media (min-width: 1200px) {
+  .jd-user-greeting { display: flex; }
+}
+
+/* ===== Secondary marketing nav row (Deals, Trending, Shops, ...) ===== */
+.jd-secondary-nav {
+  max-width: 1360px;
+  margin: 6px auto 0;
+  padding: 0 16px;
+}
+.jd-secondary-nav-inner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 6px 4px;
+}
+.jd-secondary-nav-inner::-webkit-scrollbar { display: none; }
+.jd-secondary-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color .18s ease, background-color .18s ease;
+}
+.jd-secondary-nav-link:hover { color: var(--forest); background: rgba(11,61,36,0.07); }
+.jd-secondary-nav-link.is-active { color: var(--forest); background: rgba(11,61,36,0.10); }
+.jd-secondary-nav-emoji { font-size: 0.95rem; }
+.jd-secondary-nav-btn { font-family: inherit; }
+
+@media (max-width: 900px) {
+  .jd-deliver-text { display: none; }
+}
+@media (max-width: 760px) {
+  .jd-icon-stat-label { display: none; }
+  .jd-icon-stat { padding: 4px 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jd-header, .jd-icon-btn, .jd-icon-btn-glyph, .jd-nav-link::after,
+  .jd-avatar-trigger, .jd-cta-btn, .jd-dropdown-panel, .jd-ripple, .jd-badge-pulse {
+    animation: none !important;
+    transition: none !important;
+  }
+}

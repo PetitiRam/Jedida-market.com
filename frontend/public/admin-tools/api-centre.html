@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jedida API &amp; Integration Command Centre</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   JEDIDA API & INTEGRATION COMMAND CENTRE
+   Built on the Jedida glass-ops token system (forest / lime,
+   Sora + Inter) — the same night-ops language as the rest of
+   the Jedida Glass UI, extended for the developer surface.
+   ============================================================ */
+:root{
+  --bg:#071510; --bg-alt:#0a1d15; --bg-deep:#040d09;
+  --surface:rgba(255,255,255,.035); --surface-hi:rgba(255,255,255,.07);
+  --border:rgba(255,255,255,.09); --border-strong:rgba(139,197,63,.35);
+  --text:#EAF3EC; --text-dim:#93A79B; --text-faint:#5C7368;
+  --lime:#8BC53F; --lime-dim:rgba(139,197,63,.14); --lime2:#B7E36B;
+  --forest:#0B3D24; --forest-dark:#062818;
+  --sky:#4EA8DE; --sky-dim:rgba(78,168,222,.14);
+  --amber:#E0A93E; --amber-dim:rgba(224,169,62,.14);
+  --rose:#E15B5B; --rose-dim:rgba(225,91,91,.14);
+  --purple:#A879E0; --purple-dim:rgba(168,121,224,.14);
+  --font-display:'Sora',system-ui,sans-serif;
+  --font-body:'Inter',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+  --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:22px;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0; background:
+    radial-gradient(circle at 12% -10%, rgba(139,197,63,.10), transparent 42%),
+    radial-gradient(circle at 88% 0%, rgba(78,168,222,.07), transparent 40%),
+    var(--bg);
+  color:var(--text); font-family:var(--font-body); font-size:14px;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+::selection{background:rgba(139,197,63,.35);}
+button,input,textarea,select{font-family:inherit;color:inherit;}
+::-webkit-scrollbar{width:7px;height:7px;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:99px;}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.2);}
+a{color:inherit;text-decoration:none;}
+h1,h2,h3,.disp{font-family:var(--font-display);letter-spacing:-.01em;margin:0;}
+:focus-visible{outline:2px solid var(--lime);outline-offset:2px;border-radius:6px;}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important;}}
+
+.glass{
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r-lg); backdrop-filter:blur(18px);
+  box-shadow:0 20px 50px rgba(4,13,9,.35), inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+/* ---------------- shell ---------------- */
+.shell{display:flex;flex-direction:column;height:100vh;min-height:640px;}
+
+/* ---------------- topbar ---------------- */
+.topbar{
+  display:flex;align-items:center;gap:18px;padding:12px 22px;
+  border-bottom:1px solid var(--border); background:rgba(4,13,9,.75);
+  backdrop-filter:blur(20px); z-index:40; flex-shrink:0;
+}
+.brand{display:flex;align-items:center;gap:11px;flex-shrink:0;}
+.brand-mark{
+  height:38px;width:38px;border-radius:11px;
+  background:linear-gradient(135deg,var(--lime2),var(--forest));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-weight:800;color:#06180f;font-size:16px;
+  box-shadow:0 8px 20px rgba(139,197,63,.35);
+}
+.brand-txt{line-height:1.15;}
+.brand-title{font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff;}
+.brand-sub{font-size:10.5px;color:var(--lime);letter-spacing:.03em;}
+
+.top-search{
+  flex:1;max-width:420px;display:flex;align-items:center;gap:9px;
+  border:1px solid var(--border);background:var(--surface);
+  border-radius:11px;padding:9px 13px;color:var(--text-dim);
+}
+.top-search input{background:none;border:none;outline:none;flex:1;font-size:13px;color:var(--text);}
+.top-search input::placeholder{color:var(--text-faint);}
+.kbd{font-size:10px;border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--text-faint);}
+
+.top-right{margin-left:auto;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.env-pill{
+  display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:600;
+  padding:7px 12px;border-radius:99px;border:1px solid var(--border-strong);
+  background:var(--lime-dim);color:var(--lime);
+}
+.env-dot{height:6px;width:6px;border-radius:99px;background:var(--lime);animation:pulse 1.6s infinite;}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(139,197,63,.5);}50%{opacity:.4;box-shadow:0 0 0 5px rgba(139,197,63,0);}}
+.icon-btn{
+  height:36px;width:36px;border-radius:10px;border:1px solid var(--border);
+  background:var(--surface);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--text-dim);position:relative;
+}
+.icon-btn:hover{background:var(--surface-hi);color:var(--text);}
+.icon-btn .dot{position:absolute;top:6px;right:6px;height:7px;width:7px;border-radius:99px;background:var(--rose);border:2px solid var(--bg-deep);}
+.dev-chip{display:flex;align-items:center;gap:9px;padding-left:12px;border-left:1px solid var(--border);}
+.dev-avatar{
+  height:34px;width:34px;border-radius:99px;
+  background:linear-gradient(135deg,var(--lime2),var(--forest));
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#06180f;
+}
+.dev-name{font-size:12.5px;font-weight:600;color:#fff;line-height:1.2;}
+.dev-role{font-size:10.5px;color:var(--lime);}
+
+/* ---------------- live stats strip ---------------- */
+.stats-strip{
+  display:flex;gap:10px;padding:13px 22px;overflow-x:auto;
+  border-bottom:1px solid var(--border);background:rgba(4,13,9,.45);flex-shrink:0;
+}
+.stat{
+  min-width:168px;display:flex;align-items:center;gap:11px;
+  border:1px solid var(--border);background:var(--surface);
+  border-radius:12px;padding:10px 13px;transition:.15s;flex-shrink:0;
+}
+.stat:hover{background:var(--surface-hi);transform:translateY(-1px);}
+.stat-ic{height:34px;width:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.stat-val{font-family:var(--font-display);font-weight:700;font-size:16.5px;color:#fff;line-height:1.1;display:flex;align-items:baseline;gap:5px;}
+.stat-trend{font-size:10px;font-weight:700;}
+.stat-trend.up{color:var(--lime);} .stat-trend.down{color:var(--rose);}
+.stat-label{font-size:10.5px;color:var(--text-dim);margin-top:2px;}
+
+/* ---------------- body layout ---------------- */
+.body{flex:1;display:flex;min-height:0;}
+
+/* ---------------- sidebar ---------------- */
+.sidebar{
+  width:236px;flex-shrink:0;border-right:1px solid var(--border);
+  background:rgba(4,13,9,.4);padding:14px 10px;overflow-y:auto;
+}
+.side-label{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--text-faint);padding:0 10px;margin:16px 0 6px;}
+.side-label:first-child{margin-top:0;}
+.nav-item{
+  width:100%;display:flex;align-items:center;gap:10px;padding:9px 10px;
+  border-radius:10px;border:1px solid transparent;background:none;color:var(--text-dim);
+  font-size:13px;cursor:pointer;text-align:left;transition:.15s;margin-bottom:2px;
+}
+.nav-item svg{flex-shrink:0;width:16px;height:16px;}
+.nav-item:hover{background:var(--surface);color:var(--text);}
+.nav-item.active{background:var(--lime-dim);border-color:var(--border-strong);color:var(--lime);font-weight:600;}
+.nav-badge{margin-left:auto;font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:99px;background:var(--sky-dim);color:var(--sky);}
+
+/* ---------------- main ---------------- */
+.main{flex:1;overflow-y:auto;padding:22px 22px 60px;min-width:0;}
+.view{display:none;}
+.view.active{display:block;animation:fadein .25s ease;}
+@keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+.hero{
+  position:relative;overflow:hidden;padding:26px 28px;margin-bottom:22px;
+  border-radius:var(--r-xl);
+  background:linear-gradient(150deg, rgba(139,197,63,.10), rgba(255,255,255,.015) 60%), var(--surface);
+  border:1px solid var(--border);
+}
+.hero-net{position:absolute;inset:0;opacity:.55;pointer-events:none;}
+.hero-content{position:relative;z-index:2;}
+.eyebrow{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--lime);font-weight:700;margin-bottom:8px;}
+.hero h1{font-size:26px;font-weight:800;color:#fff;max-width:640px;line-height:1.2;}
+.hero p{margin-top:8px;color:var(--text-dim);max-width:560px;font-size:13.5px;line-height:1.6;}
+.trust-strip{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}
+.trust-badge{
+  font-size:11.5px;font-weight:600;color:var(--text-dim);
+  border:1px solid var(--border);background:rgba(255,255,255,.03);
+  padding:6px 12px;border-radius:99px;display:inline-flex;align-items:center;gap:6px;
+}
+.trust-badge b{color:var(--lime);font-weight:700;}
+.hero-cta{display:flex;gap:10px;margin-top:20px;}
+.btn{
+  display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:12.5px;
+  padding:10px 16px;border-radius:10px;cursor:pointer;border:1px solid transparent;
+}
+.btn-lime{background:var(--lime);color:#06180f;}
+.btn-lime:hover{background:var(--lime2);}
+.btn-ghost{background:var(--surface);border-color:var(--border);color:var(--text);}
+.btn-ghost:hover{background:var(--surface-hi);}
+
+.section-head{display:flex;align-items:center;justify-content:space-between;margin:26px 0 14px;}
+.section-title{font-family:var(--font-display);font-weight:700;font-size:16px;color:#fff;display:flex;align-items:center;gap:8px;}
+.section-sub{font-size:12px;color:var(--text-faint);margin-top:2px;}
+.tab-row{display:flex;gap:6px;flex-wrap:wrap;}
+.tab-chip{font-size:11.5px;font-weight:600;padding:6px 12px;border-radius:99px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);cursor:pointer;}
+.tab-chip.active{background:var(--lime);color:#06180f;border-color:var(--lime);}
+
+/* ---------------- API cards grid ---------------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:14px;}
+.api-card{
+  border:1px solid var(--border);background:var(--surface);border-radius:var(--r-lg);
+  padding:16px;cursor:pointer;transition:.18s;position:relative;overflow:hidden;
+}
+.api-card:hover{background:var(--surface-hi);border-color:var(--border-strong);transform:translateY(-2px);box-shadow:0 16px 34px rgba(0,0,0,.35);}
+.api-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.api-ic{height:38px;width:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.api-name{font-family:var(--font-display);font-weight:700;font-size:14px;color:#fff;margin-top:11px;}
+.api-desc{font-size:11.5px;color:var(--text-faint);margin-top:4px;line-height:1.5;min-height:32px;}
+.api-meta-row{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap;}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 8px;border-radius:99px;border:1px solid transparent;white-space:nowrap;}
+.pill-lime{background:var(--lime-dim);color:var(--lime);border-color:rgba(139,197,63,.3);}
+.pill-sky{background:var(--sky-dim);color:var(--sky);border-color:rgba(78,168,222,.3);}
+.pill-amber{background:var(--amber-dim);color:var(--amber);border-color:rgba(224,169,62,.3);}
+.pill-rose{background:var(--rose-dim);color:var(--rose);border-color:rgba(225,91,91,.3);}
+.pill-purple{background:var(--purple-dim);color:var(--purple);border-color:rgba(168,121,224,.3);}
+.pill-slate{background:rgba(255,255,255,.06);color:var(--text-dim);border-color:var(--border);}
+.api-stats-row{display:flex;gap:14px;margin-top:12px;font-size:11px;color:var(--text-faint);}
+.api-stats-row b{color:var(--text);font-weight:700;display:block;font-size:12.5px;font-family:var(--font-display);}
+.api-usage-bar{height:4px;border-radius:99px;background:rgba(255,255,255,.08);margin-top:12px;overflow:hidden;}
+.api-usage-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--lime),var(--lime2));}
+.api-card-actions{display:flex;gap:8px;margin-top:13px;}
+.mini-btn{
+  flex:1;text-align:center;font-size:11px;font-weight:700;padding:7px 8px;border-radius:8px;
+  border:1px solid var(--border);background:rgba(255,255,255,.02);color:var(--text-dim);cursor:pointer;
+}
+.mini-btn:hover{background:var(--surface-hi);color:var(--text);}
+.mini-btn.primary{background:var(--lime-dim);border-color:rgba(139,197,63,.35);color:var(--lime);}
+
+/* ---------------- two-col with right panel ---------------- */
+.layout-2col{display:flex;gap:18px;align-items:flex-start;}
+.col-main{flex:1;min-width:0;}
+.col-right{width:322px;flex-shrink:0;}
+@media (max-width:1180px){.col-right{display:none;}}
+
+.right-panel{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);overflow:hidden;position:sticky;top:0;}
+.right-head{display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-bottom:1px solid var(--border);}
+.right-title{font-family:var(--font-display);font-weight:700;font-size:13.5px;color:#fff;}
+.right-body{padding:15px 16px;display:flex;flex-direction:column;gap:16px;max-height:calc(100vh - 220px);overflow-y:auto;}
+.rp-label{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;display:flex;align-items:center;gap:6px;justify-content:space-between;}
+.health-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.health-cell{border:1px solid var(--border);border-radius:11px;padding:10px;text-align:left;}
+.health-cell .n{font-family:var(--font-display);font-weight:800;font-size:19px;}
+.health-cell .l{font-size:10.5px;color:var(--text-faint);margin-top:2px;}
+.rp-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);}
+.rp-row:last-child{border-bottom:none;}
+.rp-row-l{color:var(--text-dim);display:flex;align-items:center;gap:7px;}
+.rp-row-v{color:var(--text);font-weight:600;}
+.activity-item{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);}
+.activity-item:last-child{border-bottom:none;}
+.act-dot{height:7px;width:7px;border-radius:99px;margin-top:5px;flex-shrink:0;}
+.act-text{font-size:11.5px;color:var(--text);line-height:1.45;}
+.act-time{font-size:10px;color:var(--text-faint);margin-top:2px;}
+.ai-rec{border:1px solid rgba(168,121,224,.3);background:var(--purple-dim);border-radius:11px;padding:10px;font-size:11.5px;color:var(--text);line-height:1.5;}
+.ai-rec b{color:var(--purple);}
+.repair-btn{width:100%;margin-top:9px;font-size:11.5px;font-weight:700;padding:8px;border-radius:9px;background:var(--lime);color:#06180f;border:none;cursor:pointer;}
+.repair-btn:hover{background:var(--lime2);}
+
+/* ---------------- chart card ---------------- */
+.chart-card{border:1px solid var(--border);background:var(--surface);border-radius:var(--r-lg);padding:18px;}
+.chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+canvas{display:block;width:100%;}
+
+/* ---------------- detail view ---------------- */
+.detail-hero{display:flex;align-items:center;gap:16px;margin-bottom:18px;}
+.detail-ic{height:56px;width:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+.breadcrumb{font-size:11.5px;color:var(--text-faint);margin-bottom:8px;display:flex;gap:6px;align-items:center;}
+.breadcrumb b{color:var(--lime);cursor:pointer;}
+.endpoint-row{
+  display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);
+  background:rgba(255,255,255,.02);border-radius:11px;margin-bottom:8px;
+}
+.method{font-family:var(--font-mono);font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:6px;flex-shrink:0;min-width:52px;text-align:center;}
+.method.get{background:var(--sky-dim);color:var(--sky);}
+.method.post{background:var(--lime-dim);color:var(--lime);}
+.method.put{background:var(--amber-dim);color:var(--amber);}
+.method.delete{background:var(--rose-dim);color:var(--rose);}
+.endpoint-path{font-family:var(--font-mono);font-size:12.5px;color:var(--text);flex:1;}
+.endpoint-desc{font-size:11.5px;color:var(--text-faint);}
+
+/* ---------------- explorer ---------------- */
+.explorer-grid{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start;}
+@media (max-width:980px){.explorer-grid{grid-template-columns:1fr;}}
+.field{margin-bottom:14px;}
+.field label{font-size:11px;color:var(--text-dim);font-weight:600;display:block;margin-bottom:6px;}
+.field select,.field input,.field textarea{
+  width:100%;border:1px solid var(--border);background:rgba(255,255,255,.03);
+  color:var(--text);border-radius:9px;padding:9px 11px;font-size:12.5px;outline:none;
+}
+.field select:focus,.field input:focus,.field textarea:focus{border-color:var(--border-strong);}
+.code-block{
+  background:var(--bg-deep);border:1px solid var(--border);border-radius:12px;
+  padding:16px;font-family:var(--font-mono);font-size:12px;line-height:1.65;color:#c9e6c2;
+  overflow-x:auto;white-space:pre;max-height:420px;overflow-y:auto;
+}
+.code-block .k{color:var(--sky);} .code-block .s{color:var(--amber);} .code-block .c{color:var(--text-faint);}
+.lang-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+
+/* ---------------- sdk grid ---------------- */
+.sdk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+.sdk-card{border:1px solid var(--border);background:var(--surface);border-radius:13px;padding:16px;text-align:center;cursor:pointer;transition:.15s;}
+.sdk-card:hover{background:var(--surface-hi);transform:translateY(-2px);}
+.sdk-ic{font-size:26px;margin-bottom:8px;}
+.sdk-name{font-weight:700;font-size:12.5px;color:#fff;}
+.sdk-ver{font-size:10px;color:var(--text-faint);margin-top:3px;}
+
+/* ---------------- table ---------------- */
+.table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.table th{text-align:left;color:var(--text-faint);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;padding:0 12px 10px;border-bottom:1px solid var(--border);}
+.table td{padding:12px;border-bottom:1px solid rgba(255,255,255,.05);color:var(--text);}
+.table tr:last-child td{border-bottom:none;}
+.table-wrap{border:1px solid var(--border);background:var(--surface);border-radius:var(--r-lg);padding:6px 8px;overflow-x:auto;}
+.mono{font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);}
+
+/* ---------------- security grid ---------------- */
+.sec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;}
+.sec-card{border:1px solid var(--border);background:var(--surface);border-radius:14px;padding:16px;}
+.sec-card .ic{height:36px;width:36px;border-radius:10px;background:var(--lime-dim);color:var(--lime);display:flex;align-items:center;justify-content:center;margin-bottom:10px;}
+.sec-card h4{font-family:var(--font-display);font-size:13px;color:#fff;font-weight:700;}
+.sec-card p{font-size:11.5px;color:var(--text-faint);margin-top:5px;line-height:1.5;}
+
+/* ---------------- floating AI assistant ---------------- */
+.fab{
+  position:fixed;bottom:22px;right:22px;height:56px;width:56px;border-radius:18px;
+  background:linear-gradient(135deg,var(--lime2),var(--forest));border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+  box-shadow:0 16px 36px rgba(139,197,63,.4);z-index:60;
+}
+.fab-panel{
+  position:fixed;bottom:90px;right:22px;width:340px;max-height:480px;border-radius:18px;overflow:hidden;
+  border:1px solid var(--border-strong);background:rgba(6,18,13,.98);backdrop-filter:blur(22px);
+  box-shadow:0 28px 70px rgba(0,0,0,.55);z-index:60;display:none;flex-direction:column;
+}
+.fab-panel.open{display:flex;}
+.fab-head{padding:15px 16px;background:linear-gradient(160deg,rgba(139,197,63,.16),transparent);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.fab-title{font-family:var(--font-display);font-weight:700;font-size:13.5px;color:#fff;display:flex;align-items:center;gap:8px;}
+.fab-close{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:16px;}
+.fab-body{padding:14px 16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px;}
+.ai-msg{font-size:12px;line-height:1.55;padding:10px 12px;border-radius:12px;max-width:92%;}
+.ai-msg.bot{background:rgba(255,255,255,.05);border:1px solid var(--border);border-bottom-left-radius:4px;}
+.ai-msg.me{background:var(--lime);color:#06180f;font-weight:600;align-self:flex-end;border-bottom-right-radius:4px;}
+.fab-suggest{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 14px;}
+.sugg-btn{font-size:11px;font-weight:600;padding:6px 10px;border-radius:99px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);cursor:pointer;}
+.sugg-btn:hover{background:var(--lime-dim);color:var(--lime);border-color:rgba(139,197,63,.3);}
+
+/* ---------------- modal (quick test) ---------------- */
+.modal-overlay{position:fixed;inset:0;background:rgba(4,13,9,.7);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:80;}
+.modal-overlay.open{display:flex;}
+.modal{width:min(560px,92vw);max-height:80vh;overflow-y:auto;border:1px solid var(--border-strong);border-radius:18px;background:rgba(6,18,13,.98);box-shadow:0 30px 80px rgba(0,0,0,.55);}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-body{padding:18px 20px;}
+.modal-close{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:18px;}
+
+@media (max-width:860px){
+  .sidebar{width:64px;}
+  .sidebar .side-label,.nav-item span{display:none;}
+  .top-search{display:none;}
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ================= TOP BAR ================= -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">J</div>
+      <div class="brand-txt">
+        <div class="brand-title">Jedida API Centre</div>
+        <div class="brand-sub">Integration Command Centre</div>
+      </div>
+    </div>
+    <div class="top-search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input placeholder="Search endpoints, webhooks, apps, logs…" />
+      <span class="kbd">⌘K</span>
+    </div>
+    <div class="top-right">
+      <span class="env-pill"><span class="env-dot"></span> Production · All systems live</span>
+      <button class="icon-btn" title="Notifications"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="dot"></span></button>
+      <button class="icon-btn" title="Documentation"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button>
+      <div class="dev-chip">
+        <div class="dev-avatar">TN</div>
+        <div>
+          <div class="dev-name">Tausi N.</div>
+          <div class="dev-role">Partner Developer</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= LIVE STATS STRIP ================= -->
+  <div class="stats-strip" id="statsStrip"></div>
+
+  <!-- ================= BODY ================= -->
+  <div class="body">
+
+    <!-- ---------------- SIDEBAR ---------------- -->
+    <div class="sidebar" id="sidebar">
+      <div class="side-label">General</div>
+      <button class="nav-item active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-item" data-view="api-centre">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
+        <span>API Centre</span>
+      </button>
+      <button class="nav-item" data-view="integration-hub">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="5" r="2"/><circle cx="20" cy="5" r="2"/><circle cx="4" cy="19" r="2"/><circle cx="20" cy="19" r="2"/><path d="M6.5 6.2 10 10M17.5 6.2 14 10M6.5 17.8 10 14M17.5 17.8 14 14"/></svg>
+        <span>Integration Hub</span>
+      </button>
+      <button class="nav-item" data-view="partner-apps">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>
+        <span>Partner Apps</span>
+      </button>
+
+      <div class="side-label">Developer Portal</div>
+      <button class="nav-item" data-view="developer-portal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>
+        <span>Developer Portal</span>
+      </button>
+      <button class="nav-item" data-view="api-explorer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 17 6-6-6-6M12 19h8"/></svg>
+        <span>API Explorer</span>
+      </button>
+      <button class="nav-item" data-view="api-keys">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.9 12.1 8-8M16 6l2 2M19 3l2 2"/></svg>
+        <span>API Keys</span>
+      </button>
+      <button class="nav-item" data-view="oauth-apps">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>OAuth Applications</span>
+      </button>
+      <button class="nav-item" data-view="webhooks">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.7 15.4 6.3M8.6 13.3l6.8 4.4"/></svg>
+        <span>Webhooks</span><span class="nav-badge">12</span>
+      </button>
+      <button class="nav-item" data-view="sdk-downloads">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+        <span>SDK Downloads</span>
+      </button>
+      <button class="nav-item" data-view="documentation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span>Documentation</span>
+      </button>
+
+      <div class="side-label">Commerce APIs</div>
+      <button class="nav-item" data-view="detail" data-api="store-builder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9M3 9v10a1 1 0 0 0 1 1h4v-6h8v6h4a1 1 0 0 0 1-1V9M3 9h18"/></svg><span>Store Builder API</span></button>
+      <button class="nav-item" data-view="detail" data-api="ai-api"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a5 5 0 0 0-5 5v1a4 4 0 0 0 0 8v1a5 5 0 0 0 10 0v-1a4 4 0 0 0 0-8V7a5 5 0 0 0-5-5z"/></svg><span>AI API</span></button>
+      <button class="nav-item" data-view="detail" data-api="trust-engine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.4 8.4 8 10 4.6-1.6 8-5 8-10V6z"/></svg><span>Trust Engine API</span></button>
+      <button class="nav-item" data-view="detail" data-api="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg><span>Orders API</span></button>
+      <button class="nav-item" data-view="detail" data-api="payments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg><span>Payments API</span></button>
+      <button class="nav-item" data-view="detail" data-api="delivery"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h13v13H3zM16 8h4l3 3v5h-7z"/><circle cx="7" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></svg><span>Delivery API</span></button>
+      <button class="nav-item" data-view="detail" data-api="agriculture"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22V12M12 12c0-5 4-9 9-9 0 5-4 9-9 9zm0 0C12 7 8 3 3 3c0 5 4 9 9 9z"/></svg><span>Agriculture API</span></button>
+      <button class="nav-item" data-view="detail" data-api="manufacturers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 20V9l6 4V9l6 4V4l8 6v10z"/></svg><span>Manufacturers API</span></button>
+      <button class="nav-item" data-view="detail" data-api="suppliers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span>Suppliers API</span></button>
+
+      <div class="side-label">System</div>
+      <button class="nav-item" data-view="analytics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg><span>Analytics</span></button>
+      <button class="nav-item" data-view="logs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Logs</span></button>
+      <button class="nav-item" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.36.5.66 1 .66"/></svg><span>Settings</span></button>
+    </div>
+
+    <!-- ---------------- MAIN ---------------- -->
+    <div class="main" id="main">
+
+      <!-- ============ DASHBOARD ============ -->
+      <div class="view active" id="view-dashboard">
+        <div class="hero">
+          <canvas class="hero-net" id="heroNet"></canvas>
+          <div class="hero-content">
+            <div class="eyebrow">Jedida for Developers</div>
+            <h1>Everything that connects to the Jedida ecosystem, in one command centre.</h1>
+            <p>Businesses, developers, partners, suppliers, manufacturers and enterprises ship on Jedida's commerce, payments, trust and AI infrastructure from a single control plane — keys, webhooks, SDKs, and live health, all in one place.</p>
+            <div class="trust-strip" id="trustStrip"></div>
+            <div class="hero-cta">
+              <button class="btn btn-lime" onclick="setView('api-explorer')">Open API Explorer</button>
+              <button class="btn btn-ghost" onclick="setView('api-keys')">Generate API Key</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="layout-2col">
+          <div class="col-main">
+            <div class="chart-card">
+              <div class="chart-head">
+                <div>
+                  <div class="section-title">Requests across the ecosystem</div>
+                  <div class="section-sub">Live traffic — all Commerce, Trust &amp; AI APIs</div>
+                </div>
+                <div class="tab-row">
+                  <button class="tab-chip active">24h</button>
+                  <button class="tab-chip">7d</button>
+                  <button class="tab-chip">30d</button>
+                </div>
+              </div>
+              <canvas id="mainChart" height="220"></canvas>
+            </div>
+
+            <div class="section-head">
+              <div>
+                <div class="section-title">Most active APIs</div>
+                <div class="section-sub">Ranked by requests in the last 24 hours</div>
+              </div>
+              <button class="btn btn-ghost" onclick="setView('api-centre')">View all APIs →</button>
+            </div>
+            <div class="grid" id="topApisGrid"></div>
+          </div>
+
+          <div class="col-right">
+            <div id="rightPanelDash"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ API CENTRE ============ -->
+      <div class="view" id="view-api-centre">
+        <div class="section-head" style="margin-top:0;">
+          <div>
+            <div class="section-title">API Centre</div>
+            <div class="section-sub">Every Jedida API, its live status, version, latency and usage</div>
+          </div>
+          <div class="tab-row" id="catFilter"></div>
+        </div>
+        <div class="layout-2col">
+          <div class="col-main">
+            <div class="grid" id="allApisGrid"></div>
+          </div>
+          <div class="col-right"><div id="rightPanelApiCentre"></div></div>
+        </div>
+      </div>
+
+      <!-- ============ INTEGRATION HUB ============ -->
+      <div class="view" id="view-integration-hub">
+        <div class="section-head" style="margin-top:0;">
+          <div><div class="section-title">Integration Hub</div><div class="section-sub">Connected commerce platforms, ERPs, and partner systems</div></div>
+          <button class="btn btn-lime">+ New Integration</button>
+        </div>
+        <div class="layout-2col">
+          <div class="col-main">
+            <div class="table-wrap">
+              <table class="table" id="integrationTable"></table>
+            </div>
+          </div>
+          <div class="col-right"><div id="rightPanelHub"></div></div>
+        </div>
+      </div>
+
+      <!-- ============ PARTNER APPS ============ -->
+      <div class="view" id="view-partner-apps">
+        <div class="section-head" style="margin-top:0;">
+          <div><div class="section-title">Partner Apps</div><div class="section-sub">Apps built on Jedida by our partner network</div></div>
+          <button class="btn btn-lime">Submit an App</button>
+        </div>
+        <div class="grid" id="partnerAppsGrid"></div>
+      </div>
+
+      <!-- ============ DEVELOPER PORTAL ============ -->
+      <div class="view" id="view-developer-portal">
+        <div class="hero" style="margin-bottom:22px;">
+          <div class="hero-content">
+            <div class="eyebrow">Developer Portal</div>
+            <h1 style="font-size:22px;">Build on Jedida.</h1>
+            <p>Everything you need to go from first API call to production traffic — keys, sandboxes, SDKs and reference docs.</p>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="api-card" onclick="setView('api-explorer')"><div class="api-ic" style="background:var(--lime-dim);color:var(--lime);">▶</div><div class="api-name">API Explorer</div><div class="api-desc">Test any endpoint live and see real JSON responses.</div></div>
+          <div class="api-card" onclick="setView('api-keys')"><div class="api-ic" style="background:var(--sky-dim);color:var(--sky);">🔑</div><div class="api-name">API Keys</div><div class="api-desc">Create and rotate sandbox &amp; production keys.</div></div>
+          <div class="api-card" onclick="setView('oauth-apps')"><div class="api-ic" style="background:var(--purple-dim);color:var(--purple);">🔐</div><div class="api-name">OAuth Applications</div><div class="api-desc">Register apps and manage authorised scopes.</div></div>
+          <div class="api-card" onclick="setView('webhooks')"><div class="api-ic" style="background:var(--amber-dim);color:var(--amber);">🪝</div><div class="api-name">Webhooks</div><div class="api-desc">Subscribe to real-time commerce events.</div></div>
+          <div class="api-card" onclick="setView('sdk-downloads')"><div class="api-ic" style="background:var(--lime-dim);color:var(--lime);">📦</div><div class="api-name">SDK Downloads</div><div class="api-desc">Client libraries for 13 languages &amp; platforms.</div></div>
+          <div class="api-card" onclick="setView('documentation')"><div class="api-ic" style="background:var(--sky-dim);color:var(--sky);">📘</div><div class="api-name">Documentation</div><div class="api-desc">Guides, references and migration notes.</div></div>
+        </div>
+      </div>
+
+      <!-- ============ API EXPLORER ============ -->
+      <div class="view" id="view-api-explorer">
+        <div class="section-head" style="margin-top:0;">
+          <div><div class="section-title">API Explorer</div><div class="section-sub">Generate keys, test endpoints and export SDK-ready code</div></div>
+        </div>
+        <div class="explorer-grid">
+          <div class="glass" style="padding:18px;">
+            <div class="field">
+              <label>API</label>
+              <select id="expApi"></select>
+            </div>
+            <div class="field">
+              <label>Endpoint</label>
+              <select id="expEndpoint"></select>
+            </div>
+            <div class="field">
+              <label>Environment</label>
+              <select id="expEnv"><option>Sandbox</option><option>Production</option></select>
+            </div>
+            <div class="field">
+              <label>Request body (JSON)</label>
+              <textarea id="expBody" rows="6" style="font-family:var(--font-mono);font-size:11.5px;"></textarea>
+            </div>
+            <button class="btn btn-lime" style="width:100%;justify-content:center;" onclick="runExplorer()">▶ Send test request</button>
+          </div>
+          <div>
+            <div class="lang-tabs" id="langTabs"></div>
+            <div class="code-block" id="codeSample"></div>
+            <div class="section-sub" style="margin:14px 0 8px;">Response</div>
+            <div class="code-block" id="jsonResponse">// Send a test request to see a live response here</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ API KEYS ============ -->
+      <div class="view" id="view-api-keys">
+        <div class="section-head" style="margin-top:0;">
+          <div><div class="section-title">API Keys</div><div class="section-sub">Scoped, rotatable keys for sandbox and production</div></div>
+          <button class="btn btn-lime" onclick="generateKey()">+ Generate Key</button>
+        </div>
+        <div class="table-wrap"><table class="table" id="keysTable"></table></div>
+        <div class="section-head"><div class="section-title" style="font-size:14px;">Security</div></div>
+        <div class="sec-grid" id="secGrid"></div>
+      </div>
+
+      <!-- ============ OAUTH APPS ============ -->
+      <div class="view" id="view-oauth-apps">
+        <div class="section-head" style="margin-top:0;">
+          <div><div class="section-title">OAuth Applications</div><div class="section-sub">Apps authorised to act on behalf of Jedida businesses</div></div>
+          <button class="btn btn-lime">+ Register App</button>
+        </div>
+        <div class="table-wrap"><table class="table" id="oauthTable"></table></div>
+      </div>
+
+      <!-- ============ WEBHOOKS ============ -->
+      <div class="view" id="view-webhooks">
+        <div class="section-head" style="margin-top:0;">
+          <div><div class="section-title">Webhooks</div><div class="section-sub">Real-time event delivery to your endpoints</div></div>
+          <button class="btn btn-lime">+ Add Endpoint</button>
+        </div>
+        <div class="table-wrap"><table class="table" id="webhooksTable"></table></div>
+      </div>
+
+      <!-- ============ SDK DOWNLOADS ============ -->
+      <div class="view" id="view-sdk-downloads">
+        <div class="section-head" style="margin-top:0;">
+          <div><div class="section-title">SDK Downloads</div><div class="section-sub">Official client libraries, maintained by Jedida</div></div>
+        </div>
+        <div class="sdk-grid" id="sdkGrid"></div>
+      </div>
+
+      <!-- ============ DOCUMENTATION ============ -->
+      <div class="view" id="view-documentation">
+        <div class="section-head" style="margin-top:0;">
+          <div><div class="section-title">Documentation</div><div class="section-sub">Guides and references for every Jedida API</div></div>
+        </div>
+        <div class="grid" id="docsGrid"></div>
+      </div>
+
+      <!-- ============ ANALYTICS ============ -->
+      <div class="view" id="view-analytics">
+        <div class="section-head" style="margin-top:0;">
+          <div><div class="section-title">Analytics</div><div class="section-sub">Ecosystem-wide usage, errors and latency trends</div></div>
+        </div>
+        <div class="chart-card" style="margin-bottom:16px;"><canvas id="analyticsChart1" height="200"></canvas></div>
+        <div class="layout-2col">
+          <div class="col-main"><div class="chart-card"><canvas id="analyticsChart2" height="180"></canvas></div></div>
+          <div class="col-right"><div class="chart-card"><canvas id="analyticsChart3" height="180"></canvas></div></div>
+        </div>
+      </div>
+
+      <!-- ============ LOGS ============ -->
+      <div class="view" id="view-logs">
+        <div class="section-head" style="margin-top:0;">
+          <div><div class="section-title">Logs</div><div class="section-sub">Live request &amp; event log across the ecosystem</div></div>
+          <button class="btn btn-ghost">Export</button>
+        </div>
+        <div class="table-wrap"><table class="table" id="logsTable"></table></div>
+      </div>
+
+      <!-- ============ SETTINGS ============ -->
+      <div class="view" id="view-settings">
+        <div class="section-head" style="margin-top:0;">
+          <div><div class="section-title">Settings</div><div class="section-sub">Workspace, rate limits and notification preferences</div></div>
+        </div>
+        <div class="grid">
+          <div class="glass" style="padding:16px;"><h4 style="font-family:var(--font-display);color:#fff;margin-bottom:8px;">Workspace</h4><div class="field"><label>Organisation name</label><input value="Jedida Market Ltd" /></div><div class="field"><label>Default environment</label><select><option>Sandbox</option><option>Production</option></select></div></div>
+          <div class="glass" style="padding:16px;"><h4 style="font-family:var(--font-display);color:#fff;margin-bottom:8px;">Rate limits</h4><div class="rp-row"><span class="rp-row-l">Requests / minute</span><span class="rp-row-v">6,000</span></div><div class="rp-row"><span class="rp-row-l">Burst allowance</span><span class="rp-row-v">1,500</span></div><div class="rp-row"><span class="rp-row-l">Current usage</span><span class="rp-row-v">41%</span></div></div>
+          <div class="glass" style="padding:16px;"><h4 style="font-family:var(--font-display);color:#fff;margin-bottom:8px;">Notifications</h4><div class="rp-row"><span class="rp-row-l">Incident alerts</span><span class="rp-row-v">Email + SMS</span></div><div class="rp-row"><span class="rp-row-l">Webhook failures</span><span class="rp-row-v">Email</span></div><div class="rp-row"><span class="rp-row-l">Weekly usage digest</span><span class="rp-row-v">Enabled</span></div></div>
+        </div>
+      </div>
+
+      <!-- ============ DETAIL (dynamic, per-API) ============ -->
+      <div class="view" id="view-detail">
+        <div class="breadcrumb"><b onclick="setView('api-centre')">API Centre</b> <span>/</span> <span id="detailCrumb">—</span></div>
+        <div class="detail-hero">
+          <div class="detail-ic" id="detailIcon"></div>
+          <div>
+            <h1 style="font-size:21px;" id="detailName">—</h1>
+            <div class="section-sub" id="detailDesc">—</div>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:8px;">
+            <button class="btn btn-ghost" onclick="setView('documentation')">Docs</button>
+            <button class="btn btn-lime" id="detailTestBtn">Quick Test</button>
+          </div>
+        </div>
+        <div class="grid" style="margin-bottom:20px;" id="detailStats"></div>
+        <div class="section-title" style="margin-bottom:10px;">Endpoints</div>
+        <div id="detailEndpoints"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================= AI ASSISTANT FAB ================= -->
+<button class="fab" id="fabBtn" title="Ask Jedida AI">✨</button>
+<div class="fab-panel" id="fabPanel">
+  <div class="fab-head">
+    <div class="fab-title">✨ Jedida Developer Assistant</div>
+    <button class="fab-close" id="fabClose">✕</button>
+  </div>
+  <div class="fab-body" id="fabBody">
+    <div class="ai-msg bot">Hi — I'm the Jedida developer assistant. I can explain any API, generate code samples, diagnose errors, recommend endpoints, or walk through auth. What are you building?</div>
+  </div>
+  <div class="fab-suggest">
+    <button class="sugg-btn" data-q="explain">Explain this API</button>
+    <button class="sugg-btn" data-q="code">Generate code sample</button>
+    <button class="sugg-btn" data-q="diagnose">Diagnose an error</button>
+    <button class="sugg-btn" data-q="webhook">Webhook example</button>
+    <button class="sugg-btn" data-q="auth">Explain authentication</button>
+  </div>
+</div>
+
+<!-- ================= QUICK TEST MODAL ================= -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-head"><div class="fab-title" id="modalTitle">Quick Test</div><button class="modal-close" id="modalClose">✕</button></div>
+    <div class="modal-body">
+      <div class="section-sub" style="margin-bottom:8px;">Sample response</div>
+      <div class="code-block" id="modalJson"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   DATA
+   ========================================================= */
+const CATALOG = {
+  'store-builder': {name:'Store Builder API', cat:'Commerce', icon:'🏗️', color:'lime', status:'Operational', version:'v3.2', latency:'82ms', uptime:99.98, usage:64, desc:'Programmatically create storefronts, themes and pages.', endpoints:[
+    {m:'GET',p:'/v3/stores/{id}',d:'Retrieve a store configuration'},
+    {m:'POST',p:'/v3/stores',d:'Create a new storefront'},
+    {m:'PUT',p:'/v3/stores/{id}/theme',d:'Apply or update a theme'},
+  ]},
+  'ai-api': {name:'AI API', cat:'Intelligence', icon:'🧠', color:'purple', status:'Operational', version:'v1.4', latency:'310ms', uptime:99.9, usage:71, desc:'Product descriptions, search ranking and merchandising AI.', endpoints:[
+    {m:'POST',p:'/v1/ai/describe',d:'Generate a product description'},
+    {m:'POST',p:'/v1/ai/rank',d:'Rank search results for a query'},
+    {m:'POST',p:'/v1/ai/chat',d:'Converse with the commerce assistant'},
+  ]},
+  'trust-engine': {name:'Trust Engine API', cat:'Trust & Safety', icon:'🛡️', color:'sky', status:'Operational', version:'v2.1', latency:'118ms', uptime:99.95, usage:48, desc:'Seller verification, dispute signals and risk scoring.', endpoints:[
+    {m:'GET',p:'/v2/trust/{sellerId}',d:'Get a seller trust score'},
+    {m:'POST',p:'/v2/trust/report',d:'File a trust or safety report'},
+  ]},
+  'orders': {name:'Orders API', cat:'Commerce', icon:'📦', color:'lime', status:'Operational', version:'v3.0', latency:'95ms', uptime:99.97, usage:88, desc:'Create, fulfil and track orders across every channel.', endpoints:[
+    {m:'GET',p:'/v3/orders/{id}',d:'Retrieve an order'},
+    {m:'POST',p:'/v3/orders',d:'Create an order'},
+    {m:'PUT',p:'/v3/orders/{id}/fulfil',d:'Mark items fulfilled'},
+    {m:'DELETE',p:'/v3/orders/{id}',d:'Cancel an order'},
+  ]},
+  'payments': {name:'Payments API', cat:'Finance', icon:'💳', color:'amber', status:'Degraded', version:'v2.6', latency:'204ms', uptime:99.6, usage:92, desc:'Charges, payouts, wallets and settlement.', endpoints:[
+    {m:'POST',p:'/v2/payments/charge',d:'Capture a payment'},
+    {m:'POST',p:'/v2/payments/payout',d:'Trigger a seller payout'},
+    {m:'GET',p:'/v2/payments/{id}',d:'Retrieve a payment'},
+  ]},
+  'delivery': {name:'Delivery API', cat:'Logistics', icon:'🚚', color:'sky', status:'Operational', version:'v1.9', latency:'140ms', uptime:99.9, usage:57, desc:'Rate shopping, label generation and live tracking.', endpoints:[
+    {m:'POST',p:'/v1/delivery/quote',d:'Get shipping rate quotes'},
+    {m:'POST',p:'/v1/delivery/label',d:'Generate a shipping label'},
+    {m:'GET',p:'/v1/delivery/track/{id}',d:'Track a shipment'},
+  ]},
+  'agriculture': {name:'Agriculture API', cat:'Vertical', icon:'🌾', color:'lime', status:'Operational', version:'v1.2', latency:'126ms', uptime:99.9, usage:33, desc:'Harvest listings, cold-chain and farmer payouts.', endpoints:[
+    {m:'GET',p:'/v1/agri/listings',d:'Browse harvest listings'},
+    {m:'POST',p:'/v1/agri/listings',d:'Publish a harvest listing'},
+  ]},
+  'manufacturers': {name:'Manufacturers API', cat:'Vertical', icon:'🏭', color:'purple', status:'Operational', version:'v1.3', latency:'132ms', uptime:99.88, usage:41, desc:'Production capacity, bulk quoting and B2B catalogs.', endpoints:[
+    {m:'GET',p:'/v1/manufacturers/{id}/capacity',d:'Get production capacity'},
+    {m:'POST',p:'/v1/manufacturers/quote',d:'Request a bulk quote'},
+  ]},
+  'suppliers': {name:'Suppliers API', cat:'Vertical', icon:'📋', color:'amber', status:'Operational', version:'v1.5', latency:'104ms', uptime:99.93, usage:38, desc:'Supplier catalogs, stock feeds and purchase orders.', endpoints:[
+    {m:'GET',p:'/v1/suppliers/{id}/catalog',d:'Fetch a supplier catalog'},
+    {m:'POST',p:'/v1/suppliers/po',d:'Create a purchase order'},
+  ]},
+  'products': {name:'Products', cat:'Commerce', icon:'🛍️', color:'lime', status:'Operational', version:'v3.0', latency:'71ms', uptime:99.98, usage:80, desc:'Catalog, variants, pricing and media.', endpoints:[{m:'GET',p:'/v3/products',d:'List products'},{m:'POST',p:'/v3/products',d:'Create a product'}]},
+  'inventory': {name:'Inventory', cat:'Commerce', icon:'📊', color:'sky', status:'Operational', version:'v2.4', latency:'88ms', uptime:99.95, usage:55, desc:'Stock levels across warehouses and sellers.', endpoints:[{m:'GET',p:'/v2/inventory/{sku}',d:'Get stock for a SKU'}]},
+  'customers': {name:'Customers', cat:'Commerce', icon:'👤', color:'purple', status:'Operational', version:'v2.2', latency:'79ms', uptime:99.96, usage:62, desc:'Customer profiles, addresses and consent.', endpoints:[{m:'GET',p:'/v2/customers/{id}',d:'Retrieve a customer'}]},
+  'wallet': {name:'Wallet', cat:'Finance', icon:'👛', color:'amber', status:'Operational', version:'v1.7', latency:'110ms', uptime:99.9, usage:47, desc:'Balances, top-ups and internal transfers.', endpoints:[{m:'GET',p:'/v1/wallet/{id}',d:'Get wallet balance'}]},
+  'invoices': {name:'Invoices', cat:'Finance', icon:'🧾', color:'amber', status:'Operational', version:'v1.4', latency:'99ms', uptime:99.94, usage:29, desc:'Generate and reconcile invoices.', endpoints:[{m:'POST',p:'/v1/invoices',d:'Create an invoice'}]},
+  'receipts': {name:'Receipts', cat:'Finance', icon:'🧻', color:'amber', status:'Operational', version:'v1.1', latency:'64ms', uptime:99.99, usage:24, desc:'Digital receipts for orders and payouts.', endpoints:[{m:'GET',p:'/v1/receipts/{id}',d:'Get a receipt'}]},
+  'tracking': {name:'Tracking', cat:'Logistics', icon:'📍', color:'sky', status:'Operational', version:'v1.6', latency:'132ms', uptime:99.9, usage:52, desc:'Real-time shipment location events.', endpoints:[{m:'GET',p:'/v1/tracking/{id}',d:'Get tracking events'}]},
+  'dropshipping': {name:'Dropshipping', cat:'Vertical', icon:'📤', color:'purple', status:'Operational', version:'v1.0', latency:'150ms', uptime:99.8, usage:36, desc:'Supplier-to-store fulfilment automation.', endpoints:[{m:'POST',p:'/v1/dropship/route',d:'Route an order to a supplier'}]},
+  'themes': {name:'Themes', cat:'Commerce', icon:'🎨', color:'lime', status:'Operational', version:'v2.0', latency:'68ms', uptime:99.97, usage:44, desc:'Storefront themes and design tokens.', endpoints:[{m:'GET',p:'/v2/themes',d:'List available themes'}]},
+  'plugins': {name:'Plugins', cat:'Commerce', icon:'🧩', color:'sky', status:'Operational', version:'v1.3', latency:'77ms', uptime:99.92, usage:31, desc:'Install and configure marketplace plugins.', endpoints:[{m:'GET',p:'/v1/plugins',d:'List installed plugins'}]},
+  'chat': {name:'Chat', cat:'Trust & Safety', icon:'💬', color:'sky', status:'Operational', version:'v2.0', latency:'92ms', uptime:99.9, usage:58, desc:'Buyer-seller messaging with moderation.', endpoints:[{m:'POST',p:'/v2/chat/send',d:'Send a message'}]},
+  'notifications': {name:'Notifications', cat:'Trust & Safety', icon:'🔔', color:'amber', status:'Operational', version:'v1.8', latency:'54ms', uptime:99.98, usage:66, desc:'Push, SMS and email delivery.', endpoints:[{m:'POST',p:'/v1/notifications',d:'Send a notification'}]},
+  'ai-commerce': {name:'AI Commerce', cat:'Intelligence', icon:'🤖', color:'purple', status:'Operational', version:'v1.4', latency:'298ms', uptime:99.87, usage:69, desc:'AI merchandising and conversational shopping.', endpoints:[{m:'POST',p:'/v1/ai/shop',d:'Conversational shopping session'}]},
+  'analytics-api': {name:'Analytics', cat:'Intelligence', icon:'📈', color:'sky', status:'Operational', version:'v1.5', latency:'140ms', uptime:99.9, usage:40, desc:'Usage, sales and cohort analytics.', endpoints:[{m:'GET',p:'/v1/analytics/summary',d:'Get a usage summary'}]},
+};
+
+const STATS = [
+  {icon:'✅',color:'lime',val:'99.98%',label:'API Uptime',trend:'+0.02%',up:true},
+  {icon:'🔗',color:'sky',val:'1,842',label:'Active Integrations',trend:'+37',up:true},
+  {icon:'🏢',color:'purple',val:'9,304',label:'Connected Businesses',trend:'+128',up:true},
+  {icon:'📡',color:'lime',val:'6.4M',label:'API Requests Today',trend:'+4.1%',up:true},
+  {icon:'⚡',color:'amber',val:'118ms',label:'Avg Response Time',trend:'-6ms',up:true},
+  {icon:'🪝',color:'sky',val:'214K',label:'Webhook Events',trend:'+2.3%',up:true},
+  {icon:'⚠️',color:'rose',val:'0.04%',label:'Error Rate',trend:'+0.01%',up:false},
+  {icon:'🚦',color:'amber',val:'41%',label:'Rate Limit Usage',trend:'steady',up:true},
+  {icon:'💚',color:'lime',val:'Healthy',label:'Marketplace Health',trend:'',up:true},
+];
+
+const TRUST = ['Partner-grade like Shopify Partners','Developer-first like Stripe','Console depth like AWS','Portal control like Azure','Edge speed like Cloudflare'];
+
+const INTEGRATIONS = [
+  {name:'Zainab Textiles ERP', type:'ERP Sync', status:'Healthy', last:'2 min ago'},
+  {name:'Nairobi Fresh Farms POS', type:'POS Bridge', status:'Healthy', last:'11 min ago'},
+  {name:'Kampala Freight Webhook', type:'Delivery Webhook', status:'Warning', last:'1 hr ago'},
+  {name:'Coastal Traders Payments', type:'Payments Sync', status:'Failed', last:'3 hrs ago'},
+  {name:'Highlands Co-op Inventory', type:'Inventory Feed', status:'Pending', last:'—'},
+  {name:'Savanna Supplies OAuth', type:'OAuth App', status:'Healthy', last:'5 min ago'},
+];
+
+const PARTNER_APPS = [
+  {name:'ShopSync Pro', dev:'Vela Labs', cat:'Inventory', installs:'2,140'},
+  {name:'PayBridge', dev:'Fintrust', cat:'Payments', installs:'1,860'},
+  {name:'HarvestLink', dev:'AgroConnect', cat:'Agriculture', installs:'930'},
+  {name:'RouteWise', dev:'Delivery Collective', cat:'Delivery', installs:'1,205'},
+  {name:'ChatDesk', dev:'Jedida Labs', cat:'Support', installs:'3,410'},
+  {name:'ThemeForge', dev:'Studio Nne', cat:'Store Builder', installs:'770'},
+];
+
+const SDKS = [
+  {n:'JavaScript',i:'🟨',v:'4.2.0'},{n:'TypeScript',i:'🔷',v:'4.2.0'},{n:'Node.js',i:'🟢',v:'3.9.1'},
+  {n:'React',i:'⚛️',v:'2.1.0'},{n:'React Native',i:'📱',v:'2.1.0'},{n:'Flutter',i:'🐦',v:'1.6.0'},
+  {n:'Android',i:'🤖',v:'2.3.4'},{n:'iOS',i:'🍎',v:'2.3.1'},{n:'Python',i:'🐍',v:'3.5.0'},
+  {n:'PHP',i:'🐘',v:'2.8.0'},{n:'Java',i:'☕',v:'2.2.0'},{n:'Go',i:'🐹',v:'1.4.0'},{n:'C#',i:'🎯',v:'1.9.0'},
+];
+
+const SECURITY = [
+  {t:'OAuth 2.0',d:'Authorisation-code and client-credential flows for partner apps.',i:'🔐'},
+  {t:'JWT',d:'Short-lived signed tokens for service-to-service calls.',i:'🪪'},
+  {t:'API Keys',d:'Scoped sandbox and production keys, rotatable anytime.',i:'🔑'},
+  {t:'Role Permissions',d:'Fine-grained scopes per key, app and team member.',i:'🧭'},
+  {t:'IP Allow Lists',d:'Restrict production keys to known IP ranges.',i:'🛰️'},
+  {t:'Encrypted Tokens',d:'All secrets encrypted at rest and in transit.',i:'🧊'},
+  {t:'Key Rotation',d:'Scheduled or on-demand rotation with zero downtime.',i:'♻️'},
+  {t:'Audit Logs',d:'Every key, scope and app change is logged.',i:'📜'},
+  {t:'Threat Detection',d:'Anomalous traffic patterns flagged in real time.',i:'🚨'},
+];
+
+/* =========================================================
+   RENDER HELPERS
+   ========================================================= */
+function toneClass(c){return 'pill-'+c;}
+function statusTone(s){return {Operational:'lime',Healthy:'lime',Degraded:'amber',Warning:'amber',Failed:'rose',Pending:'sky'}[s]||'slate';}
+
+function renderStats(){
+  document.getElementById('statsStrip').innerHTML = STATS.map(s=>`
+    <div class="stat">
+      <div class="stat-ic" style="background:var(--${s.color}-dim);color:var(--${s.color});">${s.icon}</div>
+      <div>
+        <div class="stat-val">${s.val} ${s.trend?`<span class="stat-trend ${s.up?'up':'down'}">${s.trend}</span>`:''}</div>
+        <div class="stat-label">${s.label}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderTrust(){
+  document.getElementById('trustStrip').innerHTML = TRUST.map(t=>{
+    const parts = t.split(' like ');
+    return `<span class="trust-badge">${parts[0]} <b>· ${parts[1]}</b></span>`;
+  }).join('');
+}
+
+function apiCard(key, a){
+  return `
+  <div class="api-card" onclick="openDetail('${key}')">
+    <div class="api-card-top">
+      <div class="api-ic" style="background:var(--${a.color}-dim);color:var(--${a.color});">${a.icon}</div>
+      <span class="pill ${toneClass(statusTone(a.status))}">● ${a.status}</span>
+    </div>
+    <div class="api-name">${a.name}</div>
+    <div class="api-desc">${a.desc}</div>
+    <div class="api-stats-row">
+      <div><b>${a.version}</b>version</div>
+      <div><b>${a.latency}</b>latency</div>
+      <div><b>${a.uptime}%</b>uptime</div>
+    </div>
+    <div class="api-usage-bar"><div class="api-usage-fill" style="width:${a.usage}%;"></div></div>
+    <div class="api-card-actions">
+      <button class="mini-btn" onclick="event.stopPropagation();setView('documentation')">Docs</button>
+      <button class="mini-btn primary" onclick="event.stopPropagation();quickTest('${key}')">Quick Test</button>
+    </div>
+  </div>`;
+}
+
+function renderAllApis(filter){
+  const grid = document.getElementById('allApisGrid');
+  const entries = Object.entries(CATALOG).filter(([k,a])=> !filter || filter==='All' || a.cat===filter);
+  grid.innerHTML = entries.map(([k,a])=>apiCard(k,a)).join('');
+}
+
+function renderCatFilter(){
+  const cats = ['All', ...new Set(Object.values(CATALOG).map(a=>a.cat))];
+  const el = document.getElementById('catFilter');
+  el.innerHTML = cats.map((c,i)=>`<button class="tab-chip ${i===0?'active':''}" data-cat="${c}">${c}</button>`).join('');
+  el.querySelectorAll('.tab-chip').forEach(btn=>btn.addEventListener('click',()=>{
+    el.querySelectorAll('.tab-chip').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderAllApis(btn.dataset.cat);
+  }));
+}
+
+function renderTopApis(){
+  const top = Object.entries(CATALOG).sort((a,b)=>b[1].usage-a[1].usage).slice(0,6);
+  document.getElementById('topApisGrid').innerHTML = top.map(([k,a])=>apiCard(k,a)).join('');
+}
+
+function rightPanelHTML(){
+  return `
+  <div class="right-panel">
+    <div class="right-head"><div class="right-title">Integration Health Centre</div><span class="pill pill-lime">● Live</span></div>
+    <div class="right-body">
+      <div>
+        <div class="rp-label">Connections</div>
+        <div class="health-grid">
+          <div class="health-cell" style="border-color:rgba(139,197,63,.3);"><div class="n" style="color:var(--lime);">1,690</div><div class="l">Healthy</div></div>
+          <div class="health-cell" style="border-color:rgba(224,169,62,.3);"><div class="n" style="color:var(--amber);">98</div><div class="l">Warning</div></div>
+          <div class="health-cell" style="border-color:rgba(225,91,91,.3);"><div class="n" style="color:var(--rose);">14</div><div class="l">Failed</div></div>
+          <div class="health-cell" style="border-color:rgba(78,168,222,.3);"><div class="n" style="color:var(--sky);">40</div><div class="l">Pending Sync</div></div>
+        </div>
+      </div>
+      <div>
+        <div class="rp-label">Webhook status</div>
+        <div class="rp-row"><span class="rp-row-l">Delivered (24h)</span><span class="rp-row-v">214,032</span></div>
+        <div class="rp-row"><span class="rp-row-l">Retrying</span><span class="rp-row-v">312</span></div>
+        <div class="rp-row"><span class="rp-row-l">Dead-lettered</span><span class="rp-row-v">9</span></div>
+      </div>
+      <div>
+        <div class="rp-label">Security alerts</div>
+        <div class="activity-item"><div class="act-dot" style="background:var(--rose);"></div><div><div class="act-text">Unusual traffic spike on Payments API from a new IP range</div><div class="act-time">14 min ago</div></div></div>
+        <div class="activity-item"><div class="act-dot" style="background:var(--amber);"></div><div><div class="act-text">Sandbox key used against production endpoint</div><div class="act-time">1 hr ago</div></div></div>
+      </div>
+      <div>
+        <div class="rp-label">Recent activity</div>
+        <div class="activity-item"><div class="act-dot" style="background:var(--lime);"></div><div><div class="act-text">Coastal Traders rotated their production API key</div><div class="act-time">6 min ago</div></div></div>
+        <div class="activity-item"><div class="act-dot" style="background:var(--sky);"></div><div><div class="act-text">Highlands Co-op subscribed to <span class="mono">order.fulfilled</span></div><div class="act-time">22 min ago</div></div></div>
+        <div class="activity-item"><div class="act-dot" style="background:var(--purple);"></div><div><div class="act-text">New OAuth app "RouteWise" approved for production</div><div class="act-time">48 min ago</div></div></div>
+      </div>
+      <div>
+        <div class="rp-label">AI recommendations</div>
+        <div class="ai-rec"><b>Suggestion:</b> Coastal Traders' payments webhook has failed 3 times — retry with exponential backoff or switch to polling.</div>
+        <button class="repair-btn" onclick="repairNow()">⚡ One-click Repair</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderIntegrationTable(){
+  const rows = INTEGRATIONS.map(i=>`
+    <tr><td>${i.name}</td><td class="mono">${i.type}</td><td><span class="pill ${toneClass(statusTone(i.status))}">● ${i.status}</span></td><td>${i.last}</td><td><button class="mini-btn">Manage</button></td></tr>`).join('');
+  document.getElementById('integrationTable').innerHTML = `<thead><tr><th>Integration</th><th>Type</th><th>Status</th><th>Last Sync</th><th></th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+function renderPartnerApps(list){
+  const apps = list || PARTNER_APPS;
+  document.getElementById('partnerAppsGrid').innerHTML = apps.map(p=>`
+    <div class="api-card">
+      <div class="api-ic" style="background:var(--purple-dim);color:var(--purple);">🧩</div>
+      <div class="api-name">${p.name} ${p.live?'<span class="pill pill-lime" style="margin-left:6px;">● Live</span>':''}</div>
+      <div class="api-desc">by ${p.dev} · ${p.cat}</div>
+      <div class="api-stats-row"><div><b>${p.installs}</b>${p.metaLabel || 'installs'}</div></div>
+      <div class="api-card-actions">${p.url?`<a class="mini-btn primary" style="flex:1;text-align:center;" href="${p.url}" target="_blank" rel="noopener">View app</a>`:'<button class="mini-btn primary" style="flex:1;">View app</button>'}</div>
+    </div>`).join('');
+}
+
+// Real partner-app data is fetched by the React admin shell (which already
+// holds the admin auth token) and pushed in via postMessage, since this
+// page is loaded standalone in an iframe and can't call the authenticated
+// API directly. Falls back to the illustrative PARTNER_APPS demo data
+// above until the real list arrives (or if it never does).
+window.addEventListener('message', (e) => {
+  if (e && e.data && e.data.type === 'jedida:partnerApps' && Array.isArray(e.data.apps)) {
+    renderPartnerApps(e.data.apps);
+  }
+});
+
+function renderSdkGrid(){
+  document.getElementById('sdkGrid').innerHTML = SDKS.map(s=>`
+    <div class="sdk-card" onclick="downloadSdk('${s.n}')">
+      <div class="sdk-ic">${s.i}</div>
+      <div class="sdk-name">${s.n}</div>
+      <div class="sdk-ver">v${s.v}</div>
+    </div>`).join('');
+}
+
+function renderDocsGrid(){
+  document.getElementById('docsGrid').innerHTML = Object.entries(CATALOG).map(([k,a])=>`
+    <div class="api-card" onclick="openDetail('${k}')">
+      <div class="api-ic" style="background:var(--${a.color}-dim);color:var(--${a.color});">${a.icon}</div>
+      <div class="api-name">${a.name}</div>
+      <div class="api-desc">Reference, guides &amp; changelog for ${a.name}.</div>
+    </div>`).join('');
+}
+
+function renderKeysTable(){
+  const rows = [
+    {n:'Production — Server', prefix:'jd_live_8f2c…a91', env:'Production', scopes:'orders, payments, delivery', created:'12 Mar 2026'},
+    {n:'Sandbox — Web app', prefix:'jd_test_3a91…c04', env:'Sandbox', scopes:'products, orders', created:'02 Jun 2026'},
+    {n:'CI Pipeline', prefix:'jd_test_77bd…1e2', env:'Sandbox', scopes:'store-builder', created:'19 Jun 2026'},
+  ];
+  document.getElementById('keysTable').innerHTML = `<thead><tr><th>Name</th><th>Key</th><th>Environment</th><th>Scopes</th><th>Created</th><th></th></tr></thead><tbody>${rows.map(r=>`
+    <tr><td>${r.n}</td><td class="mono">${r.prefix}</td><td><span class="pill ${r.env==='Production'?'pill-lime':'pill-sky'}">${r.env}</span></td><td class="mono">${r.scopes}</td><td>${r.created}</td><td><button class="mini-btn">Rotate</button></td></tr>`).join('')}</tbody>`;
+}
+
+function renderOauthTable(){
+  const rows = [
+    {n:'RouteWise', status:'Approved', scopes:'delivery.read, delivery.write'},
+    {n:'PayBridge', status:'Approved', scopes:'payments.read'},
+    {n:'HarvestLink', status:'Pending Review', scopes:'agriculture.read, agriculture.write'},
+  ];
+  document.getElementById('oauthTable').innerHTML = `<thead><tr><th>Application</th><th>Status</th><th>Scopes</th><th></th></tr></thead><tbody>${rows.map(r=>`
+    <tr><td>${r.n}</td><td><span class="pill ${r.status==='Approved'?'pill-lime':'pill-amber'}">${r.status}</span></td><td class="mono">${r.scopes}</td><td><button class="mini-btn">Manage</button></td></tr>`).join('')}</tbody>`;
+}
+
+function renderWebhooksTable(){
+  const rows = [
+    {url:'https://api.coastaltraders.com/hooks/jedida', ev:'order.created, order.fulfilled', status:'Healthy'},
+    {url:'https://erp.zainabtextiles.com/webhook', ev:'inventory.updated', status:'Healthy'},
+    {url:'https://freight.kampala.co/jedida-hook', ev:'delivery.status', status:'Warning'},
+  ];
+  document.getElementById('webhooksTable').innerHTML = `<thead><tr><th>Endpoint</th><th>Events</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(r=>`
+    <tr><td class="mono">${r.url}</td><td class="mono">${r.ev}</td><td><span class="pill ${toneClass(statusTone(r.status))}">● ${r.status}</span></td><td><button class="mini-btn">Test</button></td></tr>`).join('')}</tbody>`;
+}
+
+function renderLogsTable(){
+  const methods=['GET','POST','PUT'], apis=Object.values(CATALOG);
+  let rows='';
+  for(let i=0;i<14;i++){
+    const a = apis[Math.floor(Math.random()*apis.length)];
+    const m = methods[Math.floor(Math.random()*methods.length)];
+    const code = Math.random()>0.06 ? 200+Math.floor(Math.random()*3) : [400,401,429,500][Math.floor(Math.random()*4)];
+    rows += `<tr><td class="mono">${(i*7+3).toString().padStart(2,'0')}s ago</td><td><span class="method ${m.toLowerCase()}">${m}</span></td><td class="mono">/v${1+Math.floor(Math.random()*3)}/${a.name.toLowerCase().replace(/\s+/g,'-')}</td><td><span class="pill ${code<300?'pill-lime':code<500?'pill-amber':'pill-rose'}">${code}</span></td><td class="mono">${40+Math.floor(Math.random()*260)}ms</td></tr>`;
+  }
+  document.getElementById('logsTable').innerHTML = `<thead><tr><th>Time</th><th>Method</th><th>Path</th><th>Status</th><th>Latency</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+function renderSecGrid(){
+  document.getElementById('secGrid').innerHTML = SECURITY.map(s=>`
+    <div class="sec-card"><div class="ic">${s.i}</div><h4>${s.t}</h4><p>${s.d}</p></div>`).join('');
+}
+
+/* -------- detail view -------- */
+function openDetail(key){
+  const a = CATALOG[key];
+  if(!a) return;
+  document.getElementById('detailCrumb').textContent = a.name;
+  document.getElementById('detailIcon').style.background = `var(--${a.color}-dim)`;
+  document.getElementById('detailIcon').style.color = `var(--${a.color})`;
+  document.getElementById('detailIcon').textContent = a.icon;
+  document.getElementById('detailName').textContent = a.name;
+  document.getElementById('detailDesc').textContent = a.desc;
+  document.getElementById('detailStats').innerHTML = `
+    <div class="glass" style="padding:14px;"><div class="section-sub">Status</div><span class="pill ${toneClass(statusTone(a.status))}" style="margin-top:6px;">● ${a.status}</span></div>
+    <div class="glass" style="padding:14px;"><div class="section-sub">Version</div><div style="font-family:var(--font-display);font-weight:700;color:#fff;margin-top:6px;">${a.version}</div></div>
+    <div class="glass" style="padding:14px;"><div class="section-sub">Latency</div><div style="font-family:var(--font-display);font-weight:700;color:#fff;margin-top:6px;">${a.latency}</div></div>
+    <div class="glass" style="padding:14px;"><div class="section-sub">Usage</div><div class="api-usage-bar" style="margin-top:10px;"><div class="api-usage-fill" style="width:${a.usage}%;"></div></div></div>
+  `;
+  document.getElementById('detailEndpoints').innerHTML = a.endpoints.map(e=>`
+    <div class="endpoint-row"><span class="method ${e.m.toLowerCase()}">${e.m}</span><span class="endpoint-path">${e.p}</span><span class="endpoint-desc">${e.d}</span></div>`).join('');
+  document.getElementById('detailTestBtn').onclick = ()=>quickTest(key);
+  setView('detail');
+}
+
+/* -------- quick test modal -------- */
+function sampleJson(a){
+  return `{
+  <span class="k">"api"</span>: <span class="s">"${a.name}"</span>,
+  <span class="k">"status"</span>: <span class="s">"${a.status}"</span>,
+  <span class="k">"version"</span>: <span class="s">"${a.version}"</span>,
+  <span class="k">"latency_ms"</span>: ${parseInt(a.latency)},
+  <span class="k">"data"</span>: {
+    <span class="k">"id"</span>: <span class="s">"jd_${Math.random().toString(36).slice(2,10)}"</span>,
+    <span class="k">"object"</span>: <span class="s">"${a.name.toLowerCase().replace(/\s+/g,'_')}"</span>,
+    <span class="k">"created"</span>: <span class="s">"${new Date().toISOString()}"</span>
+  }<span class="c"> // sandbox sample</span>
+}`;
+}
+function quickTest(key){
+  const a = CATALOG[key];
+  document.getElementById('modalTitle').textContent = `Quick Test — ${a.name}`;
+  document.getElementById('modalJson').innerHTML = sampleJson(a);
+  document.getElementById('modalOverlay').classList.add('open');
+}
+document.getElementById('modalClose').onclick = ()=>document.getElementById('modalOverlay').classList.remove('open');
+document.getElementById('modalOverlay').addEventListener('click',(e)=>{ if(e.target.id==='modalOverlay') e.currentTarget.classList.remove('open'); });
+
+/* -------- explorer -------- */
+const LANGS = ['cURL','JavaScript','Python','PHP'];
+let currentLang = 'cURL';
+function populateExplorer(){
+  const apiSel = document.getElementById('expApi');
+  apiSel.innerHTML = Object.entries(CATALOG).map(([k,a])=>`<option value="${k}">${a.name}</option>`).join('');
+  apiSel.onchange = ()=>populateEndpoints();
+  populateEndpoints();
+  document.getElementById('langTabs').innerHTML = LANGS.map((l,i)=>`<button class="tab-chip ${i===0?'active':''}" data-lang="${l}">${l}</button>`).join('');
+  document.getElementById('langTabs').querySelectorAll('.tab-chip').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('#langTabs .tab-chip').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); currentLang = b.dataset.lang; renderCodeSample();
+  }));
+  renderCodeSample();
+}
+function populateEndpoints(){
+  const a = CATALOG[document.getElementById('expApi').value];
+  document.getElementById('expEndpoint').innerHTML = a.endpoints.map(e=>`<option value="${e.p}" data-m="${e.m}">${e.m} ${e.p}</option>`).join('');
+  document.getElementById('expBody').value = a.endpoints[0].m==='GET' ? '' : '{\n  "example": true\n}';
+  renderCodeSample();
+}
+function renderCodeSample(){
+  const a = CATALOG[document.getElementById('expApi').value];
+  const opt = document.getElementById('expEndpoint').selectedOptions[0];
+  const m = opt ? opt.dataset.m : 'GET';
+  const p = opt ? opt.value : '';
+  let code = '';
+  if(currentLang==='cURL'){
+    code = `curl -X ${m} https://api.jedida-market.com${p} \\
+  -H "Authorization: Bearer $JEDIDA_API_KEY" \\
+  -H "Content-Type: application/json"`;
+  } else if(currentLang==='JavaScript'){
+    code = `import { Jedida } from '@jedida/sdk';
+
+const jedida = new Jedida(process.env.JEDIDA_API_KEY);
+
+const res = await jedida.${a.name.toLowerCase().replace(/[^a-z]+/g,'')}.${m.toLowerCase()}('${p}');
+console.log(res);`;
+  } else if(currentLang==='Python'){
+    code = `import jedida
+
+client = jedida.Client(api_key="JEDIDA_API_KEY")
+response = client.request("${m}", "${p}")
+print(response)`;
+  } else {
+    code = `<?php
+$client = new Jedida\\Client(getenv('JEDIDA_API_KEY'));
+$response = $client->request('${m}', '${p}');
+print_r($response);`;
+  }
+  document.getElementById('codeSample').textContent = code;
+}
+function runExplorer(){
+  const a = CATALOG[document.getElementById('expApi').value];
+  document.getElementById('jsonResponse').innerHTML = sampleJson(a);
+}
+
+/* -------- keys / sdk actions -------- */
+function generateKey(){
+  alert('New sandbox key generated:\njd_test_' + Math.random().toString(36).slice(2,14));
+  renderKeysTable();
+}
+function downloadSdk(name){
+  const content = `// Jedida ${name} SDK — quick start
+// npm install @jedida/sdk  (or the ${name} equivalent)
+
+import { Jedida } from '@jedida/sdk';
+const jedida = new Jedida(process.env.JEDIDA_API_KEY);
+`;
+  const blob = new Blob([content], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = `jedida-${name.toLowerCase().replace(/\s+/g,'-')}-quickstart.txt`;
+  link.click(); URL.revokeObjectURL(url);
+}
+function repairNow(){ alert('Repair triggered: retrying failed webhook deliveries with exponential backoff.'); }
+
+/* =========================================================
+   VIEW SWITCHING
+   ========================================================= */
+function setView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const match = document.querySelector(`.nav-item[data-view="${name}"]`);
+  if(match) match.classList.add('active');
+  document.getElementById('main').scrollTop = 0;
+}
+document.querySelectorAll('.nav-item').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const view = btn.dataset.view;
+    if(view==='detail'){ openDetail(btn.dataset.api); }
+    else{ setView(view); }
+  });
+});
+
+/* =========================================================
+   CANVAS: hero network + charts
+   ========================================================= */
+function drawHeroNet(){
+  const canvas = document.getElementById('heroNet');
+  const dpr = window.devicePixelRatio||1;
+  function size(){
+    canvas.width = canvas.offsetWidth*dpr; canvas.height = canvas.offsetHeight*dpr;
+  }
+  size();
+  const ctx = canvas.getContext('2d');
+  const W = ()=>canvas.width, H = ()=>canvas.height;
+  const nodes = Array.from({length:16}).map((_,i)=>({
+    x: Math.random()*1, y: Math.random()*1, r: 1.5+Math.random()*2, phase: Math.random()*Math.PI*2
+  }));
+  const core = {x:0.82, y:0.35};
+  let t=0;
+  function frame(){
+    t+=0.012;
+    ctx.clearRect(0,0,W(),H());
+    ctx.strokeStyle='rgba(139,197,63,0.18)'; ctx.lineWidth=1*dpr;
+    nodes.forEach(n=>{
+      const nx=n.x*W(), ny=n.y*H(), cx=core.x*W(), cy=core.y*H();
+      ctx.beginPath(); ctx.moveTo(nx,ny); ctx.lineTo(cx,cy); ctx.stroke();
+    });
+    nodes.forEach(n=>{
+      const nx=n.x*W(), ny=n.y*H();
+      const pulse = (Math.sin(t*2+n.phase)+1)/2;
+      ctx.beginPath(); ctx.arc(nx,ny,(n.r+pulse*1.2)*dpr,0,Math.PI*2);
+      ctx.fillStyle=`rgba(139,197,63,${0.35+pulse*0.4})`; ctx.fill();
+    });
+    const cx=core.x*W(), cy=core.y*H();
+    const pulse=(Math.sin(t*3)+1)/2;
+    ctx.beginPath(); ctx.arc(cx,cy,(7+pulse*3)*dpr,0,Math.PI*2);
+    ctx.fillStyle='rgba(139,197,63,0.9)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx,cy,(14+pulse*6)*dpr,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(139,197,63,${0.5-pulse*0.3})`; ctx.lineWidth=1.5*dpr; ctx.stroke();
+    requestAnimationFrame(frame);
+  }
+  frame();
+  window.addEventListener('resize',size);
+}
+
+function lineChart(canvasId, series, color){
+  const canvas = document.getElementById(canvasId);
+  const dpr = window.devicePixelRatio||1;
+  function size(){ canvas.width = canvas.offsetWidth*dpr; canvas.height = (canvas.getAttribute('height')||180)*dpr; canvas.style.height=(canvas.getAttribute('height')||180)+'px'; }
+  size();
+  const ctx = canvas.getContext('2d');
+  let progress = 0;
+  const max = Math.max(...series)*1.15;
+  function draw(){
+    const W=canvas.width, H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+    const pad = 10*dpr;
+    const stepX = (W-pad*2)/(series.length-1);
+    const pts = series.map((v,i)=>({x:pad+i*stepX, y: H-pad - (v/max)*(H-pad*2)}));
+    const visible = Math.floor(pts.length*progress);
+    if(visible<2) return;
+    const grad = ctx.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0, color+'55'); grad.addColorStop(1, color+'00');
+    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+    for(let i=1;i<visible;i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.lineTo(pts[visible-1].x, H); ctx.lineTo(pts[0].x, H); ctx.closePath();
+    ctx.fillStyle = grad; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+    for(let i=1;i<visible;i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.strokeStyle = color; ctx.lineWidth = 2*dpr; ctx.lineJoin='round'; ctx.stroke();
+    ctx.beginPath(); ctx.arc(pts[visible-1].x, pts[visible-1].y, 3.2*dpr, 0, Math.PI*2);
+    ctx.fillStyle = color; ctx.fill();
+  }
+  function loop(){ if(progress<1){ progress += 0.02; draw(); requestAnimationFrame(loop);} else { draw(); } }
+  loop();
+  window.addEventListener('resize',()=>{ size(); progress=1; draw(); });
+}
+
+function genSeries(n, base, variance){
+  let v = base; const out=[];
+  for(let i=0;i<n;i++){ v += (Math.random()-0.45)*variance; v = Math.max(base*0.4, v); out.push(v); }
+  return out;
+}
+
+/* =========================================================
+   AI ASSISTANT
+   ========================================================= */
+const AI_RESPONSES = {
+  explain: "Sure — tell me which API (e.g. Orders, Payments, Trust Engine) and I'll walk through its resources, auth requirements and rate limits.",
+  code: "I can generate a ready-to-run snippet in cURL, JavaScript, Python or PHP. Head to API Explorer and pick an endpoint, or tell me the exact call you need.",
+  diagnose: "Paste the status code and response body you're seeing. Common ones: 401 -> check your Bearer token; 429 -> you're over your rate limit; 500 -> check Logs for the request ID.",
+  webhook: 'Here\'s the shape of a webhook event:\n{\n  "event": "order.fulfilled",\n  "data": { "order_id": "ord_123" },\n  "timestamp": "..."\n}\nVerify the signature header before trusting the payload.',
+  auth: "Jedida supports OAuth 2.0 for partner apps acting on behalf of a business, and API Keys (Bearer tokens) for direct server-to-server calls. Sandbox keys are prefixed jd_test_, production keys jd_live_."
+};
+function addAiMsg(text, mine){
+  const body = document.getElementById('fabBody');
+  const div = document.createElement('div');
+  div.className = 'ai-msg ' + (mine?'me':'bot');
+  div.textContent = text;
+  body.appendChild(div);
+  body.scrollTop = body.scrollHeight;
+}
+document.querySelectorAll('.sugg-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    addAiMsg(b.textContent, true);
+    setTimeout(()=>addAiMsg(AI_RESPONSES[b.dataset.q], false), 380);
+  });
+});
+document.getElementById('fabBtn').onclick = ()=>document.getElementById('fabPanel').classList.add('open');
+document.getElementById('fabClose').onclick = ()=>document.getElementById('fabPanel').classList.remove('open');
+
+/* =========================================================
+   INIT
+   ========================================================= */
+renderStats();
+renderTrust();
+renderCatFilter();
+renderAllApis('All');
+renderTopApis();
+document.getElementById('rightPanelDash').innerHTML = rightPanelHTML();
+document.getElementById('rightPanelApiCentre').innerHTML = rightPanelHTML();
+document.getElementById('rightPanelHub').innerHTML = rightPanelHTML();
+renderIntegrationTable();
+renderPartnerApps();
+renderSdkGrid();
+renderDocsGrid();
+renderKeysTable();
+renderSecGrid();
+renderOauthTable();
+renderWebhooksTable();
+renderLogsTable();
+populateExplorer();
+drawHeroNet();
+lineChart('mainChart', genSeries(30, 5200000, 500000), '#8BC53F');
+lineChart('analyticsChart1', genSeries(30, 4800000, 600000), '#4EA8DE');
+lineChart('analyticsChart2', genSeries(24, 300, 60), '#E0A93E');
+lineChart('analyticsChart3', genSeries(24, 20, 8), '#E15B5B');
+</script>
+</body>
+</html>

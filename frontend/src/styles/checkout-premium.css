@@ -1,0 +1,305 @@
+/* ==========================================================================
+   JEDIDA Marketplace — Premium Checkout
+   Extends the existing .jp-scope payment design system (payment-forms.css).
+   Scoped under .jpco-* so nothing outside Checkout is affected.
+   ========================================================================== */
+
+.jpco-wrap { max-width: 1080px; padding-bottom: 96px; }
+
+@keyframes jpco-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.jpco-anim { animation: jpco-fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.jpco-d1 { animation-delay: .03s; } .jpco-d2 { animation-delay: .08s; }
+.jpco-d3 { animation-delay: .13s; } .jpco-d4 { animation-delay: .18s; }
+.jpco-d5 { animation-delay: .23s; }
+
+/* ---------- top bar ---------- */
+.jpco-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.jpco-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--jp-ink);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  padding: 6px 4px;
+  opacity: 0.75;
+  transition: opacity .15s;
+}
+.jpco-back:hover { opacity: 1; }
+
+/* ---------- progress steps ---------- */
+.jpco-steps {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin: 4px 0 22px;
+}
+.jpco-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.jpco-step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  background: var(--jp-cream-dim);
+  color: #9AA69C;
+  border: 2px solid var(--jp-line);
+  transition: all .25s ease;
+  flex-shrink: 0;
+}
+.jpco-step.is-done .jpco-step-dot {
+  background: var(--jp-emerald);
+  border-color: var(--jp-emerald);
+  color: #fff;
+}
+.jpco-step.is-current .jpco-step-dot {
+  background: var(--jp-forest);
+  border-color: var(--jp-forest);
+  color: #fff;
+  box-shadow: 0 0 0 5px var(--jp-emerald-light);
+}
+.jpco-step-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #9AA69C;
+  white-space: nowrap;
+}
+.jpco-step.is-current .jpco-step-label,
+.jpco-step.is-done .jpco-step-label { color: var(--jp-ink); }
+.jpco-step-line {
+  flex: 1;
+  height: 2px;
+  background: var(--jp-line);
+  margin-top: 13px;
+  border-radius: 2px;
+  transition: background .25s ease;
+  min-width: 12px;
+}
+.jpco-step-line.is-done { background: var(--jp-emerald); }
+
+/* ---------- layout ---------- */
+.jpco-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .jpco-grid { grid-template-columns: 1fr; }
+}
+.jpco-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.jpco-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--jp-font-display);
+  font-weight: 800;
+  font-size: 0.98rem;
+  margin-bottom: 14px;
+}
+.jpco-section-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--jp-forest); color: #fff;
+  font-size: 0.72rem; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ---------- product card ---------- */
+.jpco-product {
+  display: flex;
+  gap: 16px;
+}
+.jpco-product-img-wrap { position: relative; flex-shrink: 0; }
+.jpco-product-img {
+  width: 108px; height: 108px;
+  border-radius: var(--jp-radius-sm);
+  object-fit: cover;
+  background: var(--jp-cream-dim);
+}
+.jpco-wishlist-btn {
+  position: absolute;
+  top: -8px; right: -8px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--jp-line);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--jp-shadow-soft);
+  transition: transform .15s ease;
+}
+.jpco-wishlist-btn:active { transform: scale(0.88); }
+
+.jpco-product-info { flex: 1; min-width: 0; }
+.jpco-product-title {
+  font-weight: 800;
+  font-size: 1.02rem;
+  line-height: 1.35;
+  margin-bottom: 4px;
+  overflow-wrap: anywhere;
+}
+.jpco-meta-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 0.82rem; color: #6B756E; margin-bottom: 8px;
+}
+.jpco-rating { display: inline-flex; align-items: center; gap: 4px; color: var(--jp-ink); font-weight: 700; }
+.jpco-rating svg { color: var(--jp-gold); }
+
+.jpco-stock-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.74rem; font-weight: 700;
+  padding: 3px 9px; border-radius: 999px;
+}
+.jpco-stock-in { background: var(--jp-emerald-light); color: #0B7A56; }
+.jpco-stock-low { background: #FCEFD8; color: #8A5A0D; }
+.jpco-stock-out { background: var(--jp-danger-bg); color: var(--jp-danger); }
+
+.jpco-qty-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-top: 12px; flex-wrap: wrap;
+}
+.jpco-stepper {
+  display: inline-flex; align-items: center;
+  border: 1.5px solid var(--jp-line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.jpco-stepper button {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; cursor: pointer;
+  font-size: 1.05rem; font-weight: 700; color: var(--jp-forest);
+  transition: background .15s;
+}
+.jpco-stepper button:hover:not(:disabled) { background: var(--jp-cream-dim); }
+.jpco-stepper button:disabled { color: #C6CDC7; cursor: not-allowed; }
+.jpco-stepper span {
+  min-width: 32px; text-align: center; font-weight: 800; font-size: 0.9rem;
+}
+.jpco-price-block { text-align: right; }
+.jpco-price-line { font-family: var(--jp-font-display); font-weight: 800; font-size: 1.05rem; color: var(--jp-forest); }
+.jpco-price-unit { font-size: 0.74rem; color: #8A9189; }
+
+/* ---------- seller card ---------- */
+.jpco-seller { display: flex; align-items: center; gap: 12px; }
+.jpco-seller-logo {
+  width: 46px; height: 46px; border-radius: 12px; object-fit: cover; flex-shrink: 0;
+  background: var(--jp-cream-dim);
+}
+.jpco-seller-name { font-weight: 800; font-size: 0.94rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.jpco-verified-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--jp-emerald-light); color: #0B7A56;
+  font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+}
+.jpco-seller-sub { font-size: 0.78rem; color: #8A9189; margin-top: 2px; }
+.jpco-seller-actions { display: flex; gap: 8px; margin-left: auto; flex-shrink: 0; }
+.jpco-seller-actions .btn-secondary, .jpco-seller-actions a.btn-secondary {
+  padding: 8px 14px; font-size: 0.82rem; white-space: nowrap;
+}
+.jpco-seller-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--jp-line);
+}
+.jpco-seller-stat { text-align: center; }
+.jpco-seller-stat strong { display: block; font-size: 0.92rem; }
+.jpco-seller-stat span { font-size: 0.7rem; color: #8A9189; }
+
+@media (max-width: 480px) {
+  .jpco-seller { flex-wrap: wrap; }
+  .jpco-seller-actions { margin-left: 0; width: 100%; }
+  .jpco-seller-actions button, .jpco-seller-actions a { flex: 1; text-align: center; }
+}
+
+/* ---------- delivery / shipping note ---------- */
+.jpco-address-icon-input { position: relative; }
+.jpco-address-icon-input svg {
+  position: absolute; left: 14px; top: 14px; color: #9AA69C; pointer-events: none;
+}
+.jpco-address-icon-input textarea { padding-left: 40px; }
+
+.jpco-shipping-note {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: var(--jp-cream-dim);
+  border-radius: var(--jp-radius-sm);
+  padding: 12px 14px;
+  margin-top: 12px;
+  font-size: 0.82rem;
+}
+.jpco-shipping-note svg { color: var(--jp-emerald); flex-shrink: 0; margin-top: 2px; }
+.jpco-shipping-grid { display: flex; flex-wrap: wrap; gap: 4px 14px; color: #5B6760; }
+.jpco-shipping-grid strong { color: var(--jp-ink); }
+
+.jpco-payment-hint {
+  display: flex; gap: 8px; align-items: flex-start;
+  font-size: 0.8rem; color: #6B756E;
+  margin-top: 14px;
+}
+.jpco-payment-hint svg { color: var(--jp-emerald); flex-shrink: 0; margin-top: 2px; }
+
+/* ---------- trust row ---------- */
+.jpco-trust-card { background: var(--jp-emerald-light); border: none; }
+
+/* ---------- sidebar / order summary ---------- */
+.jpco-sidebar { position: sticky; top: 20px; }
+.jpco-coupon-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.jpco-coupon-row input { flex: 1; }
+.jpco-applied-coupon {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.82rem; color: #0B7A56; font-weight: 700;
+  background: var(--jp-emerald-light);
+  padding: 7px 10px; border-radius: 10px;
+  margin-bottom: 14px;
+}
+.jpco-cta-desktop { display: block; }
+@media (max-width: 900px) { .jpco-cta-desktop { display: none; } }
+
+/* ---------- sticky mobile bar ---------- */
+.jpco-mobile-bar {
+  display: none;
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 40;
+  background: var(--jp-cream, #fff);
+  border-top: 1px solid var(--jp-line);
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  box-shadow: 0 -8px 24px rgba(18,43,32,0.10);
+  align-items: center;
+  gap: 12px;
+}
+.jpco-mobile-bar .jpco-mobile-total { flex: 1; min-width: 0; }
+.jpco-mobile-bar .jpco-mobile-total-amt {
+  font-family: var(--jp-font-display); font-weight: 800; font-size: 1.05rem; color: var(--jp-forest);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.jpco-mobile-bar .jpco-mobile-total-label { font-size: 0.7rem; color: #8A9189; }
+.jpco-mobile-bar button { flex-shrink: 0; width: auto; min-width: 168px; }
+@media (max-width: 900px) { .jpco-mobile-bar { display: flex; } }
+
+/* ---------- skeleton layout ---------- */
+.jpco-skel-row { display: flex; gap: 16px; margin-bottom: 16px; }
+.jpco-skel-row .jp-skeleton:first-child { width: 108px; height: 108px; flex-shrink: 0; }
+.jpco-skel-col { flex: 1; display: flex; flex-direction: column; gap: 10px; justify-content: center; }

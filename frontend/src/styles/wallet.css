@@ -1,0 +1,127 @@
+/* ============================================================
+   Wallet dashboard — premium fintech look for the shared
+   seller/delivery WalletKycPanel. Scoped under .wp-*.
+   ============================================================ */
+
+.wp-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+@media (max-width: 760px) {
+  .wp-summary-grid { grid-template-columns: 1fr; }
+}
+
+.wp-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  padding: 20px 22px;
+  position: relative;
+  overflow: hidden;
+}
+.wp-card-primary {
+  background: linear-gradient(135deg, var(--forest) 0%, var(--forest-dark) 100%);
+  color: #fff;
+  border: none;
+}
+.wp-card-primary::after {
+  content: '';
+  position: absolute;
+  width: 140px; height: 140px; border-radius: 50%;
+  background: rgba(139,197,63,0.18);
+  top: -50px; right: -50px;
+}
+.wp-card-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.wp-card-primary .wp-card-label { color: rgba(255,255,255,0.85); }
+.wp-card:not(.wp-card-primary) .wp-card-label { color: #8A9189; }
+.wp-card-value {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 800;
+  position: relative;
+}
+.wp-card-sub {
+  font-size: 0.78rem;
+  margin-top: 6px;
+  position: relative;
+}
+.wp-card-primary .wp-card-sub { color: rgba(255,255,255,0.75); }
+.wp-card:not(.wp-card-primary) .wp-card-sub { color: #8A9189; }
+
+/* ---------- Mini activity chart ---------- */
+.wp-chart-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  padding: 20px 22px;
+  margin-bottom: 20px;
+}
+.wp-chart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.wp-chart-head h4 { margin: 0; font-size: 0.95rem; }
+.wp-chart-legend { display: flex; gap: 14px; font-size: 0.76rem; color: #8A9189; }
+.wp-chart-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.wp-chart-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.wp-chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 90px;
+}
+.wp-chart-bar-wrap {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.wp-chart-bar {
+  width: 60%;
+  border-radius: 4px 4px 0 0;
+  min-height: 3px;
+  transition: opacity 0.15s ease;
+}
+.wp-chart-bar:hover { opacity: 0.8; }
+.wp-chart-empty { font-size: 0.82rem; color: #8A9189; text-align: center; padding: 20px 0; }
+
+/* ---------- Transaction timeline ---------- */
+.wp-timeline { display: flex; flex-direction: column; }
+.wp-timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.wp-timeline-row:last-child { border-bottom: none; }
+.wp-timeline-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; flex-shrink: 0;
+}
+.wp-timeline-icon.credit { background: rgba(11,61,36,0.1); color: var(--forest); }
+.wp-timeline-icon.debit { background: rgba(46,125,50,0.1); color: var(--terracotta); }
+.wp-timeline-body { flex: 1; min-width: 0; }
+.wp-timeline-title { font-size: 0.88rem; font-weight: 600; color: var(--ink); }
+.wp-timeline-meta { font-size: 0.76rem; color: #8A9189; margin-top: 2px; }
+.wp-timeline-amount { font-size: 0.92rem; font-weight: 700; white-space: nowrap; }
+.wp-timeline-amount.credit { color: var(--forest); }
+.wp-timeline-amount.debit { color: var(--terracotta); }

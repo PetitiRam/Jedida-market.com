@@ -1,0 +1,59 @@
+.role-console-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.role-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  transition: box-shadow .15s ease, transform .15s ease;
+}
+.role-card:hover { box-shadow: var(--shadow-soft); transform: translateY(-1px); }
+.role-card.selected { outline: 2px solid var(--amber); outline-offset: -1px; }
+
+.role-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.role-card-name { font-family: var(--font-display); font-weight: 700; font-size: 1rem; }
+.role-card-count { font-size: 0.78rem; color: #5B6760; }
+.role-card-desc { font-size: 0.85rem; color: #5B6760; }
+
+.risk-pill {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+}
+.risk-low { background: #E6F4EC; color: #2E8B57; }
+.risk-medium { background: #FBF1DC; color: #B7791F; }
+.risk-high { background: #FBE9DD; color: #C2571B; }
+.risk-critical { background: #FBE3E0; color: #C0392B; }
+
+.area-chip {
+  display: inline-block; font-size: 0.72rem; font-weight: 600;
+  background: var(--cream-dim); border: 1px solid var(--line); color: var(--forest);
+  padding: 3px 9px; border-radius: 999px; margin: 2px 4px 2px 0;
+}
+
+.role-panel-detail { display: flex; flex-direction: column; gap: 8px; }
+
+.activity-row { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.activity-row:last-child { border-bottom: none; }
+.activity-dot {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+}
+.activity-dot.granted { background: #E6F4EC; color: #2E8B57; }
+.activity-dot.revoked { background: #FBE3E0; color: #C0392B; }
+.activity-text { font-size: 0.85rem; }
+.activity-time { font-size: 0.74rem; color: #8A9189; margin-top: 2px; }
+
+@media (max-width: 860px) {
+  .role-console-cols { grid-template-columns: 1fr !important; }
+}

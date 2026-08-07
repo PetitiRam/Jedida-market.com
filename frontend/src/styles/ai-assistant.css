@@ -1,0 +1,230 @@
+/* ============================================================
+   JEDIDA AI ASSISTANT — floating glass chat widget
+   ------------------------------------------------------------
+   Built on the app's existing brand tokens (--forest / --amber,
+   Sora + Inter, the --glass-bg/--glass-border pair already used
+   for the premium homepage, and the --cw-grad-ai gradient already
+   reserved for "this is the AI" in chat-workspace.css) rather than
+   a new palette, so it reads as a native part of Jedida Marketplace.
+
+   Signature element: the Orb — a slow-breathing conic gradient
+   (forest -> lime -> forest) standing in for Jedida AI's "face".
+   It appears at every scale: launcher, header, empty state, and
+   as the typing indicator.
+   ============================================================ */
+
+.jai-orb {
+  display: inline-block;
+  border-radius: 50%;
+  background: conic-gradient(from 180deg, var(--forest, #0B3D24), var(--amber, #8BC53F), var(--forest, #0B3D24));
+  flex-shrink: 0;
+  animation: jai-breathe 3.2s ease-in-out infinite;
+}
+.jai-orb-sm { width: 22px; height: 22px; }
+.jai-orb-lg { width: 44px; height: 44px; margin: 0 auto 12px; }
+.jai-orb-xs { width: 10px; height: 10px; animation-duration: 1s; }
+
+@keyframes jai-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.92; }
+  50% { transform: scale(1.12); opacity: 1; }
+}
+
+/* ---------- Launcher (collapsed pill) ---------- */
+.jai-launcher {
+  position: fixed;
+  left: 20px;
+  bottom: 24px;
+  z-index: 850;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px 12px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.35));
+  background: var(--surface, #fff);
+  box-shadow: 0 10px 30px rgba(16, 36, 26, 0.18);
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-primary, var(--ink));
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.jai-launcher:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(16, 36, 26, 0.24); }
+
+/* ---------- Panel ---------- */
+.jai-panel {
+  position: fixed;
+  left: 20px;
+  bottom: 24px;
+  z-index: 950;
+  width: min(400px, calc(100vw - 40px));
+  height: min(600px, 78vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.35));
+  background: var(--glass-bg, rgba(255,255,255,0.65));
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  box-shadow: 0 24px 64px rgba(16, 36, 26, 0.28);
+  transition: height 0.25s ease, width 0.25s ease;
+}
+.jai-panel-expanded {
+  width: min(460px, calc(100vw - 40px));
+  height: min(760px, 90vh);
+}
+
+@media (max-width: 640px) {
+  .jai-panel {
+    left: 0; right: 0; bottom: 0; top: 0;
+    width: 100vw; height: 100dvh;
+    border-radius: 0;
+  }
+  .jai-launcher { left: 12px; right: 12px; width: calc(100vw - 24px); justify-content: center; bottom: 16px; }
+  .jai-hide-mobile { display: none !important; }
+}
+
+/* ---------- Header ---------- */
+.jai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 12px 12px 16px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-soft, rgba(22,32,27,0.08));
+}
+.jai-brand { display: flex; align-items: center; gap: 10px; }
+.jai-brand b { display: block; font-family: var(--font-display, 'Sora', sans-serif); font-size: 0.92rem; color: var(--text-primary, var(--ink)); line-height: 1.2; }
+.jai-brand span { display: block; font-size: 0.68rem; color: var(--text-muted, #8A9189); }
+.jai-header-actions { display: flex; align-items: center; gap: 2px; }
+.jai-header-actions button {
+  width: 30px; height: 30px; border-radius: 9px; border: none; background: none;
+  color: var(--text-secondary, #5B6760); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s ease;
+}
+.jai-header-actions button:hover { background: var(--border-soft, rgba(22,32,27,0.08)); }
+
+/* ---------- Messages ---------- */
+.jai-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.jai-empty { text-align: center; padding: 24px 8px 8px; }
+.jai-empty p { font-family: var(--font-body); font-size: 0.88rem; color: var(--text-secondary, #5B6760); line-height: 1.5; margin: 0 0 16px; }
+.jai-suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.jai-suggestions button {
+  font-family: var(--font-body); font-size: 0.78rem; font-weight: 600;
+  padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border-soft, rgba(22,32,27,0.12));
+  background: var(--surface, #fff); color: var(--forest, #0B3D24);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.jai-suggestions button:hover { background: var(--surface-alt, #F7F4EC); transform: translateY(-1px); }
+
+.jai-msg { display: flex; flex-direction: column; max-width: 88%; }
+.jai-msg-user { align-self: flex-end; align-items: flex-end; }
+.jai-msg-assistant { align-self: flex-start; align-items: flex-start; }
+
+.jai-msg-user .jai-bubble {
+  background: var(--forest, #0B3D24);
+  color: #F3FBF6;
+  padding: 10px 14px;
+  border-radius: 16px 16px 4px 16px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.jai-msg-assistant .jai-bubble {
+  color: var(--text-primary, var(--ink));
+  font-size: 0.88rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  padding-top: 2px;
+}
+.jai-typing { display: flex; align-items: center; gap: 8px; color: var(--text-muted, #8A9189); font-size: 0.82rem; font-style: italic; }
+
+.jai-msg-actions { display: flex; gap: 4px; margin-top: 6px; }
+.jai-msg-actions button {
+  width: 26px; height: 26px; border-radius: 7px; border: none; background: none;
+  color: var(--text-muted, #8A9189); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.jai-msg-actions button:hover { background: var(--border-soft, rgba(22,32,27,0.08)); color: var(--text-secondary, #5B6760); }
+.jai-msg-actions button.jai-active { color: var(--amber-dark, #6FA82E); }
+
+/* ---------- Input bar ---------- */
+.jai-input-bar {
+  flex-shrink: 0;
+  margin: 0 12px 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 6px 6px 8px;
+  border-radius: 999px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-soft, rgba(22,32,27,0.1));
+}
+.jai-input-bar input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  color: var(--text-primary, var(--ink));
+  padding: 8px 4px;
+}
+.jai-input-bar input::placeholder { color: var(--text-muted, #8A9189); }
+
+.jai-icon-btn {
+  width: 32px; height: 32px; border-radius: 50%; border: none; background: none;
+  color: var(--text-muted, #8A9189); cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.jai-icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.jai-icon-btn:not(:disabled):hover { background: var(--border-soft, rgba(22,32,27,0.08)); color: var(--text-secondary); }
+
+.jai-send-btn {
+  width: 34px; height: 34px; border-radius: 50%; border: none; flex-shrink: 0;
+  background: var(--forest, #0B3D24); color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.jai-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.jai-send-btn:not(:disabled):hover { transform: scale(1.06); }
+
+.jai-deep-toggle {
+  display: flex; align-items: center; gap: 6px; cursor: pointer;
+  padding: 4px 8px 4px 4px; border-radius: 999px; flex-shrink: 0;
+}
+.jai-deep-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+.jai-toggle-track {
+  width: 30px; height: 18px; border-radius: 999px; background: var(--border-soft, rgba(22,32,27,0.18));
+  position: relative; transition: background 0.2s ease; flex-shrink: 0;
+}
+.jai-toggle-thumb {
+  position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: transform 0.2s ease;
+}
+.jai-deep-toggle input:checked + .jai-toggle-track { background: var(--forest, #0B3D24); }
+.jai-deep-toggle input:checked + .jai-toggle-track .jai-toggle-thumb { transform: translateX(12px); }
+.jai-toggle-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary, #5B6760); white-space: nowrap; }
+
+/* Dark theme: lean on the same global tokens theme.css already flips */
+html[data-theme='dark'] .jai-launcher,
+html[data-theme='dark'] .jai-suggestions button,
+html[data-theme='dark'] .jai-input-bar {
+  background: var(--surface, #101C14);
+  border-color: var(--border-soft, rgba(240,194,75,0.14));
+}

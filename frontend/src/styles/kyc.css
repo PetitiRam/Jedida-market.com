@@ -1,0 +1,267 @@
+.kyc-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+.kyc-loading {
+  padding: 80px 16px;
+  text-align: center;
+  color: var(--ink);
+}
+
+.kyc-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.kyc-header-text { flex: 1; min-width: 220px; }
+.kyc-header-text h1 { margin: 0; font-family: var(--font-display); font-size: 1.6rem; }
+.kyc-header-text p { margin: 2px 0 0; color: #5B6760; font-size: 0.9rem; }
+.kyc-encrypted-badge {
+  font-size: 0.8rem;
+  color: var(--forest);
+  background: var(--cream-dim);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 12px;
+}
+
+.kyc-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .kyc-layout { grid-template-columns: 1fr; }
+}
+
+.kyc-sidebar {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  position: sticky;
+  top: 16px;
+}
+.kyc-step-list { list-style: none; margin: 0; padding: 0; }
+.kyc-step-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  cursor: default;
+}
+.kyc-step-list li.done { cursor: pointer; }
+.kyc-step-marker {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; font-weight: 600;
+  background: var(--cream-dim);
+  color: #8A968F;
+  flex-shrink: 0;
+}
+.kyc-step-list li.done .kyc-step-marker { background: var(--forest); color: #fff; }
+.kyc-step-list li.active .kyc-step-marker { background: var(--amber); color: var(--forest-dark); }
+.kyc-step-label { display: flex; flex-direction: column; font-size: 0.9rem; font-weight: 600; color: var(--ink); }
+.kyc-step-label small { font-weight: 400; color: #8A968F; font-size: 0.75rem; }
+.kyc-step-list li.active .kyc-step-label { color: var(--forest); }
+
+.kyc-help-box {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 0.85rem;
+  color: #5B6760;
+}
+.kyc-help-box .btn-small { margin-top: 8px; display: inline-block; }
+
+.kyc-main { min-width: 0; }
+
+.kyc-progress-bar-track {
+  height: 6px;
+  background: var(--cream-dim);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.kyc-progress-bar-fill {
+  height: 100%;
+  background: var(--forest);
+  transition: width 0.3s ease;
+}
+.kyc-step-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #8A968F;
+  margin-bottom: 16px;
+}
+.kyc-save-indicator.ok { color: var(--forest); }
+.kyc-save-indicator.error { color: #B54708; }
+
+.kyc-step-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 28px;
+  box-shadow: var(--shadow-soft);
+}
+.kyc-step-title h2 { margin: 0 0 4px; font-family: var(--font-display); }
+.kyc-step-title p { margin: 0 0 20px; color: #5B6760; font-size: 0.92rem; }
+
+.kyc-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 600px) { .kyc-form-grid { grid-template-columns: 1fr; } }
+.kyc-field { display: flex; flex-direction: column; gap: 6px; }
+.kyc-field.full { grid-column: 1 / -1; }
+.kyc-field label { font-size: 0.85rem; font-weight: 600; color: var(--ink); }
+.kyc-field input, .kyc-field select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  font-family: var(--font-body);
+}
+.kyc-field input:focus, .kyc-field select:focus { outline: 2px solid var(--amber); border-color: var(--amber); }
+.kyc-field-error { color: #B54708; font-size: 0.78rem; }
+.kyc-field-hint { color: #8A968F; font-size: 0.78rem; }
+.required-mark { color: #B54708; }
+
+.kyc-checkbox-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 16px; font-size: 0.9rem; color: var(--ink);
+}
+
+.kyc-step-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 28px;
+}
+
+.btn-primary {
+  background: var(--forest);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 22px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary {
+  background: #fff;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 10px;
+  padding: 12px 22px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-small { padding: 6px 12px; font-size: 0.82rem; }
+.btn-link { background: none; border: none; color: var(--forest); cursor: pointer; font-size: 0.85rem; padding: 0; }
+.btn-danger { color: #B54708; }
+
+/* Document upload cards */
+.kyc-doc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+@media (max-width: 600px) { .kyc-doc-grid { grid-template-columns: 1fr; } }
+.kyc-upload-card {
+  border: 1.5px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition: border-color 0.15s;
+}
+.kyc-upload-card.drag-over { border-color: var(--amber); background: var(--cream-dim); }
+.kyc-upload-card.has-file { border-style: solid; }
+.kyc-upload-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.kyc-upload-label { font-weight: 600; font-size: 0.9rem; }
+.kyc-badge-success { color: var(--forest); font-weight: 700; }
+.kyc-upload-dropzone {
+  width: 100%;
+  background: var(--cream-dim);
+  border: none;
+  border-radius: 10px;
+  padding: 28px 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  color: #5B6760;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.kyc-upload-icon { font-size: 1.6rem; }
+.kyc-upload-hint { font-size: 0.75rem; color: #8A968F; }
+.kyc-upload-preview img { width: 100%; max-height: 140px; object-fit: cover; border-radius: 8px; }
+.kyc-upload-file-icon { padding: 20px; text-align: center; background: var(--cream-dim); border-radius: 8px; }
+.kyc-upload-meta { display: flex; justify-content: space-between; font-size: 0.75rem; color: #8A968F; margin-top: 6px; }
+.kyc-upload-actions { display: flex; gap: 12px; margin-top: 6px; }
+.kyc-status-line { font-size: 0.8rem; color: #5B6760; margin-top: 8px; }
+.kyc-status-error { color: #B54708; }
+.kyc-quality-check { font-size: 0.78rem; margin-top: 8px; }
+.kyc-quality-check.ok { color: var(--forest); }
+.kyc-quality-check.warn { color: #B54708; }
+
+.kyc-ocr-summary {
+  background: var(--cream-dim);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.kyc-ocr-summary h4 { margin: 0 0 8px; font-size: 0.9rem; }
+.kyc-ocr-summary ul { margin: 0; padding-left: 18px; font-size: 0.88rem; }
+.kyc-mismatch { color: #B54708; font-size: 0.78rem; margin-left: 6px; }
+.kyc-ocr-note { font-size: 0.75rem; color: #8A968F; margin: 10px 0 0; }
+
+/* Face capture */
+.kyc-face-instructions ul { padding-left: 20px; color: #5B6760; font-size: 0.9rem; line-height: 1.7; }
+.kyc-camera-frame {
+  position: relative;
+  width: 260px; height: 260px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #000;
+}
+.kyc-camera-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.kyc-camera-guide {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  border: 4px solid #E5B93B;
+  pointer-events: none;
+  transition: border-color 0.2s;
+}
+.kyc-camera-guide.green { border-color: #2E7D32; }
+.kyc-challenge-banner {
+  text-align: center;
+  background: var(--cream-dim);
+  border-radius: 10px;
+  padding: 10px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.kyc-check-list { list-style: none; padding: 0; margin: 0 0 16px; display: flex; flex-direction: column; gap: 6px; }
+.kyc-check-list li { font-size: 0.85rem; color: #8A968F; }
+.kyc-check-list li.ok { color: var(--forest); }
+.kyc-face-preview { width: 160px; height: 160px; object-fit: cover; border-radius: 50%; display: block; margin: 0 auto 16px; }
+.kyc-face-instructions, .kyc-face-camera, .kyc-face-captured, .kyc-face-done { text-align: center; margin-bottom: 12px; }
+
+/* Review */
+.kyc-review-row {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 14px 0; border-bottom: 1px solid var(--line);
+}
+.kyc-review-detail { color: #5B6760; font-size: 0.88rem; margin-top: 2px; }
+.kyc-terms-note { text-align: center; color: #8A968F; font-size: 0.78rem; margin-top: 14px; }
+
+.kyc-submitted-card {
+  max-width: 480px; margin: 60px auto; text-align: center;
+  background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 40px 28px; box-shadow: var(--shadow-soft);
+}
+.kyc-submitted-icon { font-size: 2.4rem; margin-bottom: 12px; }
+.kyc-submitted-note { color: #5B6760; font-size: 0.88rem; margin-top: 12px; }

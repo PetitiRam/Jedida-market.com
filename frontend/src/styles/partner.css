@@ -1,0 +1,404 @@
+/* ==========================================================================
+   Partner With Jedida — application module.
+   Namespaced under `.jd-partner`; reuses the jd-field / jd-btn-primary /
+   jd-checkbox-row / jd-alert primitives already shipped in auth-v2.css by
+   redefining the same custom properties in this scope. No shared rule from
+   auth-v2.css is altered — this file only adds new selectors.
+   ========================================================================== */
+
+.jd-partner {
+  --jd-glass-bg: rgba(255, 255, 255, 0.66);
+  --jd-glass-border: rgba(255, 255, 255, 0.55);
+  --jd-glass-shadow: 0 20px 60px rgba(22, 32, 27, 0.12), 0 2px 8px rgba(22, 32, 27, 0.05);
+  --jd-input-bg: rgba(255, 255, 255, 0.75);
+  --jd-input-border: rgba(22, 32, 27, 0.14);
+  --jd-radius-lg: 24px;
+  --jd-radius-md: 16px;
+  --jd-radius-sm: 12px;
+  background: var(--cream);
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+html[data-theme='dark'] .jd-partner {
+  --jd-glass-bg: rgba(23, 28, 20, 0.58);
+  --jd-glass-border: rgba(243, 241, 232, 0.10);
+  --jd-glass-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --jd-input-bg: rgba(35, 42, 30, 0.55);
+  --jd-input-border: rgba(243, 241, 232, 0.14);
+}
+
+/* ---------- Ambient glow ---------- */
+.jd-partner-glow-a, .jd-partner-glow-b {
+  position: absolute; border-radius: 50%; pointer-events: none; z-index: 0; filter: blur(2px);
+}
+.jd-partner-glow-a {
+  width: 560px; height: 560px; top: -200px; right: -180px;
+  background: radial-gradient(circle, rgba(139,197,63,0.22) 0%, transparent 70%);
+}
+.jd-partner-glow-b {
+  width: 480px; height: 480px; bottom: 10%; left: -200px;
+  background: radial-gradient(circle, rgba(11,61,36,0.18) 0%, transparent 70%);
+}
+
+/* ---------- Topbar ---------- */
+.jd-partner-topbar {
+  position: relative; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 48px;
+}
+@media (max-width: 640px) { .jd-partner-topbar { padding: 18px 20px; } }
+
+/* ---------- Hero ---------- */
+.jd-partner-hero {
+  position: relative; z-index: 1;
+  text-align: center;
+  padding: 56px 24px 40px;
+}
+.jd-partner-eyebrow {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 0.76rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--terracotta, #2E7D32);
+  background: rgba(139,197,63,0.14);
+  padding: 7px 14px; border-radius: 999px;
+  margin-bottom: 18px;
+}
+.jd-partner-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2rem, 4.6vw, 3.1rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  max-width: 780px;
+  margin: 0 auto;
+  color: var(--text-primary);
+}
+.jd-partner-subtitle {
+  max-width: 580px; margin: 18px auto 0;
+  color: var(--text-secondary);
+  font-size: 1.06rem; line-height: 1.6;
+}
+.jd-partner-trust-row {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 28px;
+  margin-top: 36px;
+}
+.jd-partner-trust-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.86rem; font-weight: 600; color: var(--text-secondary);
+}
+.jd-partner-trust-item svg { color: var(--forest); }
+html[data-theme='dark'] .jd-partner-trust-item svg { color: var(--amber); }
+
+/* ---------- Layout ---------- */
+.jd-partner-body {
+  position: relative; z-index: 1;
+  max-width: 760px; margin: 0 auto;
+  padding: 8px 20px 80px;
+}
+
+/* Progress */
+.jd-partner-progress-wrap {
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 28px;
+}
+.jd-partner-progress-track {
+  flex: 1; height: 6px; border-radius: 999px;
+  background: var(--jd-input-border);
+  overflow: hidden;
+}
+.jd-partner-progress-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--forest), var(--amber));
+  transition: width 0.3s ease;
+}
+.jd-partner-progress-label {
+  font-size: 0.78rem; font-weight: 700; color: var(--text-muted); white-space: nowrap;
+}
+
+/* Section card */
+.jd-partner-section {
+  background: var(--jd-glass-bg);
+  border: 1px solid var(--jd-glass-border);
+  border-radius: var(--jd-radius-lg);
+  box-shadow: var(--jd-glass-shadow);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  padding: 32px 30px;
+  margin-bottom: 22px;
+  animation: jd-partner-in 0.5s cubic-bezier(.2,.8,.2,1);
+}
+@media (max-width: 560px) { .jd-partner-section { padding: 24px 18px; border-radius: 18px; } }
+@keyframes jd-partner-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.jd-partner-section-head {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 22px;
+}
+.jd-partner-section-num {
+  width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0;
+  background: linear-gradient(155deg, var(--forest), var(--forest-dark));
+  color: var(--cream);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 800; font-size: 0.9rem;
+}
+.jd-partner-section-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem; font-weight: 800; color: var(--text-primary);
+}
+.jd-partner-section-sub {
+  font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;
+}
+
+/* Textarea variant of jd-field */
+.jd-partner textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: 18px 14px 10px;
+  font-size: 0.96rem;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background: var(--jd-input-bg);
+  border: 1.5px solid var(--jd-input-border);
+  border-radius: var(--jd-radius-sm);
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+.jd-partner textarea::placeholder { color: transparent; }
+.jd-partner textarea:focus {
+  border-color: var(--forest);
+  box-shadow: 0 0 0 4px rgba(11,61,36,0.12);
+  background: var(--surface);
+}
+.jd-partner .jd-field-label.jd-textarea-label { position: static; display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-secondary); font-size: 0.88rem; transform: none; }
+
+/* Partner type grid */
+.jd-partner-type-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+}
+@media (max-width: 480px) { .jd-partner-type-grid { grid-template-columns: 1fr; } }
+.jd-partner-type-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 14px;
+  border: 1.5px solid var(--jd-input-border);
+  border-radius: var(--jd-radius-sm);
+  background: var(--jd-input-bg);
+  cursor: pointer;
+  font-size: 0.88rem; font-weight: 600; color: var(--text-secondary);
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+}
+.jd-partner-type-card:hover { transform: translateY(-1px); }
+.jd-partner-type-card.selected {
+  border-color: var(--forest);
+  background: rgba(11,61,36,0.08);
+  color: var(--forest);
+}
+html[data-theme='dark'] .jd-partner-type-card.selected { color: var(--amber); border-color: var(--amber); background: rgba(139,197,63,0.10); }
+.jd-partner-type-card-icon {
+  width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+  background: rgba(11,61,36,0.10);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--forest);
+}
+html[data-theme='dark'] .jd-partner-type-card-icon { color: var(--amber); background: rgba(139,197,63,0.12); }
+
+/* Document upload rows */
+.jd-partner-doc {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--jd-input-border);
+  border-radius: var(--jd-radius-sm);
+  background: var(--jd-input-bg);
+  margin-bottom: 10px;
+  transition: border-color 0.18s ease;
+}
+.jd-partner-doc.success { border-color: rgba(30,125,79,0.4); }
+.jd-partner-doc.error { border-color: rgba(209,85,58,0.5); }
+.jd-partner-doc-info { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.jd-partner-doc-icon {
+  width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0; margin-top: 1px;
+  background: rgba(11,61,36,0.08); color: var(--forest);
+  display: flex; align-items: center; justify-content: center;
+}
+html[data-theme='dark'] .jd-partner-doc-icon { color: var(--amber); background: rgba(139,197,63,0.10); }
+.jd-partner-doc.success .jd-partner-doc-icon { background: rgba(30,125,79,0.14); color: #1e7d4f; }
+.jd-partner-doc-label { font-size: 0.88rem; font-weight: 700; color: var(--text-primary); }
+.jd-partner-doc-required { color: var(--terracotta, #2E7D32); }
+.jd-partner-doc-filename { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; word-break: break-all; }
+.jd-partner-doc-error { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; color: #c04a2c; margin-top: 4px; }
+.jd-partner-doc-progress-track { width: 120px; height: 4px; border-radius: 999px; background: var(--jd-input-border); margin-top: 6px; overflow: hidden; }
+.jd-partner-doc-progress-fill { height: 100%; background: var(--forest); border-radius: 999px; transition: width 0.15s ease; }
+
+.jd-partner-doc-action { flex-shrink: 0; }
+.jd-partner-doc-upload-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--forest);
+  color: var(--cream);
+  font-size: 0.8rem; font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.jd-partner-doc-upload-btn:hover { background: var(--forest-dark); }
+.jd-partner-doc-upload-btn input { display: none; }
+.jd-partner-doc-remove {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 1.5px solid var(--jd-input-border);
+  background: transparent; color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.jd-partner-doc-remove:hover { border-color: #c04a2c; color: #c04a2c; }
+
+/* Terms box */
+.jd-partner-terms-box {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 18px;
+  border-radius: var(--jd-radius-sm);
+  background: var(--jd-input-bg);
+  border: 1.5px solid var(--jd-input-border);
+}
+
+/* ---------- Success / confirmation state ---------- */
+.jd-partner-success {
+  text-align: center;
+  padding: 20px 8px 8px;
+}
+.jd-partner-success-icon {
+  width: 74px; height: 74px; border-radius: 50%;
+  background: linear-gradient(155deg, var(--forest), var(--forest-dark));
+  color: var(--cream);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 22px;
+  box-shadow: 0 14px 32px rgba(11,61,36,0.28);
+  animation: jd-partner-pop 0.5s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes jd-partner-pop { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.jd-partner-success-title {
+  font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; color: var(--text-primary);
+  margin-bottom: 10px;
+}
+.jd-partner-success-body { color: var(--text-secondary); max-width: 440px; margin: 0 auto 22px; line-height: 1.6; }
+.jd-partner-refcode {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px; border-radius: 999px;
+  background: rgba(11,61,36,0.08);
+  border: 1px solid rgba(11,61,36,0.18);
+  font-family: var(--font-display); font-weight: 800; letter-spacing: 0.04em;
+  color: var(--forest); margin-bottom: 26px;
+}
+html[data-theme='dark'] .jd-partner-refcode { color: var(--amber); background: rgba(139,197,63,0.10); border-color: rgba(139,197,63,0.24); }
+
+/* Submit footer */
+.jd-partner-submit-row { margin-top: 6px; }
+.jd-partner-submit-note { text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-top: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .jd-partner-section, .jd-partner-success-icon { animation: none !important; }
+}
+
+/* ==========================================================================
+   Partner Portal — signed-in workspace for approved partners.
+   Reuses the same .jd-partner scope/tokens (glass bg, radii, ambient glow)
+   so the portal feels continuous with the public application flow.
+   ========================================================================== */
+
+.jd-portal-shell { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 8px 20px 80px; }
+
+.jd-portal-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 22px 4px 18px; flex-wrap: wrap;
+}
+.jd-portal-header-title { font-family: var(--font-display); font-weight: 800; font-size: 1.5rem; color: var(--text-primary); }
+.jd-portal-header-sub { color: var(--text-muted); font-size: 0.88rem; margin-top: 2px; }
+
+.jd-portal-status-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.jd-portal-status-approved { background: rgba(30,125,79,0.14); color: #1e7d4f; }
+.jd-portal-status-suspended { background: rgba(209,85,58,0.14); color: #c04a2c; }
+.jd-portal-status-default { background: rgba(139,197,63,0.16); color: var(--terracotta, #2E7D32); }
+
+/* Stat grid */
+.jd-portal-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+@media (max-width: 780px) { .jd-portal-stat-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 460px) { .jd-portal-stat-grid { grid-template-columns: 1fr; } }
+.jd-portal-stat-card {
+  background: var(--jd-glass-bg); border: 1px solid var(--jd-glass-border); border-radius: var(--jd-radius-md);
+  box-shadow: var(--jd-glass-shadow); backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%);
+  padding: 18px 20px;
+}
+.jd-portal-stat-label { font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.jd-portal-stat-value { font-family: var(--font-display); font-size: 1.7rem; font-weight: 800; color: var(--text-primary); margin-top: 6px; }
+.jd-portal-stat-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+
+/* Card (reuses jd-partner-section look, lighter padding for dense panels) */
+.jd-portal-card {
+  background: var(--jd-glass-bg); border: 1px solid var(--jd-glass-border); border-radius: var(--jd-radius-lg);
+  box-shadow: var(--jd-glass-shadow); backdrop-filter: blur(22px) saturate(160%); -webkit-backdrop-filter: blur(22px) saturate(160%);
+  padding: 26px 26px; margin-bottom: 20px; animation: jd-partner-in 0.4s cubic-bezier(.2,.8,.2,1);
+}
+@media (max-width: 560px) { .jd-portal-card { padding: 18px; border-radius: 18px; } }
+.jd-portal-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+.jd-portal-card-title { font-family: var(--font-display); font-size: 1.05rem; font-weight: 800; color: var(--text-primary); }
+.jd-portal-card-sub { font-size: 0.82rem; color: var(--text-muted); margin-top: 2px; }
+
+/* Table */
+.jd-portal-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.jd-portal-table th {
+  text-align: left; padding: 10px 12px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted); border-bottom: 1.5px solid var(--jd-input-border);
+}
+.jd-portal-table td { padding: 12px; border-bottom: 1px solid var(--jd-input-border); color: var(--text-primary); vertical-align: middle; }
+.jd-portal-table tr:last-child td { border-bottom: none; }
+.jd-portal-table-wrap { overflow-x: auto; }
+
+/* Status pills for tables */
+.jd-portal-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+.jd-portal-pill-active { background: rgba(30,125,79,0.14); color: #1e7d4f; }
+.jd-portal-pill-revoked, .jd-portal-pill-error { background: rgba(209,85,58,0.14); color: #c04a2c; }
+.jd-portal-pill-pending { background: rgba(139,197,63,0.16); color: var(--terracotta, #2E7D32); }
+.jd-portal-pill-neutral { background: var(--jd-input-bg); color: var(--text-muted); border: 1px solid var(--jd-input-border); }
+
+/* Key reveal box (shown once, right after generation) */
+.jd-portal-key-reveal {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  padding: 14px 16px; border-radius: var(--jd-radius-sm); background: rgba(11,61,36,0.08); border: 1.5px dashed var(--forest);
+  font-family: monospace; font-size: 0.86rem; color: var(--forest); margin-bottom: 14px; word-break: break-all;
+}
+html[data-theme='dark'] .jd-portal-key-reveal { color: var(--amber); border-color: var(--amber); background: rgba(139,197,63,0.10); }
+
+/* Log entry row (sandbox / audit) */
+.jd-portal-log-row {
+  padding: 12px 14px; border-radius: var(--jd-radius-sm); background: var(--jd-input-bg); border: 1px solid var(--jd-input-border);
+  margin-bottom: 8px; font-size: 0.84rem;
+}
+.jd-portal-log-meta { color: var(--text-muted); font-size: 0.76rem; margin-top: 4px; }
+.jd-portal-log-json {
+  background: rgba(0,0,0,0.04); border-radius: 8px; padding: 8px 10px; margin-top: 6px; font-family: monospace; font-size: 0.76rem;
+  white-space: pre-wrap; word-break: break-all; max-height: 180px; overflow-y: auto;
+}
+html[data-theme='dark'] .jd-portal-log-json { background: rgba(255,255,255,0.05); }
+
+/* Locked / gated state (e.g. suspended partnership) */
+.jd-portal-locked {
+  text-align: center; padding: 48px 20px; color: var(--text-muted);
+}
+.jd-portal-locked-icon { font-size: 2.2rem; margin-bottom: 10px; }
+
+/* Ticket thread */
+.jd-portal-message { padding: 12px 14px; border-radius: var(--jd-radius-sm); margin-bottom: 10px; max-width: 88%; }
+.jd-portal-message-partner { background: rgba(11,61,36,0.08); margin-left: auto; }
+html[data-theme='dark'] .jd-portal-message-partner { background: rgba(139,197,63,0.10); }
+.jd-portal-message-admin { background: var(--jd-input-bg); border: 1px solid var(--jd-input-border); }
+.jd-portal-message-meta { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 4px; }
+
+/* Small inline form row */
+.jd-portal-field-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.jd-portal-field-row > div { flex: 1; min-width: 160px; }
+
+/* 2FA QR box */
+.jd-portal-qr-box { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.jd-portal-backup-codes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; font-family: monospace; font-size: 0.86rem; }

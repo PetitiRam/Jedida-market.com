@@ -1,0 +1,10 @@
+<!--
+  Merge into ios/App/App/App.entitlements after `npx cap add ios`.
+  Requires apple-app-site-association to be hosted at
+  https://jedidamarketplace.com/.well-known/apple-app-site-association
+  on the production web server (see SHELL_README.md).
+-->
+<key>com.apple.developer.associated-domains</key>
+<array>
+  <string>applinks:jedidamarketplace.com</string>
+</array>

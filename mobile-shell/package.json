@@ -1,0 +1,39 @@
+{
+  "name": "jedida-marketplace-shell",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lightweight native shell (Android/iOS) that loads the live JEDIDA Marketplace web app and exposes native device capabilities to it.",
+  "scripts": {
+    "add:android": "npx cap add android",
+    "add:ios": "npx cap add ios",
+    "sync": "npx cap sync",
+    "open:android": "npx cap open android",
+    "open:ios": "npx cap open ios",
+    "build:android": "npx cap sync android && cd android && ./gradlew assembleRelease",
+    "build:ios": "npx cap sync ios && npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/app": "^6.0.1",
+    "@capacitor/haptics": "^6.0.1",
+    "@capacitor/keyboard": "^6.0.3",
+    "@capacitor/splash-screen": "^6.0.2",
+    "@capacitor/status-bar": "^6.0.1",
+    "@capacitor/push-notifications": "^6.0.2",
+    "@capacitor/camera": "^6.0.2",
+    "@capacitor/filesystem": "^6.0.1",
+    "@capacitor/share": "^6.0.2",
+    "@capacitor/clipboard": "^6.0.1",
+    "@capacitor/network": "^6.0.2",
+    "@capacitor/preferences": "^6.0.2",
+    "@capacitor/browser": "^6.0.2",
+    "capacitor-secure-storage-plugin": "^0.10.0",
+    "capacitor-native-biometric": "^4.2.1",
+    "@capacitor-community/barcode-scanner": "^4.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/ios": "^6.1.2"
+  }
+}

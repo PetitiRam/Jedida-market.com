@@ -1,0 +1,318 @@
+name: Build & Deploy Native Shells
+
+# Builds the real signed installers referenced throughout mobile-shell/ and
+# desktop-shell/, and deploys them into backend/public/downloads/ on the
+# production server so the download page's manifest endpoint
+# (/api/downloads/manifest/current) and file endpoint (/downloads/:file)
+# start serving them. See ALLOWED_FILES in backend/src/routes/downloads.js —
+# the filenames produced here must match it exactly.
+#
+# Trigger: push a version tag, e.g. `git tag v1.2.0 && git push origin v1.2.0`.
+# Can also be run manually from the Actions tab for a rebuild without a new
+# tag (workflow_dispatch).
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+
+env:
+  ANDROID_PACKAGE_NAME: jedida-marketplace.apk
+  WINDOWS_PACKAGE_NAME: JEDIDA-Marketplace-Setup.exe
+  MACOS_PACKAGE_NAME: JEDIDA-Marketplace.dmg
+  LINUX_APPIMAGE_NAME: JEDIDA-Marketplace.AppImage
+  LINUX_DEB_NAME: JEDIDA-Marketplace.deb
+
+jobs:
+  # ---------------------------------------------------------------------
+  # Android — Capacitor project, built and signed via Gradle.
+  # ---------------------------------------------------------------------
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile-shell/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Capacitor deps
+        working-directory: mobile-shell
+        run: npm install
+
+      - name: Add Android platform
+        working-directory: mobile-shell
+        run: npx cap add android
+
+      # The android-config/* files are checked into git as a diff to apply
+      # to the platform Capacitor generates fresh each run (see the header
+      # comments in each file) — merge them in rather than committing a
+      # generated android/ project.
+      - name: Merge android-config additions
+        working-directory: mobile-shell
+        run: |
+          set -e
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          python3 - "$MANIFEST" android-config/AndroidManifest.additions.xml <<'PY'
+          import re, sys
+          manifest_path, additions_path = sys.argv[1], sys.argv[2]
+          manifest = open(manifest_path).read()
+          additions = open(additions_path).read()
+
+          perms = re.findall(r'<uses-permission[^/]*/>', additions)
+          for p in perms:
+              if p not in manifest:
+                  manifest = manifest.replace('<application', p + '\n    <application', 1)
+
+          if 'android:usesCleartextTraffic="false"' not in manifest:
+              manifest = manifest.replace(
+                  '<application',
+                  '<application\n        android:usesCleartextTraffic="false"\n        android:networkSecurityConfig="@xml/network_security_config"',
+                  1,
+              )
+
+          intent_filters = re.search(
+              r'(<intent-filter android:autoVerify="true">.*?</intent-filter>\s*<intent-filter>.*?</intent-filter>)',
+              additions, re.S,
+          )
+          if intent_filters and 'jedidamarketplace' not in manifest:
+              manifest = manifest.replace(
+                  '</activity>', intent_filters.group(1) + '\n    </activity>', 1
+              )
+
+          open(manifest_path, 'w').write(manifest)
+          PY
+          cp android-config/network_security_config.xml \
+             android/app/src/main/res/xml/network_security_config.xml \
+             2>/dev/null || mkdir -p android/app/src/main/res/xml && \
+             cp android-config/network_security_config.xml android/app/src/main/res/xml/
+          echo "Manual step still required for MainActivity.additions.java —"
+          echo "review the diff before assuming deep-link handling is wired up."
+
+      - name: Sync web assets
+        working-directory: mobile-shell
+        run: npx cap sync android
+
+      - name: Decode signing keystore
+        working-directory: mobile-shell/android
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+
+      - name: Build signed release APK
+        working-directory: mobile-shell/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=release.keystore \
+            -Pandroid.injected.signing.store.password="$ANDROID_KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD"
+
+      - name: Rename output
+        run: |
+          cp mobile-shell/android/app/build/outputs/apk/release/app-release.apk \
+             "${{ env.ANDROID_PACKAGE_NAME }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-build
+          path: ${{ env.ANDROID_PACKAGE_NAME }}
+          retention-days: 7
+
+  # ---------------------------------------------------------------------
+  # Desktop — Electron, one job per OS since electron-builder needs the
+  # native toolchain of the platform it's packaging for.
+  # ---------------------------------------------------------------------
+  build-desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            dist_script: dist:win
+            artifact_glob: 'desktop-shell/dist/*.exe'
+          - os: macos-latest
+            dist_script: dist:mac
+            artifact_glob: 'desktop-shell/dist/*.dmg'
+          - os: ubuntu-latest
+            dist_script: dist:linux
+            artifact_glob: |
+              desktop-shell/dist/*.AppImage
+              desktop-shell/dist/*.deb
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: desktop-shell/package-lock.json
+
+      - name: Install deps
+        working-directory: desktop-shell
+        run: npm install
+
+      # macOS builds are notarized so Gatekeeper doesn't block the .dmg on
+      # first launch; skipped automatically by electron-builder if these
+      # secrets are absent, producing an unsigned (still functional) build.
+      - name: Build (macOS, signed + notarized)
+        if: matrix.os == 'macos-latest'
+        working-directory: desktop-shell
+        env:
+          CSC_LINK: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npm run ${{ matrix.dist_script }}
+
+      - name: Build (Windows, code-signed)
+        if: matrix.os == 'windows-latest'
+        working-directory: desktop-shell
+        env:
+          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: npm run ${{ matrix.dist_script }}
+
+      - name: Build (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: desktop-shell
+        run: npm run ${{ matrix.dist_script }}
+
+      - name: Rename outputs to match backend allowlist
+        shell: bash
+        run: |
+          set -e
+          mkdir -p renamed
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp desktop-shell/dist/*.exe "renamed/${{ env.WINDOWS_PACKAGE_NAME }}"
+          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+            cp desktop-shell/dist/*.dmg "renamed/${{ env.MACOS_PACKAGE_NAME }}"
+          else
+            cp desktop-shell/dist/*.AppImage "renamed/${{ env.LINUX_APPIMAGE_NAME }}"
+            cp desktop-shell/dist/*.deb "renamed/${{ env.LINUX_DEB_NAME }}"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-build-${{ matrix.os }}
+          path: renamed/*
+          retention-days: 7
+
+  # ---------------------------------------------------------------------
+  # iOS — archived on a macOS runner. Uploading to TestFlight/App Store
+  # still needs the manual Xcode/App Store Connect step described in
+  # SHELL_README.md; this job produces the signed .ipa for that upload,
+  # gated on signing secrets being present so the workflow doesn't fail
+  # for forks/PRs that don't have them.
+  # ---------------------------------------------------------------------
+  build-ios:
+    runs-on: macos-latest
+    if: ${{ vars.IOS_SIGNING_CONFIGURED == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile-shell/package-lock.json
+
+      - name: Install Capacitor deps
+        working-directory: mobile-shell
+        run: npm install
+
+      - name: Add iOS platform
+        working-directory: mobile-shell
+        run: npx cap add ios
+
+      - name: Sync web assets
+        working-directory: mobile-shell
+        run: npx cap sync ios
+
+      - name: Install signing certificate & provisioning profile
+        env:
+          IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          set -e
+          echo "$IOS_CERTIFICATE_P12_BASE64" | base64 -d > cert.p12
+          echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 -d > profile.mobileprovision
+          KEYCHAIN_PASSWORD=$(uuidgen)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security import cert.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      - name: Archive & export IPA
+        working-directory: mobile-shell/ios/App
+        run: |
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+            -archivePath build/App.xcarchive archive
+          xcodebuild -exportArchive -archivePath build/App.xcarchive \
+            -exportOptionsPlist ../../../ci/ios-export-options.plist \
+            -exportPath build/export
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: mobile-shell/ios/App/build/export/*.ipa
+          retention-days: 7
+
+  # ---------------------------------------------------------------------
+  # Deploy — collect every platform's artifact and publish into
+  # backend/public/downloads/ on the production server, matching the
+  # ALLOWED_FILES set in backend/src/routes/downloads.js exactly.
+  # ---------------------------------------------------------------------
+  deploy:
+    needs: [build-android, build-desktop]
+    if: always() && (needs.build-android.result == 'success' || needs.build-desktop.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten artifacts
+        run: |
+          mkdir -p publish
+          find artifacts -type f \( \
+            -name "${{ env.ANDROID_PACKAGE_NAME }}" -o \
+            -name "${{ env.WINDOWS_PACKAGE_NAME }}" -o \
+            -name "${{ env.MACOS_PACKAGE_NAME }}" -o \
+            -name "${{ env.LINUX_APPIMAGE_NAME }}" -o \
+            -name "${{ env.LINUX_DEB_NAME }}" \
+          \) -exec cp {} publish/ \;
+          ls -la publish
+
+      - name: Deploy to production downloads directory
+        uses: burnett01/rsync-deployments@7.0.1
+        with:
+          switches: -avz --checksum
+          path: publish/
+          remote_path: ${{ secrets.DEPLOY_DOWNLOADS_PATH }}
+          remote_host: ${{ secrets.DEPLOY_HOST }}
+          remote_user: ${{ secrets.DEPLOY_USER }}
+          remote_key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      # DEPLOY_DOWNLOADS_PATH should point at the server's
+      # backend/public/downloads/ directory (see README.txt already
+      # checked into that folder). The manifest endpoint
+      # (/api/downloads/manifest/current) picks up new files immediately —
+      # no backend restart needed, it stats the directory on every request.

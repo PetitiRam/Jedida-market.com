@@ -1,0 +1,370 @@
+/* ============================================================
+   JEDIDA Marketplace — Upgrade Page (premium redesign)
+   Glassmorphism, rounded corners, soft shadows, ripple + state
+   transitions. Built on top of the existing theme.css tokens.
+   ============================================================ */
+
+.upg-page {
+  min-height: 100vh;
+  padding: 32px 20px 64px;
+  background:
+    radial-gradient(1100px 500px at 15% -10%, rgba(11, 61, 36, 0.10), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(139, 197, 63, 0.14), transparent 55%),
+    var(--cream);
+}
+
+.upg-shell {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.upg-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.upg-secure-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(226, 214, 188, 0.9);
+  box-shadow: var(--shadow-soft);
+  font-size: 0.8rem;
+}
+.upg-secure-badge strong { display: block; font-size: 0.82rem; color: var(--ink); }
+.upg-secure-badge span { color: #6B756E; font-size: 0.72rem; }
+
+.upg-hero {
+  display: grid;
+  grid-template-columns: 1.3fr 1px 0.9fr;
+  gap: 28px;
+  align-items: start;
+}
+
+@media (max-width: 980px) {
+  .upg-hero { grid-template-columns: 1fr; }
+  .upg-hero .upg-divider { display: none; }
+}
+
+.upg-divider {
+  width: 1px;
+  align-self: stretch;
+  background: linear-gradient(180deg, transparent, var(--line), transparent);
+}
+
+.upg-glass-card {
+  position: relative;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 20px 60px rgba(22, 32, 27, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  padding: 28px;
+}
+
+.upg-title { font-family: var(--font-display); font-size: 1.7rem; margin: 0 0 6px; color: var(--ink); }
+.upg-subtitle { color: #5B6760; margin: 0 0 20px; font-size: 0.95rem; }
+
+.upg-onetime-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(11, 61, 36, 0.08);
+  color: var(--forest);
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+/* ---- Step label ---- */
+.upg-step-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--forest);
+  margin-bottom: 8px;
+}
+
+/* ---- Upgrade type cards ---- */
+.upg-type-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+@media (max-width: 560px) { .upg-type-grid { grid-template-columns: 1fr; } }
+
+.upg-type-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1.5px solid var(--line);
+  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+}
+.upg-type-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(22,32,27,0.08); }
+.upg-type-card.active {
+  border-color: var(--forest);
+  background: rgba(11, 61, 36, 0.06);
+  box-shadow: 0 0 0 3px rgba(11, 61, 36, 0.10);
+}
+.upg-type-icon {
+  width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem;
+  background: rgba(11, 61, 36, 0.08);
+}
+.upg-type-card h4 { margin: 0 0 2px; font-size: 0.95rem; }
+.upg-type-card p { margin: 0; font-size: 0.78rem; color: #6B756E; }
+.upg-type-check {
+  position: absolute; top: 10px; right: 10px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--forest); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem;
+}
+
+/* ---- Form grid ---- */
+.upg-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+@media (max-width: 560px) { .upg-field-row { grid-template-columns: 1fr; } }
+
+.upg-select-wrap, .upg-input-wrap {
+  position: relative;
+}
+.upg-select-wrap select, .upg-input-wrap input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: rgba(255,255,255,0.7);
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--ink);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.upg-select-wrap select:focus, .upg-input-wrap input:focus {
+  outline: none;
+  border-color: var(--forest);
+  box-shadow: 0 0 0 3px rgba(11, 61, 36, 0.10);
+}
+.upg-input-wrap.has-icon input { padding-left: 40px; }
+.upg-input-icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  color: #8A9189; font-size: 0.95rem;
+}
+.upg-field-hint { font-size: 0.74rem; color: #8A9189; margin-top: 5px; }
+.upg-auto-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.7rem; color: var(--forest); background: rgba(11,61,36,0.08);
+  padding: 2px 8px; border-radius: 999px; margin-left: 8px;
+}
+
+/* ---- Read-only amount ---- */
+.upg-amount-box {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1.5px dashed rgba(11, 61, 36, 0.35);
+  background: rgba(11, 61, 36, 0.05);
+}
+.upg-amount-value { font-family: var(--font-display); font-size: 1.35rem; color: var(--forest); }
+.upg-amount-lock { color: #8A9189; font-size: 0.85rem; }
+
+/* ---- Payment summary ---- */
+.upg-summary {
+  margin-top: 22px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.6);
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 14px;
+}
+.upg-summary-item .label { font-size: 0.72rem; color: #8A9189; margin-bottom: 2px; }
+.upg-summary-item .value { font-size: 0.92rem; font-weight: 600; color: var(--ink); }
+
+/* ---- Terms ---- */
+.upg-terms {
+  display: flex; align-items: flex-start; gap: 10px;
+  margin-top: 18px; font-size: 0.82rem; color: #5B6760;
+}
+.upg-terms a { color: var(--forest); font-weight: 600; }
+
+/* ---- Ripple CTA button ---- */
+.upg-cta {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  margin-top: 18px;
+  padding: 16px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--forest) 0%, var(--forest-dark) 100%);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(11, 61, 36, 0.28);
+  transition: transform 0.12s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+.upg-cta:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 16px 34px rgba(11, 61, 36, 0.34); }
+.upg-cta:active:not(:disabled) { transform: translateY(0); }
+.upg-cta:disabled { opacity: 0.65; cursor: not-allowed; }
+.upg-cta .upg-ripple {
+  position: absolute; border-radius: 50%; transform: scale(0);
+  animation: upg-ripple-anim 0.6s ease-out;
+  background: rgba(255,255,255,0.5);
+  pointer-events: none;
+}
+@keyframes upg-ripple-anim { to { transform: scale(3.2); opacity: 0; } }
+.upg-cta-note { text-align: center; font-size: 0.74rem; color: #8A9189; margin-top: 8px; }
+
+/* ---- Benefits panel ---- */
+.upg-benefits-list { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
+.upg-benefit-row { display: flex; gap: 12px; align-items: flex-start; }
+.upg-benefit-icon {
+  width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+  background: rgba(139, 197, 63, 0.16); color: var(--amber-dark);
+  display: flex; align-items: center; justify-content: center; font-size: 1rem;
+}
+.upg-benefit-row h5 { margin: 0 0 2px; font-size: 0.88rem; }
+.upg-benefit-row p { margin: 0; font-size: 0.76rem; color: #6B756E; }
+.upg-gift-note {
+  margin-top: 18px; padding: 12px 14px; border-radius: 12px;
+  background: rgba(139, 197, 63, 0.12); color: var(--amber-dark);
+  font-size: 0.8rem; font-weight: 600; text-align: center;
+}
+
+/* ============================================================
+   Payment card mock — Stripe/Apple-Pay style premium card
+   ============================================================ */
+.upg-pay-card {
+  border-radius: 18px;
+  padding: 20px;
+  color: #fff;
+  background: linear-gradient(135deg, #0B3D24 0%, #0E2A1F 60%, #0A1F17 100%);
+  box-shadow: 0 18px 40px rgba(14, 42, 31, 0.35);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+.upg-pay-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(280px 140px at 90% -10%, rgba(139,197,63,0.35), transparent 60%);
+}
+.upg-pay-card-top { display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; }
+.upg-pay-card-brand { font-family: var(--font-display); letter-spacing: 0.04em; font-size: 0.95rem; }
+.upg-pay-card-chip { width: 34px; height: 24px; border-radius: 6px; background: linear-gradient(135deg,#8BC53F,#6FA82E); }
+.upg-pay-card-number { margin-top: 26px; font-size: 1.05rem; letter-spacing: 0.12em; position: relative; z-index: 1; }
+.upg-pay-card-bottom { display: flex; justify-content: space-between; margin-top: 20px; font-size: 0.7rem; opacity: 0.85; position: relative; z-index: 1; }
+
+/* ============================================================
+   Status tracker (post-submit states)
+   ============================================================ */
+.upg-status-wrap { text-align: center; padding: 12px 4px 4px; }
+.upg-status-icon {
+  width: 74px; height: 74px; margin: 0 auto 18px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem;
+}
+.upg-status-icon.loading { background: rgba(11,61,36,0.08); }
+.upg-status-icon.pending { background: rgba(139,197,63,0.16); }
+.upg-status-icon.success { background: rgba(11,61,36,0.12); color: var(--forest); }
+.upg-status-icon.error { background: rgba(46,125,50,0.14); color: var(--terracotta); }
+
+.upg-spinner {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 3px solid rgba(11,61,36,0.18); border-top-color: var(--forest);
+  animation: upg-spin 0.8s linear infinite;
+}
+@keyframes upg-spin { to { transform: rotate(360deg); } }
+
+.upg-status-title { font-family: var(--font-display); font-size: 1.3rem; margin: 0 0 6px; }
+.upg-status-body { color: #5B6760; font-size: 0.9rem; max-width: 420px; margin: 0 auto; }
+
+.upg-tracker { display: flex; gap: 6px; margin: 26px auto 8px; max-width: 440px; }
+.upg-tracker .seg { flex: 1; height: 6px; border-radius: 999px; background: var(--line); transition: background 0.3s ease; }
+.upg-tracker .seg.done { background: var(--forest); }
+.upg-tracker .seg.current {
+  background: linear-gradient(90deg, var(--forest) 50%, var(--line) 50%);
+  background-size: 200% 100%;
+  animation: upg-tracker-pulse 1.4s ease-in-out infinite;
+}
+@keyframes upg-tracker-pulse { 0% { background-position: 200% 0; } 100% { background-position: -20% 0; } }
+
+/* ============================================================
+   Comparison table
+   ============================================================ */
+.upg-compare-wrap { margin-top: 40px; }
+.upg-compare-title { font-family: var(--font-display); font-size: 1.5rem; text-align: center; margin-bottom: 4px; }
+.upg-compare-sub { text-align: center; color: #5B6760; margin-bottom: 24px; font-size: 0.9rem; }
+
+.upg-compare-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.6);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-soft);
+}
+@media (max-width: 720px) {
+  .upg-compare-grid { grid-template-columns: 1.1fr 1fr 1fr; font-size: 0.8rem; }
+}
+
+.upg-compare-head { padding: 16px 14px; font-weight: 700; font-family: var(--font-display); }
+.upg-compare-head.free { color: #6B756E; }
+.upg-compare-head.pro {
+  color: #fff;
+  background: linear-gradient(135deg, var(--forest), var(--forest-dark));
+  position: relative;
+}
+.upg-compare-badge {
+  position: absolute; top: -10px; right: 10px;
+  background: var(--amber); color: var(--forest-dark);
+  font-size: 0.62rem; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+}
+
+.upg-compare-row { display: contents; }
+.upg-compare-row > div { padding: 12px 14px; border-top: 1px solid var(--line); font-size: 0.85rem; }
+.upg-compare-row .feature { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.upg-compare-row .no { color: var(--terracotta); }
+.upg-compare-row .yes { color: var(--forest); font-weight: 600; }
+.upg-compare-row .pro-cell { background: rgba(11, 61, 36, 0.045); }
+
+.upg-trust-strip {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px,1fr));
+  gap: 16px; margin-top: 28px;
+}
+.upg-trust-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 14px; border-radius: 14px;
+  background: rgba(255,255,255,0.55); border: 1px solid var(--line);
+}
+.upg-trust-item .ic { font-size: 1.2rem; }
+.upg-trust-item h5 { margin: 0 0 2px; font-size: 0.82rem; }
+.upg-trust-item p { margin: 0; font-size: 0.72rem; color: #8A9189; }

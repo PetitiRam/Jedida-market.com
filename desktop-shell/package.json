@@ -1,0 +1,33 @@
+{
+  "name": "jedida-marketplace-desktop",
+  "version": "1.0.0",
+  "description": "Lightweight desktop shell (Windows/macOS/Linux) that loads the live JEDIDA Marketplace web app.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --mac --linux",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.4",
+    "electron-log": "^5.2.0"
+  },
+  "devDependencies": {
+    "electron": "^31.3.1",
+    "electron-builder": "^25.0.5"
+  },
+  "build": {
+    "appId": "com.jedidamarketplace.app",
+    "productName": "JEDIDA Marketplace",
+    "asar": true,
+    "files": ["main.js", "preload.js", "offline.html", "splash.html", "assets/**/*"],
+    "publish": [{ "provider": "generic", "url": "https://jedidamarketplace.com/downloads/desktop" }],
+    "win": { "target": ["nsis"], "icon": "assets/icon.ico" },
+    "nsis": { "oneClick": false, "allowToChangeInstallDirectory": true },
+    "mac": { "target": ["dmg"], "icon": "assets/icon.icns", "category": "public.app-category.shopping" },
+    "linux": { "target": ["AppImage", "deb"], "icon": "assets/icon.png", "category": "Network" },
+    "protocols": [{ "name": "JEDIDA Marketplace", "schemes": ["jedidamarketplace"] }]
+  }
+}

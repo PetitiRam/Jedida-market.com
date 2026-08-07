@@ -1,0 +1,17 @@
+{
+  "name": "JEDIDA Marketplace",
+  "short_name": "JEDIDA",
+  "description": "Buy, sell and grow — from agriculture to everyday goods.",
+  "start_url": "/?source=pwa",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0B3D24",
+  "theme_color": "#0B3D24",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

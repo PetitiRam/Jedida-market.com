@@ -1,0 +1,486 @@
+/* ============================================================
+   JEDIDA CHAT WORKSPACE — Solid Commerce Communication System
+   ------------------------------------------------------------
+   Direction: the glass shell stays (floating sheet, blurred
+   backdrop) but everything living inside it — message cards,
+   the header, the control panel, the action bar — sits on
+   solid, elevated surfaces with real depth. Built entirely on
+   the existing Jedida brand tokens (--forest / --amber / Sora
+   + Inter) rather than a new palette, so it reads as the same
+   product wearing a better suit, not a reskin.
+
+   Signature element: the Trust Ring — a small conic-gradient
+   ring around the counterpart's avatar whose fill == trust
+   score. It's the one recurring device that ties the header,
+   the control panel and the AI panel together.
+   ============================================================ */
+
+:root {
+  /* Solid surfaces (cards float ON TOP of the glass shell) */
+  --cw-card-bg: #FFFFFF;
+  --cw-card-bg-alt: #F7FBF8;
+  --cw-card-border: rgba(11, 61, 36, 0.09);
+  --cw-shadow-1: 0 1px 2px rgba(16, 36, 26, 0.06);
+  --cw-shadow-2: 0 10px 28px rgba(16, 36, 26, 0.12);
+  --cw-shadow-3: 0 22px 56px rgba(16, 36, 26, 0.20);
+
+  /* Glass shell (the sheet itself, unchanged in spirit) */
+  --cw-glass-bg: linear-gradient(165deg, rgba(11,61,36,0.86), rgba(6,40,24,0.94));
+  --cw-glass-border: rgba(255, 255, 255, 0.14);
+  --cw-glass-blur: 22px;
+
+  /* Brand gradients */
+  --cw-grad-forest: linear-gradient(135deg, #0B3D24 0%, #1E4A2E 55%, #2E7D32 100%);
+  --cw-grad-gold: linear-gradient(135deg, #8BC53F 0%, #6FA82E 100%);
+  --cw-grad-ai: linear-gradient(135deg, #103A22 0%, #1E4A2E 45%, #8BC53F 130%);
+
+  /* Semantic */
+  --cw-verified: #0E9F6E;
+  --cw-verified-bg: #E7F7F1;
+  --cw-online: #3DDC84;
+  --cw-warn: #B0790E;
+  --cw-warn-bg: #FFF7E6;
+  --cw-danger: #C0392B;
+  --cw-danger-bg: #FBE3DA;
+  --cw-text: #10241A;
+  --cw-text-soft: #5B6760;
+  --cw-text-mute: #8A9189;
+  --cw-line: #E7EFE9;
+
+  --cw-radius-lg: 22px;
+  --cw-radius-md: 16px;
+  --cw-radius-sm: 11px;
+  --cw-font-display: var(--font-display, 'Sora', system-ui, sans-serif);
+  --cw-font-body: var(--font-body, 'Inter', system-ui, sans-serif);
+}
+
+html[data-theme='dark'] .cw-root {
+  --cw-card-bg: #16231A;
+  --cw-card-bg-alt: #1B2A20;
+  --cw-card-border: rgba(243, 241, 232, 0.10);
+  --cw-shadow-1: 0 1px 2px rgba(0,0,0,0.3);
+  --cw-shadow-2: 0 10px 28px rgba(0,0,0,0.4);
+  --cw-shadow-3: 0 22px 56px rgba(0,0,0,0.5);
+  --cw-verified-bg: rgba(14,159,110,0.16);
+  --cw-warn-bg: rgba(176,121,14,0.16);
+  --cw-danger-bg: rgba(192,57,43,0.16);
+  --cw-text: #F3FBF6;
+  --cw-text-soft: rgba(243,251,246,0.68);
+  --cw-text-mute: rgba(243,251,246,0.48);
+  --cw-line: rgba(243,241,232,0.10);
+}
+
+/* ============================================================
+   SHELL
+   ============================================================ */
+.cw-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  position: relative;
+  font-family: var(--cw-font-body);
+  color: var(--cw-text);
+}
+
+/* ============================================================
+   1. HEADER LAYER
+   ============================================================ */
+.cw-header {
+  flex-shrink: 0;
+  background: var(--cw-card-bg);
+  border-radius: var(--cw-radius-lg);
+  box-shadow: var(--cw-shadow-2);
+  border: 1px solid var(--cw-card-border);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.cw-header-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cw-avatar-wrap {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+}
+
+/* Trust ring — conic gradient sized by trust score via --cw-score (0-100),
+   set inline per-instance. */
+.cw-trust-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  padding: 3px;
+  background: conic-gradient(
+    var(--cw-verified) calc(var(--cw-score, 0) * 1%),
+    var(--cw-line) 0
+  );
+}
+.cw-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  background: var(--cw-grad-forest);
+  border: 2px solid var(--cw-card-bg);
+}
+.cw-avatar-fallback {
+  width: 100%; height: 100%; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--cw-grad-forest); color: #F3FBF6;
+  font-family: var(--cw-font-display); font-weight: 700; font-size: 1.1rem;
+  border: 2px solid var(--cw-card-bg);
+}
+.cw-online-dot {
+  position: absolute; bottom: 1px; right: 1px;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--cw-online);
+  border: 2.5px solid var(--cw-card-bg);
+}
+.cw-online-dot.offline { background: var(--cw-text-mute); }
+
+.cw-header-info { flex: 1; min-width: 0; }
+.cw-header-name-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cw-header-name {
+  font-family: var(--cw-font-display);
+  font-weight: 700;
+  font-size: 1.02rem;
+  color: var(--cw-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cw-verified-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 0.68rem; font-weight: 700; color: var(--cw-verified);
+  background: var(--cw-verified-bg); border-radius: 999px; padding: 2px 8px;
+  flex-shrink: 0;
+}
+.cw-header-meta-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 3px; font-size: 0.76rem; color: var(--cw-text-soft);
+}
+.cw-business-type {
+  font-weight: 600; color: var(--cw-text-soft);
+}
+.cw-trust-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-weight: 700; color: var(--cw-verified);
+}
+.cw-security-line {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.72rem; color: var(--cw-text-mute); margin-top: 6px;
+}
+
+.cw-header-actions {
+  display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap;
+}
+.cw-header-action-btn {
+  font-family: var(--cw-font-body);
+  font-size: 0.74rem; font-weight: 600;
+  border: 1px solid var(--cw-card-border);
+  background: var(--cw-card-bg-alt);
+  color: var(--cw-text-soft);
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.cw-header-action-btn:hover {
+  background: var(--cw-card-bg);
+  box-shadow: var(--cw-shadow-1);
+  transform: translateY(-1px);
+}
+.cw-header-action-btn.danger { color: var(--cw-danger); }
+.cw-header-action-btn.primary {
+  background: var(--cw-grad-forest); color: #F3FBF6; border: none;
+}
+
+/* ============================================================
+   SECURITY STRIP  —  "Protected by Jedida"
+   ============================================================ */
+.cw-security-strip {
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--cw-grad-forest);
+  color: #F3FBF6;
+  border-radius: var(--cw-radius-md);
+  padding: 8px 14px;
+  margin-bottom: 10px;
+  box-shadow: var(--cw-shadow-1);
+}
+.cw-security-strip-title {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--cw-font-display); font-weight: 700; font-size: 0.82rem;
+}
+.cw-security-checks {
+  display: flex; gap: 12px; font-size: 0.68rem; color: rgba(243,251,246,0.82);
+  flex-wrap: wrap;
+}
+.cw-security-checks span { white-space: nowrap; }
+
+.cw-warning-card {
+  flex-shrink: 0;
+  background: var(--cw-warn-bg);
+  border: 1px solid rgba(176,121,14,0.28);
+  border-radius: var(--cw-radius-md);
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  display: flex; align-items: flex-start; gap: 8px;
+  box-shadow: var(--cw-shadow-1);
+}
+.cw-warning-card strong { font-family: var(--cw-font-display); }
+.cw-warning-card p { margin: 2px 0 0; font-size: 0.8rem; color: #6B4E0E; }
+.cw-warning-close {
+  margin-left: auto; border: none; background: none; cursor: pointer;
+  color: #6B4E0E; font-size: 0.85rem; flex-shrink: 0;
+}
+
+/* ============================================================
+   2. CONVERSATION WORKSPACE
+   ============================================================ */
+.cw-body {
+  flex: 1; min-height: 0; display: flex; gap: 10px; position: relative;
+}
+.cw-conversation {
+  flex: 1; min-width: 0; display: flex; flex-direction: column;
+  background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+.cw-messages {
+  flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+  padding: 2px 2px 6px;
+}
+.cw-day-divider {
+  align-self: center; font-size: 0.68rem; color: var(--cw-text-mute);
+  background: var(--cw-card-bg); border-radius: 999px; padding: 3px 12px;
+  box-shadow: var(--cw-shadow-1); margin: 4px 0;
+}
+
+.cw-msg-row { display: flex; flex-direction: column; max-width: 82%; }
+.cw-msg-row.mine { align-self: flex-end; align-items: flex-end; }
+.cw-msg-row.theirs { align-self: flex-start; align-items: flex-start; }
+
+.cw-msg-card {
+  background: var(--cw-card-bg);
+  border: 1px solid var(--cw-card-border);
+  border-radius: var(--cw-radius-md);
+  box-shadow: var(--cw-shadow-1);
+  padding: 10px 13px;
+  font-size: 0.88rem;
+  line-height: 1.42;
+}
+.cw-msg-row.mine .cw-msg-card {
+  background: var(--cw-grad-forest);
+  color: #F3FBF6;
+  border: none;
+  border-bottom-right-radius: 4px;
+}
+.cw-msg-row.theirs .cw-msg-card { border-bottom-left-radius: 4px; }
+
+.cw-msg-foot {
+  display: flex; align-items: center; gap: 6px; margin-top: 4px;
+  font-size: 0.66rem; color: var(--cw-text-mute);
+}
+.cw-msg-foot .read { color: var(--cw-verified); font-weight: 600; }
+
+/* AI identity badge — different from human messages */
+.cw-ai-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.66rem; font-weight: 700;
+  background: var(--cw-grad-ai); color: #F3FBF6;
+  border-radius: 999px; padding: 3px 9px; margin-bottom: 6px;
+}
+.cw-msg-row.ai .cw-msg-card {
+  border: 1px solid rgba(139,197,63,0.35);
+  background: var(--cw-card-bg-alt);
+}
+.cw-suggestion-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.cw-suggestion-chip {
+  font-size: 0.72rem; font-weight: 600; color: var(--cw-verified);
+  background: var(--cw-verified-bg); border: none; border-radius: 999px;
+  padding: 5px 11px; cursor: pointer;
+}
+
+/* Support (human rep) badge */
+.cw-support-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.66rem; font-weight: 700; color: var(--cw-verified);
+  margin-bottom: 6px;
+}
+
+/* Product message card */
+.cw-product-card {
+  display: flex; gap: 10px; align-items: center;
+  background: var(--cw-card-bg); border: 1px solid var(--cw-card-border);
+  border-radius: var(--cw-radius-md); box-shadow: var(--cw-shadow-1);
+  padding: 10px; min-width: 240px;
+}
+.cw-product-thumb {
+  width: 56px; height: 56px; border-radius: var(--cw-radius-sm);
+  object-fit: cover; flex-shrink: 0; background: var(--cw-card-bg-alt);
+}
+.cw-product-info { flex: 1; min-width: 0; }
+.cw-product-title {
+  font-family: var(--cw-font-display); font-weight: 700; font-size: 0.85rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cw-product-meta { display: flex; gap: 8px; font-size: 0.7rem; color: var(--cw-text-soft); margin-top: 3px; flex-wrap: wrap; }
+.cw-product-price { font-weight: 700; color: var(--cw-verified); }
+.cw-product-btn {
+  flex-shrink: 0; font-size: 0.72rem; font-weight: 700;
+  background: var(--cw-grad-gold); color: #10241A; border: none;
+  border-radius: 999px; padding: 7px 12px; cursor: pointer; white-space: nowrap;
+}
+
+/* Order message card */
+.cw-order-card {
+  background: var(--cw-card-bg); border: 1px solid var(--cw-card-border);
+  border-radius: var(--cw-radius-md); box-shadow: var(--cw-shadow-1);
+  padding: 12px; min-width: 220px;
+}
+.cw-order-head { display: flex; justify-content: space-between; align-items: center; }
+.cw-order-id { font-family: var(--cw-font-display); font-weight: 700; font-size: 0.82rem; }
+.cw-status-pill {
+  font-size: 0.66rem; font-weight: 700; border-radius: 999px; padding: 3px 9px;
+}
+.cw-status-pill.paid, .cw-status-pill.delivered_confirmed, .cw-status-pill.completed { background: var(--cw-verified-bg); color: var(--cw-verified); }
+.cw-status-pill.pending_payment, .cw-status-pill.shipped { background: var(--cw-warn-bg); color: var(--cw-warn); }
+.cw-status-pill.cancelled, .cw-status-pill.disputed { background: var(--cw-danger-bg); color: var(--cw-danger); }
+.cw-order-rows { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.cw-order-row { display: flex; justify-content: space-between; font-size: 0.76rem; color: var(--cw-text-soft); }
+.cw-order-row b { color: var(--cw-text); }
+
+/* ============================================================
+   3. BUSINESS CONTROL PANEL
+   ============================================================ */
+.cw-panel {
+  flex-shrink: 0; width: 260px; display: flex; flex-direction: column; gap: 10px;
+  overflow-y: auto;
+}
+.cw-panel.overlay {
+  position: absolute; top: 0; right: 0; bottom: 0; z-index: 30;
+  background: var(--cw-card-bg);
+  border-radius: var(--cw-radius-lg);
+  box-shadow: var(--cw-shadow-3);
+  padding: 14px; width: min(84%, 300px);
+}
+.cw-panel-section {
+  background: var(--cw-card-bg); border: 1px solid var(--cw-card-border);
+  border-radius: var(--cw-radius-md); box-shadow: var(--cw-shadow-1);
+  padding: 12px;
+}
+.cw-panel-title {
+  font-family: var(--cw-font-display); font-weight: 700; font-size: 0.78rem;
+  display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+  color: var(--cw-text-soft);
+}
+.cw-panel-empty { font-size: 0.74rem; color: var(--cw-text-mute); }
+.cw-panel-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.78rem; padding: 6px 0; border-top: 1px solid var(--cw-line);
+}
+.cw-panel-row:first-of-type { border-top: none; }
+.cw-panel-stat { text-align: center; }
+.cw-panel-stat b { display: block; font-family: var(--cw-font-display); font-size: 1.05rem; }
+.cw-panel-stat span { font-size: 0.66rem; color: var(--cw-text-mute); }
+.cw-panel-close {
+  border: none; background: var(--cw-card-bg-alt); border-radius: 999px;
+  width: 26px; height: 26px; cursor: pointer; font-size: 0.8rem;
+}
+.cw-panel-toggle {
+  position: absolute; top: 8px; right: 8px; z-index: 20;
+  border: 1px solid var(--cw-card-border); background: var(--cw-card-bg);
+  border-radius: 999px; width: 32px; height: 32px; cursor: pointer;
+  box-shadow: var(--cw-shadow-2); font-size: 0.9rem;
+}
+
+@media (min-width: 900px) {
+  .cw-panel.overlay { position: static; width: 260px; box-shadow: none; padding: 0; background: none; }
+}
+
+/* ============================================================
+   AI ASSISTANT
+   ============================================================ */
+.cw-ai-fab {
+  position: absolute; bottom: 78px; right: 6px; z-index: 40;
+  width: 50px; height: 50px; border-radius: 50%; border: none;
+  background: var(--cw-grad-ai); color: #fff; font-size: 1.25rem;
+  box-shadow: var(--cw-shadow-3); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  animation: cw-fab-pulse 2.4s ease-in-out infinite;
+}
+@keyframes cw-fab-pulse {
+  0%, 100% { box-shadow: var(--cw-shadow-3), 0 0 0 0 rgba(139,197,63,0.35); }
+  50% { box-shadow: var(--cw-shadow-3), 0 0 0 8px rgba(139,197,63,0); }
+}
+.cw-ai-panel {
+  position: absolute; bottom: 66px; right: 6px; z-index: 41;
+  width: min(88%, 300px);
+  background: var(--cw-card-bg); border-radius: var(--cw-radius-lg);
+  box-shadow: var(--cw-shadow-3); border: 1px solid var(--cw-card-border);
+  overflow: hidden;
+}
+.cw-ai-panel-head {
+  background: var(--cw-grad-ai); color: #fff; padding: 12px 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.cw-ai-panel-head b { font-family: var(--cw-font-display); font-size: 0.86rem; }
+.cw-ai-panel-head span { font-size: 0.68rem; opacity: 0.85; display: block; }
+.cw-ai-actions { padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+.cw-ai-action-btn {
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  border: none; background: none; padding: 9px 8px; border-radius: var(--cw-radius-sm);
+  cursor: pointer; font-size: 0.82rem; color: var(--cw-text); font-weight: 500;
+}
+.cw-ai-action-btn:hover { background: var(--cw-card-bg-alt); }
+.cw-ai-action-btn .icon {
+  width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--cw-verified-bg); font-size: 0.95rem;
+}
+
+/* ============================================================
+   BOTTOM ACTION BAR
+   ============================================================ */
+.cw-action-bar {
+  flex-shrink: 0; margin-top: 10px;
+}
+.cw-action-chips {
+  display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px;
+  scrollbar-width: none;
+}
+.cw-action-chips::-webkit-scrollbar { display: none; }
+.cw-chip {
+  flex-shrink: 0; display: flex; align-items: center; gap: 5px;
+  font-size: 0.74rem; font-weight: 600; color: #F3FBF6;
+  background: rgba(255,255,255,0.10); border: 1px solid var(--cw-glass-border);
+  border-radius: 999px; padding: 6px 12px; cursor: pointer;
+  transition: background 0.15s ease;
+}
+.cw-chip:hover { background: rgba(255,255,255,0.18); }
+.cw-chip.active { background: var(--cw-grad-gold); color: #10241A; border-color: transparent; }
+
+.cw-input-row {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.12); border: 1px solid var(--cw-glass-border);
+  border-radius: 999px; padding: 7px 7px 7px 15px;
+}
+.cw-input-row input {
+  flex: 1; border: none; background: transparent; color: #F3FBF6;
+  font-size: 0.92rem; outline: none;
+}
+.cw-input-row input::placeholder { color: rgba(243,251,246,0.5); }
+.cw-icon-btn {
+  border: none; background: none; cursor: pointer; font-size: 1.1rem; color: #F3FBF6;
+}
+.cw-send-btn {
+  width: 36px; height: 36px; border-radius: 50%; border: none; flex-shrink: 0;
+  background: var(--cw-grad-gold); color: #10241A; font-size: 1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}

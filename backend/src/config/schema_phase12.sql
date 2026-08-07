@@ -1,0 +1,3 @@
+ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS current_lat NUMERIC(9,6);
+ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS current_lng NUMERIC(9,6);
+ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS location_updated_at TIMESTAMPTZ;

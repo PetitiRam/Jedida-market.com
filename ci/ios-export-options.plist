@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Used by `xcodebuild -exportArchive` in build-shell.yml to turn the .xcarchive
+  into a signed .ipa. Defaults to App Store Connect upload since that's the
+  eventual distribution path (SHELL_README.md: "archive & upload for
+  TestFlight/App Store from there"). Switch method to "ad-hoc" temporarily if
+  you need a directly-installable .ipa for internal testing outside
+  TestFlight — you'll also need to list device UDIDs in a provisioning
+  profile that supports ad-hoc for that to work.
+-->
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store-connect</string>
+    <key>teamID</key>
+    <string>$(APPLE_TEAM_ID)</string>
+    <key>signingStyle</key>
+    <string>manual</string>
+    <key>uploadSymbols</key>
+    <true/>
+    <key>compileBitcode</key>
+    <false/>
+</dict>
+</plist>

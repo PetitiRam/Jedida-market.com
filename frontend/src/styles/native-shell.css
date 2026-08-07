@@ -1,0 +1,136 @@
+/* Native experience layer — chrome only, no page-specific styling. Uses
+   the existing theme tokens from theme.css so it never looks bolted-on. */
+
+/* --- Boot splash overlay: bridges native splash -> first React paint --- */
+.native-boot-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--forest, #0B3D24);
+  opacity: 1;
+  transition: opacity 0.26s ease;
+}
+.native-boot-splash--fading { opacity: 0; pointer-events: none; }
+.native-boot-splash :is(span) { color: var(--cream, #F6FBF7) !important; }
+
+/* --- Page transitions --- */
+.native-page-transition {
+  animation: jedida-page-in 0.22s ease both;
+}
+@keyframes jedida-page-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Bottom tab bar (native mobile shell only) --- */
+.native-bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 950;
+  display: flex;
+  background: rgba(251, 246, 236, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--line, #DCEAE0);
+  padding: 6px 4px calc(6px + var(--safe-area-bottom, 0px));
+}
+[data-theme="dark"] .native-bottom-nav {
+  background: rgba(18, 43, 32, 0.92);
+  border-top-color: rgba(226, 214, 188, 0.15);
+}
+.native-bottom-nav__tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 2px 4px;
+  background: none;
+  border: none;
+  color: #8A9189;
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-size: 0.68rem;
+  font-weight: 600;
+  border-radius: 10px;
+  transition: transform 0.15s ease;
+}
+.native-bottom-nav__tab:active { transform: scale(0.94); }
+.native-bottom-nav__tab--active { color: var(--forest, #0B3D24); }
+[data-theme="dark"] .native-bottom-nav__tab--active { color: var(--amber, #8BC53F); }
+
+/* Reserve space so page content and the floating chat button never sit
+   under the tab bar. Only applied when the shell has actually mounted the
+   nav (is-native-shell on <html>) — desktop/web are unaffected. */
+html.is-native-shell {
+  --chat-button-bottom: calc(76px + var(--safe-area-bottom, 0px));
+}
+html.is-native-shell body {
+  padding-bottom: calc(58px + var(--safe-area-bottom, 0px));
+}
+
+/* --- Double-back-to-exit toast --- */
+.native-exit-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(72px + var(--safe-area-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 1000;
+  background: var(--ink, #10241A);
+  color: var(--cream, #F6FBF7);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 999px;
+  box-shadow: var(--shadow-soft, 0 8px 24px rgba(22,32,27,0.08));
+  animation: jedida-toast-in 0.18s ease both;
+}
+@keyframes jedida-toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* --- Safe-area top padding for content that sits under a transparent
+   status bar (header components can opt in with this class) --- */
+.native-safe-top { padding-top: var(--safe-area-top, 0px); }
+
+/* --- Biometric lock screen (native only, opt-in) --- */
+.native-biometric-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: var(--forest, #0B3D24);
+  color: var(--cream, #F6FBF7);
+  padding: 24px;
+  text-align: center;
+}
+.native-biometric-gate p { font-size: 0.95rem; opacity: 0.85; margin: 0; }
+.native-biometric-gate__button {
+  background: var(--amber, #8BC53F);
+  color: var(--ink, #10241A);
+  border: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 12px 32px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .native-boot-splash,
+  .native-page-transition,
+  .native-bottom-nav__tab,
+  .native-exit-toast {
+    animation: none !important;
+    transition: none !important;
+  }
+}

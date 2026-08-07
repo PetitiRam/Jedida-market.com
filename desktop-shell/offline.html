@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>JEDIDA Marketplace</title>
+<style>
+  :root { color-scheme: light; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: 'Sora', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #F6FBF7;
+    color: #10241A;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px; text-align: center;
+  }
+  .card { max-width: 360px; }
+  .badge {
+    width: 64px; height: 64px; border-radius: 16px; background: #0B3D24;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px; font-size: 28px;
+  }
+  h1 { font-size: 1.3rem; margin: 0 0 8px; }
+  p { color: #5B6760; font-size: 0.95rem; line-height: 1.5; margin: 0 0 24px; }
+  button {
+    background: #0B3D24; color: #F6FBF7; border: none; border-radius: 10px;
+    padding: 14px 28px; font-size: 1rem; font-weight: 600; cursor: pointer;
+  }
+  button:active { opacity: 0.85; }
+  .status { margin-top: 16px; font-size: 0.8rem; color: #8A9189; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">📡</div>
+    <h1>You're offline</h1>
+    <p>JEDIDA Marketplace couldn't connect. We'll reconnect automatically once your internet is back, or tap below to retry now.</p>
+    <button id="retry">Try again</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <script>
+    // The native layer (see android-config / ios-config) swaps this page in
+    // when the production site fails to load, and swaps it back out —
+    // reloading the production URL — the moment connectivity returns.
+    // This script is a fallback for when native retry logic isn't wired up
+    // yet, or the user taps the button manually.
+    const statusEl = document.getElementById('status');
+
+    function attemptReload() {
+      statusEl.textContent = 'Checking connection…';
+      if (window.jedidaDesktop) {
+        window.jedidaDesktop.retryLoad();
+      } else {
+        location.reload();
+      }
+    }
+
+    document.getElementById('retry').addEventListener('click', attemptReload);
+    window.addEventListener('online', attemptReload);
+    setInterval(() => { if (navigator.onLine) attemptReload(); }, 10000);
+  </script>
+</body>
+</html>

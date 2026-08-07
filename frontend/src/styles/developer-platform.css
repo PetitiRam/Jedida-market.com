@@ -1,0 +1,251 @@
+/* ============================================================
+   JEDIDA DEVELOPER & PARTNER PLATFORM
+   ------------------------------------------------------------
+   Reuses the .jcc dark glass tokens (see command-center.css /
+   theme.css) rather than a new palette — this is the same
+   night-ops surface as the Marketplace Operations Command
+   Center, just a different application on top of it. Scoped
+   under .jdp so it never leaks into the rest of the app.
+   ============================================================ */
+
+.jdp {
+  min-height: 100vh;
+  width: 100%;
+  background: radial-gradient(circle at 15% 0%, rgba(139, 197, 63, 0.08), transparent 45%), var(--jcc-bg);
+  color: var(--jcc-text);
+  font-family: var(--font-body);
+}
+
+.jdp-center {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.jdp-card {
+  background: var(--jcc-surface);
+  border: 1px solid var(--jcc-border);
+  border-radius: 20px;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 24px 60px rgba(4, 13, 9, 0.4);
+}
+
+.jdp-welcome {
+  max-width: 560px;
+  width: 100%;
+  padding: 40px 36px;
+  text-align: center;
+  animation: jdp-rise 0.5s ease;
+}
+@keyframes jdp-rise {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.jdp-mark {
+  height: 64px;
+  width: 64px;
+  margin: 0 auto 18px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #B7E36B, var(--jcc-forest));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 26px;
+  color: #06180f;
+  box-shadow: 0 10px 28px rgba(139, 197, 63, 0.4);
+  animation: jdp-pulse 2.4s ease-in-out infinite;
+}
+@keyframes jdp-pulse {
+  0%, 100% { box-shadow: 0 10px 28px rgba(139, 197, 63, 0.4); }
+  50% { box-shadow: 0 10px 40px rgba(139, 197, 63, 0.7); }
+}
+
+.jdp-welcome h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 24px;
+  color: #fff;
+  margin: 0 0 8px;
+}
+.jdp-welcome p {
+  color: var(--jcc-text-dim);
+  font-size: 13.5px;
+  line-height: 1.6;
+  margin: 0 0 26px;
+}
+
+.jdp-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.jdp-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--jcc-border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--jcc-text);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.jdp-option:hover {
+  background: var(--jcc-lime-dim);
+  border-color: var(--jcc-border-strong);
+  color: var(--jcc-lime);
+  transform: translateY(-1px);
+}
+.jdp-option .ic { font-size: 18px; flex-shrink: 0; }
+.jdp-option small { display: block; font-weight: 400; color: var(--jcc-text-faint); margin-top: 2px; }
+
+.jdp-back-link {
+  display: inline-block;
+  margin-top: 22px;
+  font-size: 12px;
+  color: var(--jcc-text-faint);
+  cursor: pointer;
+}
+.jdp-back-link:hover { color: var(--jcc-text-dim); }
+
+/* ---------------- registration form ---------------- */
+.jdp-form-wrap {
+  max-width: 640px;
+  width: 100%;
+  padding: 34px 32px;
+  margin: 40px auto;
+}
+.jdp-form-wrap h1 {
+  font-family: var(--font-display);
+  font-size: 21px;
+  color: #fff;
+  margin: 0 0 4px;
+}
+.jdp-form-wrap .sub { color: var(--jcc-text-dim); font-size: 13px; margin-bottom: 24px; }
+
+.jdp-field { margin-bottom: 16px; }
+.jdp-field label { display: block; font-size: 12px; font-weight: 600; color: var(--jcc-text-dim); margin-bottom: 6px; }
+.jdp-field input,
+.jdp-field select,
+.jdp-field textarea {
+  width: 100%;
+  border: 1px solid var(--jcc-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--jcc-text);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: var(--font-body);
+  outline: none;
+}
+.jdp-field input:focus, .jdp-field select:focus, .jdp-field textarea:focus {
+  border-color: var(--jcc-border-strong);
+}
+.jdp-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 640px) { .jdp-field-row { grid-template-columns: 1fr; } }
+
+.jdp-check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--jcc-text-dim);
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.jdp-check-row a { color: var(--jcc-lime); }
+.jdp-check-row input { margin-top: 3px; flex-shrink: 0; }
+
+.jdp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 11px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  width: 100%;
+}
+.jdp-btn-lime { background: var(--jcc-lime); color: #06180f; }
+.jdp-btn-lime:hover { background: #B7E36B; }
+.jdp-btn-lime:disabled { opacity: 0.55; cursor: not-allowed; }
+.jdp-btn-ghost { background: rgba(255, 255, 255, 0.03); border-color: var(--jcc-border); color: var(--jcc-text); }
+
+.jdp-alert {
+  border-radius: 10px;
+  padding: 10px 13px;
+  font-size: 12.5px;
+  margin-bottom: 16px;
+}
+.jdp-alert-error { background: var(--jcc-rose-dim); border: 1px solid rgba(225,91,91,.3); color: var(--jcc-rose); }
+.jdp-alert-success { background: var(--jcc-lime-dim); border: 1px solid var(--jcc-border-strong); color: var(--jcc-lime); }
+
+/* ---------------- dashboard shell ---------------- */
+.jdp-shell { display: flex; min-height: 100vh; }
+.jdp-sidebar {
+  width: 236px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--jcc-border);
+  background: rgba(4, 13, 9, 0.4);
+  padding: 18px 10px;
+}
+.jdp-brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 20px; }
+.jdp-brand b { font-family: var(--font-display); color: #fff; font-size: 14px; }
+.jdp-side-label {
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--jcc-text-faint); padding: 0 10px; margin: 16px 0 6px;
+}
+.jdp-side-label:first-child { margin-top: 0; }
+.jdp-nav-item {
+  width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px 10px;
+  border-radius: 10px; border: 1px solid transparent; background: none;
+  color: var(--jcc-text-dim); font-size: 13px; cursor: pointer; text-align: left; margin-bottom: 2px;
+}
+.jdp-nav-item:hover { background: rgba(255,255,255,0.04); color: var(--jcc-text); }
+.jdp-nav-item.active { background: var(--jcc-lime-dim); border-color: var(--jcc-border-strong); color: var(--jcc-lime); font-weight: 600; }
+.jdp-nav-item .soon { margin-left: auto; font-size: 9px; font-weight: 700; color: var(--jcc-text-faint); border: 1px solid var(--jcc-border); padding: 1px 6px; border-radius: 99px; }
+
+.jdp-main { flex: 1; padding: 26px 30px 60px; overflow-y: auto; }
+.jdp-topline { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+.jdp-status-pill {
+  display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 700;
+  padding: 6px 12px; border-radius: 99px;
+}
+.jdp-status-approved { background: var(--jcc-lime-dim); border: 1px solid var(--jcc-border-strong); color: var(--jcc-lime); }
+.jdp-status-pending { background: var(--jcc-amber-dim); border: 1px solid rgba(224,169,62,.3); color: var(--jcc-amber); }
+.jdp-status-rejected, .jdp-status-suspended { background: var(--jcc-rose-dim); border: 1px solid rgba(225,91,91,.3); color: var(--jcc-rose); }
+
+.jdp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.jdp-api-card { border: 1px solid var(--jcc-border); background: var(--jcc-surface); border-radius: 14px; padding: 15px; }
+.jdp-api-card .name { font-family: var(--font-display); font-weight: 700; font-size: 13.5px; color: #fff; }
+.jdp-api-card .cat { font-size: 10.5px; color: var(--jcc-lime); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.jdp-api-card .desc { font-size: 11.5px; color: var(--jcc-text-faint); line-height: 1.5; margin-top: 6px; }
+
+.jdp-empty-panel {
+  border: 1px dashed var(--jcc-border);
+  border-radius: 16px;
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--jcc-text-faint);
+  font-size: 13px;
+}
+.jdp-empty-panel b { color: var(--jcc-text-dim); display: block; margin-bottom: 6px; font-family: var(--font-display); font-size: 14px; }
+
+@media (max-width: 860px) {
+  .jdp-sidebar { width: 60px; }
+  .jdp-sidebar .jdp-side-label, .jdp-nav-item span:not(.soon) { display: none; }
+  .jdp-brand b { display: none; }
+}

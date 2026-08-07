@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+.env
+backend/.env
+frontend/.env
+mobile/.env
+*.log
+.DS_Store
+backend/public/downloads/*
+!backend/public/downloads/README.txt
+mobile-shell/android/
+mobile-shell/ios/

@@ -1,0 +1,411 @@
+/* ==========================================================================
+   Auth v2 — Sign In / Sign Up only.
+   Namespaced under `.jd-auth` so nothing here leaks into the rest of the
+   app's shared `input`, `select`, `.btn-primary`, `.field-group` etc. rules
+   defined in theme.css. Reuses existing brand tokens + the existing
+   [data-theme] light/dark switch — no new theme system.
+   ========================================================================== */
+
+.jd-auth {
+  --jd-glass-bg: rgba(255, 255, 255, 0.62);
+  --jd-glass-border: rgba(255, 255, 255, 0.55);
+  --jd-glass-shadow: 0 20px 60px rgba(22, 32, 27, 0.14), 0 2px 8px rgba(22, 32, 27, 0.06);
+  --jd-input-bg: rgba(255, 255, 255, 0.72);
+  --jd-input-border: rgba(22, 32, 27, 0.14);
+  --jd-radius-lg: 24px;
+  --jd-radius-md: 16px;
+  --jd-radius-sm: 12px;
+}
+html[data-theme='dark'] .jd-auth {
+  --jd-glass-bg: rgba(23, 28, 20, 0.55);
+  --jd-glass-border: rgba(243, 241, 232, 0.10);
+  --jd-glass-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --jd-input-bg: rgba(35, 42, 30, 0.55);
+  --jd-input-border: rgba(243, 241, 232, 0.14);
+}
+
+.jd-auth {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  background: var(--cream);
+  position: relative;
+  overflow: hidden;
+}
+@media (max-width: 900px) {
+  .jd-auth { grid-template-columns: 1fr; }
+  .jd-auth-brand { display: none; }
+}
+
+/* ---------- Ambient background ---------- */
+.jd-auth-glow-a, .jd-auth-glow-b {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(2px);
+  pointer-events: none;
+  z-index: 0;
+}
+.jd-auth-glow-a {
+  width: 480px; height: 480px;
+  background: radial-gradient(circle, rgba(139,197,63,0.28) 0%, transparent 70%);
+  top: -140px; right: -140px;
+}
+.jd-auth-glow-b {
+  width: 420px; height: 420px;
+  background: radial-gradient(circle, rgba(11,61,36,0.20) 0%, transparent 70%);
+  bottom: -160px; left: 30%;
+}
+
+/* ---------- Brand panel ---------- */
+.jd-auth-brand {
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(165deg, var(--forest) 0%, var(--forest-dark) 100%);
+  color: var(--cream);
+  padding: 56px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+.jd-auth-brand-orb {
+  position: absolute; right: -100px; top: -100px;
+  width: 320px; height: 320px; border-radius: 50%;
+  background: radial-gradient(circle, var(--amber) 0%, transparent 72%);
+  opacity: 0.30;
+}
+.jd-auth-brand-top { position: relative; z-index: 1; }
+.jd-auth-brand-bottom { position: relative; z-index: 1; }
+.jd-auth-brand-heading {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+  line-height: 1.3;
+  max-width: 380px;
+  margin-top: 64px;
+  letter-spacing: -0.01em;
+}
+.jd-auth-brand-points {
+  display: flex; flex-direction: column; gap: 16px;
+}
+.jd-auth-brand-point {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 0.92rem; color: rgba(251,246,236,0.92);
+}
+.jd-auth-brand-point-icon {
+  width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+  background: rgba(251,246,236,0.12);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--amber);
+}
+
+/* ---------- Form panel ---------- */
+.jd-auth-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+.jd-auth-topbar {
+  position: absolute;
+  top: 24px; right: 28px;
+  display: flex; align-items: center; gap: 10px;
+  z-index: 2;
+}
+
+.jd-auth-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--jd-glass-bg);
+  border: 1px solid var(--jd-glass-border);
+  border-radius: var(--jd-radius-lg);
+  box-shadow: var(--jd-glass-shadow);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  padding: 40px 36px 32px;
+  animation: jd-card-in 0.55s cubic-bezier(.2,.8,.2,1);
+}
+@media (max-width: 480px) {
+  .jd-auth-card { padding: 30px 22px 24px; border-radius: 20px; }
+}
+@keyframes jd-card-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.jd-auth-eyebrow {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+  margin-bottom: 8px;
+}
+.jd-auth-title {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 24px;
+  letter-spacing: -0.01em;
+}
+
+/* step transition (Sign Up) */
+.jd-auth-step {
+  animation: jd-step-in 0.35s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes jd-step-in {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ---------- Google button + divider ---------- */
+.jd-auth-google { margin-bottom: 4px; min-height: 44px; }
+.jd-auth-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 22px 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.jd-auth-divider::before, .jd-auth-divider::after {
+  content: ''; flex: 1; height: 1px;
+  background: var(--jd-input-border);
+}
+
+/* ---------- Floating-label fields ---------- */
+.jd-field {
+  position: relative;
+  margin-bottom: 18px;
+}
+.jd-field-row { display: flex; gap: 12px; }
+.jd-field-row .jd-field { flex: 1; min-width: 0; }
+
+.jd-field-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.jd-field input,
+.jd-field select {
+  width: 100%;
+  padding: 20px 14px 8px;
+  font-size: 0.96rem;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background: var(--jd-input-bg);
+  border: 1.5px solid var(--jd-input-border);
+  border-radius: var(--jd-radius-sm);
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+  appearance: none;
+}
+.jd-field select { padding-top: 20px; cursor: pointer; }
+.jd-field input::placeholder { color: transparent; }
+.jd-field input:focus,
+.jd-field select:focus {
+  border-color: var(--forest);
+  box-shadow: 0 0 0 4px rgba(11,61,36,0.12);
+  background: var(--surface);
+}
+html[data-theme='dark'] .jd-field input:focus,
+html[data-theme='dark'] .jd-field select:focus {
+  box-shadow: 0 0 0 4px rgba(139,197,63,0.14);
+}
+.jd-field.jd-has-icon-right input { padding-right: 42px; }
+.jd-field.jd-has-icon-left input { padding-left: 42px; }
+
+.jd-field-label {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  font-size: 0.96rem;
+  color: var(--text-muted);
+  pointer-events: none;
+  transform-origin: left top;
+  transition: transform 0.16s ease, color 0.16s ease, top 0.16s ease;
+}
+.jd-field input:focus ~ .jd-field-label,
+.jd-field input.jd-filled ~ .jd-field-label,
+.jd-field select:focus ~ .jd-field-label,
+.jd-field select.jd-filled ~ .jd-field-label,
+.jd-field-label.jd-float {
+  top: 7px;
+  transform: scale(0.74);
+  color: var(--forest);
+  font-weight: 600;
+}
+html[data-theme='dark'] .jd-field input:focus ~ .jd-field-label,
+html[data-theme='dark'] .jd-field input.jd-filled ~ .jd-field-label,
+html[data-theme='dark'] .jd-field select:focus ~ .jd-field-label,
+html[data-theme='dark'] .jd-field select.jd-filled ~ .jd-field-label,
+html[data-theme='dark'] .jd-field-label.jd-float {
+  color: var(--amber);
+}
+
+.jd-field-icon-left {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--text-muted); display: flex; pointer-events: none;
+}
+.jd-field-icon-right {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  display: flex; align-items: center; gap: 8px;
+}
+.jd-field-toggle {
+  background: none; border: none; padding: 4px; cursor: pointer;
+  color: var(--text-muted); display: flex; align-items: center;
+  border-radius: 6px; transition: color 0.15s ease, background-color 0.15s ease;
+}
+.jd-field-toggle:hover { color: var(--forest); background: var(--surface-alt); }
+
+.jd-field-status { display: flex; align-items: center; }
+.jd-field-status.jd-valid { color: #1e7d4f; }
+.jd-field-status.jd-invalid { color: #c04a2c; }
+
+.jd-field.jd-error input,
+.jd-field.jd-error select { border-color: #d1553a; }
+.jd-field.jd-error input:focus,
+.jd-field.jd-error select:focus { box-shadow: 0 0 0 4px rgba(209,85,58,0.14); }
+.jd-field-error {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.8rem; color: #c04a2c;
+  margin-top: 6px;
+  animation: jd-shake-in 0.2s ease;
+}
+@keyframes jd-shake-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ---------- Password strength ---------- */
+.jd-strength { margin-top: 8px; }
+.jd-strength-track {
+  display: flex; gap: 5px; margin-bottom: 5px;
+}
+.jd-strength-seg {
+  height: 4px; flex: 1; border-radius: 999px;
+  background: var(--jd-input-border);
+  transition: background-color 0.2s ease;
+}
+.jd-strength-seg.on-weak { background: #d1553a; }
+.jd-strength-seg.on-fair { background: #d6952f; }
+.jd-strength-seg.on-good { background: #4a9b6e; }
+.jd-strength-seg.on-strong { background: var(--forest); }
+.jd-strength-label { font-size: 0.76rem; color: var(--text-muted); }
+
+/* ---------- Checkbox ---------- */
+.jd-checkbox-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  cursor: pointer; user-select: none;
+  margin-bottom: 4px;
+}
+.jd-checkbox-box {
+  width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0;
+  border: 1.5px solid var(--jd-input-border);
+  background: var(--jd-input-bg);
+  display: flex; align-items: center; justify-content: center;
+  color: transparent;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+  margin-top: 1px;
+}
+.jd-checkbox-row.checked .jd-checkbox-box {
+  background: var(--forest); border-color: var(--forest); color: #fff;
+}
+.jd-checkbox-box svg { transform: scale(0.8); }
+.jd-checkbox-text { font-size: 0.86rem; color: var(--text-secondary); line-height: 1.4; }
+.jd-checkbox-text a { color: var(--forest); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+html[data-theme='dark'] .jd-checkbox-text a { color: var(--amber); }
+
+.jd-row-between {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px; flex-wrap: wrap; gap: 8px;
+}
+
+/* ---------- Buttons ---------- */
+.jd-btn-primary {
+  position: relative;
+  width: 100%;
+  padding: 14px 18px;
+  border: none;
+  border-radius: var(--jd-radius-sm);
+  background: var(--forest);
+  color: var(--cream);
+  font-weight: 700;
+  font-size: 1rem;
+  font-family: var(--font-body);
+  cursor: pointer;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background-color 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+  box-shadow: 0 8px 20px rgba(11,61,36,0.22);
+}
+.jd-btn-primary:hover:not(:disabled) { background: var(--forest-dark); transform: translateY(-1px); box-shadow: 0 12px 26px rgba(11,61,36,0.3); }
+.jd-btn-primary:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+.jd-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+.jd-btn-primary.jd-success { background: #1e7d4f; }
+
+.jd-btn-spin { animation: jd-spin 0.8s linear infinite; }
+@keyframes jd-spin { to { transform: rotate(360deg); } }
+
+.jd-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  transform: scale(0);
+  animation: jd-ripple 0.6s ease-out;
+  pointer-events: none;
+}
+@keyframes jd-ripple { to { transform: scale(3.2); opacity: 0; } }
+
+.jd-btn-ghost {
+  background: none; border: none; color: var(--forest); font-weight: 600;
+  font-size: 0.88rem; cursor: pointer; padding: 6px 0;
+  display: flex; align-items: center; gap: 4px;
+}
+html[data-theme='dark'] .jd-btn-ghost { color: var(--amber); }
+
+.jd-link {
+  color: var(--forest); font-weight: 700; cursor: pointer;
+  text-decoration: none; transition: color 0.15s ease;
+}
+.jd-link:hover { text-decoration: underline; text-underline-offset: 2px; }
+html[data-theme='dark'] .jd-link { color: var(--amber); }
+
+/* ---------- Alerts (success / error) ---------- */
+.jd-alert {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--jd-radius-sm);
+  font-size: 0.86rem;
+  margin-bottom: 18px;
+  animation: jd-alert-in 0.25s ease;
+}
+@keyframes jd-alert-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.jd-alert-error { background: rgba(209,85,58,0.12); color: #a83e26; border: 1px solid rgba(209,85,58,0.28); }
+html[data-theme='dark'] .jd-alert-error { color: #f0a58e; }
+.jd-alert-success { background: rgba(11,61,36,0.10); color: #1e7d4f; border: 1px solid rgba(11,61,36,0.22); }
+html[data-theme='dark'] .jd-alert-success { color: #7fd9a6; }
+
+/* ---------- Footer note ---------- */
+.jd-auth-footnote {
+  margin-top: 24px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+.jd-auth-page-footer {
+  margin-top: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- Skeleton (initial load state) ---------- */
+.jd-skel { border-radius: var(--jd-radius-sm); background: linear-gradient(90deg, var(--surface-sunken) 25%, var(--surface-alt) 37%, var(--surface-sunken) 63%); background-size: 800px 100%; animation: jd-shimmer 1.4s ease infinite; }
+@keyframes jd-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+.jd-skel-field { height: 54px; margin-bottom: 18px; }
+.jd-skel-btn { height: 48px; margin-top: 8px; }
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .jd-auth-card, .jd-auth-step, .jd-alert, .jd-field-error, .jd-btn-spin, .jd-ripple { animation: none !important; }
+}

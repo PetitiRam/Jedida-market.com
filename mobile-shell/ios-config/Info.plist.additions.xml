@@ -1,0 +1,28 @@
+<!-- Merge into ios/App/App/Info.plist after `npx cap add ios` -->
+
+<key>NSCameraUsageDescription</key>
+<string>JEDIDA Marketplace uses your camera to take product photos and scan QR codes.</string>
+<key>NSPhotoLibraryUsageDescription</key>
+<string>JEDIDA Marketplace needs access to your photos to upload product images.</string>
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>JEDIDA Marketplace can save receipts and images to your photo library.</string>
+<key>NSFaceIDUsageDescription</key>
+<string>Use Face ID to sign in to JEDIDA Marketplace quickly and securely.</string>
+
+<!-- HTTPS only, no exceptions -->
+<key>NSAppTransportSecurity</key>
+<dict>
+  <key>NSAllowsArbitraryLoads</key>
+  <false/>
+</dict>
+
+<!-- Custom scheme deep links (jedidamarketplace://...) -->
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>jedidamarketplace</string>
+    </array>
+  </dict>
+</array>
