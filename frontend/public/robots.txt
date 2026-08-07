@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /payment-center
+Disallow: /checkout
+Disallow: /signin
+Disallow: /register
+
+Sitemap: https://jedida-market.com/sitemap.xml
