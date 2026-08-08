@@ -53,7 +53,8 @@ export async function uploadPartnerDocument(req, res) {
     const isImage = file.mimetype.startsWith('image/');
     // Business/registration documents are private — signed, time-limited
     // delivery URL rather than a permanently public one.
-    const result = await uploadToCloudinary(file.buffer, file.originalname, isImage ? 'image' : 'raw', 'jedida-marketplace/partner-applications', { sensitive: true });
+    const result = await uploadToCloudinary(file.buffer, file.originalname, isImage ? 'image' : 'raw', 'jedida-marketplace/partner-applications', { sensitive: true 
+});
     return res.status(201).json({
       message: 'Document uploaded.',
       document: {
@@ -564,7 +565,8 @@ export async function reviewProfileChangeRequest(req, res) {
         [
           application.rows[0].partner_user_id,
           `Company info change ${decision === 'approve' ? 'approved' : 'rejected'}`,
-          `Your requested change to ${Object.keys(changeRequest.changes).join(', ')} was ${decision === 'approve' ? 'approved' : 'rejected'}.${notes ? ` ${notes}` : ''}`,
+          `Your requested change to ${Object.keys(changeRequest.changes).join(', ')} was ${decision === 'approve' ? 'approved' : 'rejected'}.${notes ? ` ${notes}` : 
+''}`,
           { changeRequestId: id }
         ]
       );
@@ -572,7 +574,8 @@ export async function reviewProfileChangeRequest(req, res) {
     await client.query(
       `INSERT INTO partner_portal_audit_log (application_id, actor_id, actor_role, action, details)
        VALUES ($1,$2,'admin',$3,$4)`,
-      [changeRequest.application_id, req.user.id, `profile_change_${decision === 'approve' ? 'approved' : 'rejected'}`, { changeRequestId: id, notes: notes || null }]
+      [changeRequest.application_id, req.user.id, `profile_change_${decision === 'approve' ? 'approved' : 'rejected'}`, { changeRequestId: id, notes: notes || null 
+}]
     );
 
     await client.query('COMMIT');
@@ -595,12 +598,12 @@ export async function listApplications(req, res) {
   const conditions = [];
   const values = [];
   let i = 1;
-  if (status) { conditions.push(`status = $${i}`); values.push(status); i += 1; }
-  if (partnerType) { conditions.push(`partner_type = $${i}`); values.push(partnerType); i += 1; }
-  if (country) { conditions.push(`country = $${i}`); values.push(country); i += 1; }
-  if (assignedReviewerId) { conditions.push(`assigned_reviewer_id = $${i}`); values.push(assignedReviewerId); i += 1; }
+  if (status) { conditions.push(`a.status = $${i}`); values.push(status); i += 1; }
+  if (partnerType) { conditions.push(`a.partner_type = $${i}`); values.push(partnerType); i += 1; }
+  if (country) { conditions.push(`a.country = $${i}`); values.push(country); i += 1; }
+  if (assignedReviewerId) { conditions.push(`a.assigned_reviewer_id = $${i}`); values.push(assignedReviewerId); i += 1; }
   if (search) {
-    conditions.push(`(company_name ILIKE $${i} OR business_email ILIKE $${i} OR reference_code ILIKE $${i} OR contact_full_name ILIKE $${i})`);
+    conditions.push(`(a.company_name ILIKE $${i} OR a.business_email ILIKE $${i} OR a.reference_code ILIKE $${i} OR a.contact_full_name ILIKE $${i})`);
     values.push(`%${search}%`);
     i += 1;
   }
@@ -623,7 +626,7 @@ export async function listApplications(req, res) {
        ${where} ORDER BY a.${sortColumn} ${sortDirection} LIMIT $${i} OFFSET $${i + 1}`,
       [...values, limit, offset]
     ),
-    query(`SELECT COUNT(*) FROM partner_applications ${where}`, values),
+    query(`SELECT COUNT(*) FROM partner_applications a ${where}`, values),
   ]);
   res.json({ applications: result.rows, total: Number(countResult.rows[0].count), page: Number(page), pageSize: limit });
 }

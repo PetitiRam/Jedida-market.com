@@ -59,9 +59,9 @@ export async function getOverview(req, res) {
            WHERE revoked = FALSE AND expires_at > now() GROUP BY platform`),
     query(`SELECT COUNT(*)::int AS count FROM blocked_ips WHERE unblocked_at IS NULL
              AND (expires_at IS NULL OR expires_at > now())`),
-    query(`SELECT ff.user_id, u.name, u.email, COUNT(*)::int AS flag_count, MAX(ff.severity)::int AS max_severity
+    query(`SELECT ff.user_id, u.full_name AS name, u.email, COUNT(*)::int AS flag_count, MAX(ff.severity)::int AS max_severity
            FROM fraud_flags ff JOIN users u ON u.id = ff.user_id
-           WHERE ff.status IN ('open','reviewing') GROUP BY ff.user_id, u.name, u.email
+           WHERE ff.status IN ('open','reviewing') GROUP BY ff.user_id, u.full_name, u.email
            ORDER BY max_severity DESC, flag_count DESC LIMIT 10`),
     query(`SELECT hour_bucket, request_count, blocked_count FROM api_traffic_stats
            WHERE hour_bucket > now() - interval '24 hours' ORDER BY hour_bucket ASC`),

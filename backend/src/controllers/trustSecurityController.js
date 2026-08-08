@@ -241,7 +241,7 @@ export async function listFraudFlags(req, res) {
   const conditions = [];
   const values = [];
   let i = 1;
-  if (status) { conditions.push(`status = $${i}`); values.push(status); i += 1; }
+  if (status) { conditions.push(`f.status = $${i}`); values.push(status); i += 1; }
   try {
     const result = await query(
       `SELECT f.*, u.username FROM fraud_flags f LEFT JOIN users u ON u.id = f.user_id
@@ -383,13 +383,18 @@ export async function userSecurityTimeline(req, res) {
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
     const [securityLog, logins, orders, payments, deliveries, dropshipLog, disputes] = await Promise.all([
-      query(`SELECT event_type AS type, entity_type, entity_id, metadata, created_at FROM platform_security_log WHERE actor_id = $1 ORDER BY created_at DESC LIMIT $2`, [userId, limit]),
+      query(`SELECT event_type AS type, entity_type, entity_id, metadata, created_at FROM platform_security_log WHERE actor_id = $1 ORDER BY created_at DESC LIMIT 
+$2`, [userId, limit]),
       query(`SELECT success, ip_address, created_at FROM login_attempts WHERE email = $1 ORDER BY created_at DESC LIMIT $2`, [user.email, limit]),
       query(`SELECT id, status, total_amount, currency, created_at FROM orders WHERE buyer_id = $1 ORDER BY created_at DESC LIMIT $2`, [userId, limit]),
-      query(`SELECT p.id, p.status, p.amount, p.currency, p.created_at FROM payments p JOIN orders o ON o.id = p.order_id WHERE o.buyer_id = $1 ORDER BY p.created_at DESC LIMIT $2`, [userId, limit]),
-      query(`SELECT d.id, d.status, d.created_at FROM deliveries d JOIN orders o ON o.id = d.order_id WHERE o.buyer_id = $1 ORDER BY d.created_at DESC LIMIT $2`, [userId, limit]),
-      query(`SELECT action AS type, entity_type, entity_id, metadata, created_at FROM dropship_audit_log WHERE actor_id = $1 ORDER BY created_at DESC LIMIT $2`, [userId, limit]),
-      query(`SELECT d.id, d.status, d.reason, d.created_at FROM disputes d JOIN orders o ON o.id = d.order_id WHERE o.buyer_id = $1 OR d.opened_by = $1 ORDER BY d.created_at DESC LIMIT $2`, [userId, userId, limit])
+      query(`SELECT p.id, p.status, p.amount, p.currency, p.created_at FROM payments p JOIN orders o ON o.id = p.order_id WHERE o.buyer_id = $1 ORDER BY 
+p.created_at DESC LIMIT $2`, [userId, limit]),
+      query(`SELECT d.id, d.status, d.created_at FROM deliveries d JOIN orders o ON o.id = d.order_id WHERE o.buyer_id = $1 ORDER BY d.created_at DESC LIMIT $2`, 
+[userId, limit]),
+      query(`SELECT action AS type, entity_type, entity_id, metadata, created_at FROM dropship_audit_log WHERE actor_id = $1 ORDER BY created_at DESC LIMIT $2`, 
+[userId, limit]),
+      query(`SELECT d.id, d.status, d.reason, d.created_at FROM disputes d JOIN orders o ON o.id = d.order_id WHERE o.buyer_id = $1 OR d.opened_by = $1 ORDER BY 
+d.created_at DESC LIMIT $2`, [userId, userId, limit])
     ]);
 
     return res.json({

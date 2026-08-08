@@ -306,7 +306,8 @@ export async function updateShopStatus(req, res) {
   await query(
     `INSERT INTO notifications (user_id, type, title, body, sent_by) VALUES ($1,'shop_status_update',$2,$3,$4)`,
     [result.rows[0].owner_id, status === 'suspended' ? 'Your shop was suspended' : 'Your shop was reactivated',
-     status === 'suspended' ? `Your shop "${result.rows[0].name}" was suspended${reason ? `: ${reason}` : '.'}` : `Your shop "${result.rows[0].name}" is active again.`,
+     status === 'suspended' ? `Your shop "${result.rows[0].name}" was suspended${reason ? `: ${reason}` : '.'}` : `Your shop "${result.rows[0].name}" is active 
+again.`,
      req.user.id]
   );
   res.json({ message: `Shop ${status}.`, shop: result.rows[0] });
@@ -659,8 +660,10 @@ export async function getMissionControl(req, res) {
     recentOrdersFeed, recentSecurityFeed, recentVerifiedFeed, recentWithdrawalsFeed, recentFeedPosts,
     maintenanceRow,
   ] = await Promise.all([
-    query(`SELECT COALESCE(SUM(total_amount),0) AS total FROM orders WHERE created_at::date = CURRENT_DATE AND status IN ('paid_escrow','shipped','delivered_confirmed','completed')`),
-    query(`SELECT COALESCE(SUM(total_amount),0) AS total FROM orders WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status IN ('paid_escrow','shipped','delivered_confirmed','completed')`),
+    query(`SELECT COALESCE(SUM(total_amount),0) AS total FROM orders WHERE created_at::date = CURRENT_DATE AND status IN 
+('paid_escrow','shipped','delivered_confirmed','completed')`),
+    query(`SELECT COALESCE(SUM(total_amount),0) AS total FROM orders WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status IN 
+('paid_escrow','shipped','delivered_confirmed','completed')`),
     query(`SELECT
       COUNT(*) FILTER (WHERE status IN ('completed','delivered_confirmed')) AS completed,
       COUNT(*) FILTER (WHERE status IN ('pending_payment','paid_escrow','shipped')) AS pending,
@@ -675,7 +678,8 @@ export async function getMissionControl(req, res) {
     query(`SELECT COUNT(*) AS count FROM shops`),
     query(`SELECT COUNT(*) AS count FROM deliveries WHERE status IN ('confirmed','processing','packed','assigned_to_driver','out_for_delivery')`),
     query(`SELECT COUNT(*) AS count FROM partner_support_tickets WHERE status = 'open'`),
-    query(`SELECT COALESCE(SUM(request_count),0) AS requests, COALESCE(SUM(blocked_count),0) AS blocked FROM api_traffic_stats WHERE hour_bucket >= date_trunc('day', now())`),
+    query(`SELECT COALESCE(SUM(request_count),0) AS requests, COALESCE(SUM(blocked_count),0) AS blocked FROM api_traffic_stats WHERE hour_bucket >= 
+date_trunc('day', now())`),
     query(`SELECT COUNT(*) AS count FROM security_events WHERE created_at > now() - interval '24 hours'`),
     query(`SELECT COUNT(*) AS count FROM shop_risk_signals WHERE status = 'open'`),
     query(`SELECT COUNT(*) AS count, COALESCE(SUM(severity),0) AS weight FROM fraud_flags WHERE status IN ('open','reviewing')`),
@@ -685,15 +689,18 @@ export async function getMissionControl(req, res) {
       COUNT(*) AS total
       FROM payments WHERE created_at > now() - interval '30 days'`),
     query(`SELECT pg_database_size(current_database()) AS bytes`),
-    query(`SELECT date_trunc('day', created_at) AS day, COUNT(*) AS orders, COALESCE(SUM(total_amount) FILTER (WHERE status IN ('paid_escrow','shipped','delivered_confirmed','completed')), 0) AS revenue
+    query(`SELECT date_trunc('day', created_at) AS day, COUNT(*) AS orders, COALESCE(SUM(total_amount) FILTER (WHERE status IN 
+('paid_escrow','shipped','delivered_confirmed','completed')), 0) AS revenue
       FROM orders WHERE created_at >= now() - interval '7 days' GROUP BY day ORDER BY day ASC`),
     query(`SELECT status, COUNT(*) AS count FROM orders GROUP BY status`),
     query(`SELECT category, COUNT(*) AS count FROM products GROUP BY category ORDER BY count DESC LIMIT 6`),
     query(`SELECT s.id, s.name, COALESCE(SUM(o.total_amount),0) AS revenue, COUNT(o.id) AS orders
       FROM shops s JOIN orders o ON o.shop_id = s.id AND o.status IN ('paid_escrow','shipped','delivered_confirmed','completed')
       GROUP BY s.id, s.name ORDER BY revenue DESC LIMIT 5`),
-    query(`SELECT method, COUNT(*) AS count FROM payments WHERE status = 'succeeded' AND created_at > now() - interval '30 days' GROUP BY method ORDER BY count DESC`),
-    query(`SELECT location_country AS country, COUNT(*) AS count FROM users WHERE location_country IS NOT NULL AND location_country <> '' GROUP BY location_country ORDER BY count DESC LIMIT 8`),
+    query(`SELECT method, COUNT(*) AS count FROM payments WHERE status = 'succeeded' AND created_at > now() - interval '30 days' GROUP BY method ORDER BY count 
+DESC`),
+    query(`SELECT location_country AS country, COUNT(*) AS count FROM users WHERE location_country IS NOT NULL AND location_country <> '' GROUP BY location_country 
+ORDER BY count DESC LIMIT 8`),
     query(`SELECT COUNT(*) AS count FROM products WHERE quantity_available <= 5 AND status = 'active'`),
     query(`SELECT p.category AS category,
         COUNT(*) FILTER (WHERE o.created_at > now() - interval '7 days') AS recent,
@@ -706,7 +713,8 @@ export async function getMissionControl(req, res) {
     // column split them into two rows that the mapper below both labelled
     // "super_admin", producing a duplicate React key and an undercount on
     // each row. Grouping by the normalized value merges them into one.
-    query(`SELECT COALESCE(admin_role, 'super_admin') AS admin_role, COUNT(*) AS count FROM users WHERE is_admin = TRUE GROUP BY COALESCE(admin_role, 'super_admin')`),
+    query(`SELECT COALESCE(admin_role, 'super_admin') AS admin_role, COUNT(*) AS count FROM users WHERE is_admin = TRUE GROUP BY COALESCE(admin_role, 
+'super_admin')`),
     query(`SELECT type, COALESCE(SUM(balance),0) AS total FROM wallets GROUP BY type`),
     query(`SELECT status, COALESCE(SUM(amount),0) AS total, COUNT(*) AS count FROM withdrawal_requests GROUP BY status`),
     query(`SELECT COUNT(*) AS count, COALESCE(SUM(amount),0) AS total FROM payments WHERE status = 'refunded' AND created_at > now() - interval '30 days'`),
@@ -716,9 +724,12 @@ export async function getMissionControl(req, res) {
     query(`SELECT o.id, o.total_amount, o.currency, o.status, o.created_at, u.full_name AS buyer_name
       FROM orders o JOIN users u ON u.id = o.buyer_id ORDER BY o.created_at DESC LIMIT 6`),
     query(`SELECT id, event_type, severity, summary, created_at FROM security_events ORDER BY created_at DESC LIMIT 6`),
-    query(`SELECT id, name AS shop_name, verified_since AS created_at FROM shops WHERE is_verified = TRUE AND verified_since IS NOT NULL ORDER BY verified_since DESC LIMIT 4`),
-    query(`SELECT wr.id, wr.amount, wr.currency, wr.status, wr.created_at, u.full_name FROM withdrawal_requests wr JOIN users u ON u.id = wr.user_id WHERE wr.status IN ('approved','paid') ORDER BY wr.created_at DESC LIMIT 4`),
-    query(`SELECT sfp.id, sfp.post_type, sfp.caption, sfp.created_at, s.name AS shop_name FROM shop_feed_posts sfp JOIN shops s ON s.id = sfp.shop_id WHERE sfp.status = 'published' ORDER BY sfp.created_at DESC LIMIT 4`),
+    query(`SELECT id, name AS shop_name, verified_since AS created_at FROM shops WHERE is_verified = TRUE AND verified_since IS NOT NULL ORDER BY verified_since 
+DESC LIMIT 4`),
+    query(`SELECT wr.id, wr.amount, wr.currency, wr.status, wr.created_at, u.full_name FROM withdrawal_requests wr JOIN users u ON u.id = wr.user_id WHERE wr.status 
+IN ('approved','paid') ORDER BY wr.created_at DESC LIMIT 4`),
+    query(`SELECT sfp.id, sfp.post_type, sfp.caption, sfp.created_at, s.name AS shop_name FROM shop_feed_posts sfp JOIN shops s ON s.id = sfp.shop_id WHERE 
+sfp.status = 'published' ORDER BY sfp.created_at DESC LIMIT 4`),
     query(`SELECT maintenance_settings, emergency_controls FROM platform_settings WHERE id = 1`),
   ]);
 
@@ -848,10 +859,13 @@ export async function getMissionControl(req, res) {
     charts: {
       revenueTrend7d: revenueTrend7d.rows.map((r) => ({ day: r.day, orders: Number(r.orders), revenue: Number(r.revenue) })),
       ordersByStatus: ordersByStatusAll.rows.map((r) => ({ status: r.status, count: Number(r.count) })),
-      topCategories: topCategories.rows.map((r) => ({ category: r.category, count: Number(r.count), percent: Math.round((Number(r.count) / totalCategoryCount) * 100) })),
+      topCategories: topCategories.rows.map((r) => ({ category: r.category, count: Number(r.count), percent: Math.round((Number(r.count) / totalCategoryCount) * 
+100) })),
       topShops: topShops.rows.map((r) => ({ id: r.id, name: r.name, revenue: Number(r.revenue), orders: Number(r.orders) })),
-      paymentMethods: paymentMethods.rows.map((r) => ({ method: r.method, count: Number(r.count), percent: Math.round((Number(r.count) / totalPaymentMethodCount) * 100) })),
-      topCountries: topCountries.rows.map((r) => ({ country: r.country, count: Number(r.count), percent: Math.round((Number(r.count) / totalCountryCount) * 100) })),
+      paymentMethods: paymentMethods.rows.map((r) => ({ method: r.method, count: Number(r.count), percent: Math.round((Number(r.count) / totalPaymentMethodCount) * 
+100) })),
+      topCountries: topCountries.rows.map((r) => ({ country: r.country, count: Number(r.count), percent: Math.round((Number(r.count) / totalCountryCount) * 100) 
+})),
     },
     activity,
     insights,
@@ -873,7 +887,8 @@ export async function getMissionControl(req, res) {
       totalShops: Number(totalShops.rows[0].count),
     },
     maintenance: maintenanceRow.rows[0]?.maintenance_settings || { maintenanceMode: false, maintenanceMessage: '' },
-    emergencyControls: maintenanceRow.rows[0]?.emergency_controls || { paymentsFrozen: false, partnerApisDisabled: false, loginDisabled: false, withdrawalsFrozen: false },
+    emergencyControls: maintenanceRow.rows[0]?.emergency_controls || { paymentsFrozen: false, partnerApisDisabled: false, loginDisabled: false, withdrawalsFrozen: 
+false },
   });
 }
 
@@ -926,10 +941,10 @@ export async function updateBusinessVerificationLevel(req, res) {
 // current trust level, for the admin Verification Levels screen.
 export async function listBusinessVerificationLevels(req, res) {
   const { businessType } = req.query;
-  const conditions = [`status = 'active'`];
+  const conditions = [`bp.status = 'active'`];
   const values = [];
   let i = 1;
-  if (businessType) { conditions.push(`business_type = $${i}`); values.push(businessType); i += 1; }
+  if (businessType) { conditions.push(`bp.business_type = $${i}`); values.push(businessType); i += 1; }
   try {
     const result = await query(
       `SELECT bp.*, u.username, u.email
