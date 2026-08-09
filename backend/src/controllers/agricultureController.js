@@ -126,14 +126,14 @@ export async function createSupplyContract(req, res) {
     return res.status(403).json({ error: 'Your account is currently restricted from creating new orders or contracts. Contact Jedida support.' });
   }
   try {
-    const result = await query(
-      `INSERT INTO supply_contracts
-         (buyer_id, supplier_id, product_id, originating_agreement_id, quantity_per_cycle, unit, cycle, unit_price, starts_on, ends_on, next_delivery_date)
-       VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7,'monthly'),$8,COALESCE($9, CURRENT_DATE),$10,COALESCE($9, CURRENT_DATE))
-       RETURNING *`,
-      [req.user.id, supplierId, productId || null, originatingAgreementId || null, quantityPerCycle, unit || null, cycle || null, unitPrice, startsOn || null, endsOn || null]
-    );
-
+const result = await query(
+  `INSERT INTO supply_contracts
+     (buyer_id, supplier_id, product_id, originating_agreement_id, quantity_per_cycle, unit, cycle, unit_price, starts_on, ends_on, next_delivery_date)
+   VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7,'monthly')::supply_contract_cycle,$8,COALESCE($9, CURRENT_DATE),$10,COALESCE($9, CURRENT_DATE))
+   RETURNING *`,
+  [req.user.id, supplierId, productId || null, originatingAgreementId || null, quantityPerCycle, unit || null, cycle || null, unitPrice, startsOn || null, endsOn || 
+null]
+);
     await notifyUser(supplierId, 'supply_contract_created', 'New supply contract',
       'A buyer has set up a repeat supply contract with you on Jedida.', { contractId: result.rows[0].id });
 

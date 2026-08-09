@@ -349,22 +349,40 @@ export async function createAd(req, res) {
     placement, priority, startsAt, endsAt, targetCategory,
     mediaType, autoplay, muted, loopVideo, durationSeconds, thumbnailUrl
   } = req.body;
-  const result = await query(
-    `INSERT INTO ads
-       (title, image_url, video_url, link_url, subtitle, cta_text, badge_text, placement, priority, starts_at, ends_at, target_category,
-        media_type, autoplay, muted, loop_video, duration_seconds, thumbnail_url, created_by)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,COALESCE($8,'hero'),COALESCE($9,0),$10,$11,$12,
-             COALESCE($13, CASE WHEN $3 IS NOT NULL THEN 'video' ELSE 'image' END),
-             COALESCE($14, TRUE), COALESCE($15, TRUE), COALESCE($16, TRUE), $17, $18, $19)
-     RETURNING *`,
-    [title, imageUrl, videoUrl || null, linkUrl || null, subtitle || null, ctaText || null, badgeText || null,
-     placement || null, priority ?? null, startsAt || null, endsAt || null, targetCategory || null,
-     mediaType || null, autoplay ?? null, muted ?? null, loopVideo ?? null, durationSeconds ?? null, thumbnailUrl || null,
-     req.user.id]
-  );
-  res.status(201).json({ ad: result.rows[0] });
-}
 
+  // image_url is NOT NULL at the DB level (it's the required poster/
+  // fallback even for video ads) — reject cleanly here instead of letting
+  // an unhandled query rejection reach Postgres and crash the process.
+  if (!title || !String(title).trim()) return res.status(400).json({ error: 'Title is required.' });
+  if (!imageUrl) return res.status(400).json({ error: 'An image is required (used as the video poster too, for video ads).' });
+  if (durationSeconds !== undefined && durationSeconds !== null && durationSeconds !== '' && !Number.isFinite(Number(durationSeconds))) {
+    return res.status(400).json({ error: 'Duration must be a number of seconds.' });
+  }
+  if (priority !== undefined && priority !== null && priority !== '' && !Number.isFinite(Number(priority))) {
+    return res.status(400).json({ error: 'Priority must be a number.' });
+  }
+
+  try {
+    const result = await query(
+      `INSERT INTO ads
+         (title, image_url, video_url, link_url, subtitle, cta_text, badge_text, placement, priority, starts_at, ends_at, target_category,
+          media_type, autoplay, muted, loop_video, duration_seconds, thumbnail_url, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,COALESCE($8,'hero')::ad_placement,COALESCE($9,0),$10,$11,$12,
+               COALESCE($13, CASE WHEN $3::text IS NOT NULL THEN 'video' ELSE 'image' END)::ad_media_type,
+               COALESCE($14, TRUE), COALESCE($15, TRUE), COALESCE($16, TRUE), $17, $18, $19)
+       RETURNING *`,
+      [title, imageUrl, videoUrl || null, linkUrl || null, subtitle || null, ctaText || null, badgeText || null,
+       placement || null, priority ?? null, startsAt || null, endsAt || null, targetCategory || null,
+       mediaType || null, autoplay ?? null, muted ?? null, loopVideo ?? null,
+       (durationSeconds === undefined || durationSeconds === null || durationSeconds === '') ? null : Number(durationSeconds),
+       thumbnailUrl || null, req.user.id]
+    );
+    return res.status(201).json({ ad: result.rows[0] });
+  } catch (err) {
+    console.error('Create ad error:', err);
+    return res.status(500).json({ error: 'Could not create ad. Please check the fields and try again.' });
+  }
+}
 // Admin list — every ad regardless of active/schedule state, so the admin
 // panel can manage past/future/paused ads too.
 export async function listActiveAds(req, res) {
@@ -373,12 +391,16 @@ export async function listActiveAds(req, res) {
   const values = [];
   if (placement) { conditions.push(`placement = $${values.length + 1}`); values.push(placement); }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-  const result = await query(
-    `SELECT * FROM ads ${where} ORDER BY priority DESC, created_at DESC`, values
-  );
-  res.json({ ads: result.rows });
+  try {
+    const result = await query(
+      `SELECT * FROM ads ${where} ORDER BY priority DESC, created_at DESC`, values
+    );
+    return res.json({ ads: result.rows });
+  } catch (err) {
+    console.error('List ads error:', err);
+    return res.status(500).json({ error: 'Could not load ads.' });
+  }
 }
-
 export async function updateAd(req, res) {
   const { id } = req.params;
   const allowed = {
@@ -388,6 +410,11 @@ export async function updateAd(req, res) {
     mediaType: 'media_type', autoplay: 'autoplay', muted: 'muted', loopVideo: 'loop_video',
     durationSeconds: 'duration_seconds', thumbnailUrl: 'thumbnail_url'
   };
+  // image_url is NOT NULL at the DB level — reject an explicit clear
+  // attempt here with a clean 400 rather than a crashing constraint error.
+  if ('imageUrl' in req.body && !req.body.imageUrl) {
+    return res.status(400).json({ error: 'Image cannot be removed — every ad needs one (used as the video poster too).' });
+  }
   const sets = [];
   const values = [];
   let i = 1;
@@ -396,19 +423,25 @@ export async function updateAd(req, res) {
   }
   if (sets.length === 0) return res.status(400).json({ error: 'No valid fields to update.' });
   values.push(id);
-  const result = await query(`UPDATE ads SET ${sets.join(', ')} WHERE id = $${i} RETURNING *`, values);
-  if (result.rows.length === 0) return res.status(404).json({ error: 'Ad not found.' });
-  res.json({ ad: result.rows[0] });
+  try {
+    const result = await query(`UPDATE ads SET ${sets.join(', ')} WHERE id = $${i} RETURNING *`, values);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Ad not found.' });
+    return res.json({ ad: result.rows[0] });
+  } catch (err) {
+    console.error('Update ad error:', err);
+    return res.status(500).json({ error: 'Could not update ad. Please check the fields and try again.' });
+  }
 }
 
 export async function deleteAd(req, res) {
-  await query('UPDATE ads SET active = FALSE WHERE id = $1', [req.params.id]);
-  res.json({ message: 'Ad removed.' });
+  try {
+    await query('UPDATE ads SET active = FALSE WHERE id = $1', [req.params.id]);
+    return res.json({ message: 'Ad removed.' });
+  } catch (err) {
+    console.error('Delete ad error:', err);
+    return res.status(500).json({ error: 'Could not remove ad.' });
+  }
 }
-
-// Public — only ads that are active AND currently inside their scheduling
-// window (or unscheduled), optionally filtered to one placement, ordered by
-// priority. Also records an impression per ad returned.
 export async function listPublicAds(req, res) {
   const { placement } = req.query;
   const conditions = [

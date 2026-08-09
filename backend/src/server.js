@@ -81,6 +81,46 @@ import { verifyRequestOrigin } from './middleware/csrfProtection.js';
 
 dotenv.config();
 
+// ----------------------------------------------------------------------
+// Process-level safety net. Without these, ANY unhandled error anywhere
+// in the app — a stray promise rejection in a route, an unlistened
+// EventEmitter 'error' (e.g. the pg Pool's idle-client errors, see
+// db.js), a bug in one of the background sweeps below — takes down the
+// entire Node process, killing every in-flight request across every
+// route, not just the one that misbehaved. That's what produced the
+// dangling "GET /api/ads ... - - ms - -" log line: the process died
+// mid-request, before morgan/the response could finish.
+//
+// These handlers are a last line of defense, not a substitute for
+// fixing the actual bug — they log with full context and keep the
+// server alive so a single bad request/connection doesn't cascade into
+// a full outage. Anything caught here should still be tracked down and
+// fixed at the source; this just stops it from being catastrophic in
+// the meantime.
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🔴 Unhandled Promise Rejection:', reason);
+  console.error('   at promise:', promise);
+  // Deliberately NOT calling process.exit() — an unhandled rejection in
+  // one request/background job is recoverable; crashing the whole
+  // server over it is strictly worse for uptime than logging it.
+});
+
+process.on('uncaughtException', (err, origin) => {
+  console.error('🔴 Uncaught Exception:', err);
+  console.error('   origin:', origin);
+  // Node's own docs recommend NOT resuming normal operation after an
+  // uncaughtException in general, since the process may be in an
+  // inconsistent state. In practice, for this app the overwhelmingly
+  // common cause is a synchronous throw or unhandled EventEmitter
+  // 'error' from something non-critical (a logging call, a background
+  // sweep, a stray pool event) rather than corrupted in-process state,
+  // so we log and keep serving traffic rather than dropping every open
+  // connection. If crashes here become frequent, that's a signal to
+  // find and fix the specific unguarded call — not to remove this
+  // handler, which would just restore the original all-or-nothing
+  // failure mode.
+});
+
 const app = express();
 app.set('trust proxy', 1); // required behind Railway/Render/Netlify-style reverse proxies
 
@@ -379,7 +419,7 @@ const httpServer = sslEnabled
   : http.createServer(app);
 initChatSocket(httpServer, process.env.FRONTEND_URL);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
   console.log(`🟢 JEDIDA Marketplace API + real-time chat running on port ${PORT} (${sslEnabled ? 'https' : 'http'})`);
 });
@@ -440,7 +480,8 @@ if (process.env.VERIFIED_SHOP_SWEEP_DISABLED !== 'true') {
   const runTrustSweep = async () => {
     try {
       const { engineSummary, protectionSummary } = await runFullTrustAndProtectionSweep();
-      console.log(`✅ Verified Shop sweep: ${engineSummary.checked} shop(s) checked, ${engineSummary.granted} newly verified, ${engineSummary.revoked} revoked. AI Protection: ${protectionSummary.signalsRaised} risk signal(s), ${protectionSummary.flagsRaised} fraud flag(s) raised.`);
+      console.log(`✅ Verified Shop sweep: ${engineSummary.checked} shop(s) checked, ${engineSummary.granted} newly verified, ${engineSummary.revoked} revoked. AI 
+Protection: ${protectionSummary.signalsRaised} risk signal(s), ${protectionSummary.flagsRaised} fraud flag(s) raised.`);
     } catch (err) {
       console.error('✅ Verified Shop sweep failed:', err);
     }
