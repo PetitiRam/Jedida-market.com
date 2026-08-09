@@ -13,7 +13,7 @@ const LANGUAGES = [
 
 const STICKERS = ['👍', '🎉', '❤️', '😂', '🙏', '📦', '✅', '⏳'];
 
-export default function ChatPanelV2({ embedded = false }) {
+export default function ChatPanelV2({ embedded = false, autoEscalateReason = null }) {
   const [conversationId, setConversationId] = useState(null);
   const [conversation, setConversation] = useState(null);
   const [text, setText] = useState('');
@@ -108,6 +108,20 @@ export default function ChatPanelV2({ embedded = false }) {
 
   useEffect(loadConversation, []);
 
+  // When opened from a context that already decided a human is needed
+  // (e.g. Jedida AI's [[ESCALATE]] handoff), skip the extra tap on
+  // "Talk to a human" — escalate immediately, live, with the real reason,
+  // the moment the conversation is known and isn't already escalated.
+  const autoEscalateFired = useRef(false);
+  useEffect(() => {
+    if (!autoEscalateReason || !conversation || conversation.escalated || autoEscalateFired.current) return;
+    autoEscalateFired.current = true;
+    client.post(`/chat-v2/${conversation.id}/escalate`, {
+      area: 'customer_support',
+      reason: autoEscalateReason,
+    }).then(loadConversation).catch(() => {});
+  }, [autoEscalateReason, conversation]);
+
   useEffect(() => {
     if (!conversationId) return;
     client.get(`/chat-v2/${conversationId}/messages`).then(({ data }) => setMessages(data.messages));
@@ -180,6 +194,12 @@ export default function ChatPanelV2({ embedded = false }) {
 
   const visibleMessages = searchResults !== null ? searchResults : messages;
 
+  // Once escalated, distinguish "waiting for a person" from "a person is
+  // actually here" so the widget never just sits on a vague static
+  // banner — it tells the truth about where the handoff is at each
+  // moment: request sent -> connecting -> a real admin has replied.
+  const hasLiveAdminReply = messages.some((m) => m.is_official && !m.is_ai);
+
   // Glass theme used when this panel sits inside the half-screen overlay
   // (FloatingChatButton). Kept local so the default (embedded=false) usage
   // elsewhere is untouched.
@@ -210,12 +230,14 @@ export default function ChatPanelV2({ embedded = false }) {
       padding: '8px 12px', maxWidth: '75%', fontSize: '0.9rem', position: 'relative'
     }}>
       {m.is_official && !m.is_ai && (
-        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: embedded ? '#C9EFA0' : 'var(--forest)', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: embedded ? '#C9EFA0' : 'var(--forest)', marginBottom: 3, display: 'flex', alignItems: 'center', 
+gap: 4 }}>
           ✔️ Official Jedida Administrator
         </div>
       )}
       {m.is_ai && (
-        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: embedded ? '#C9EFA0' : 'var(--forest)', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: embedded ? '#C9EFA0' : 'var(--forest)', marginBottom: 3, display: 'flex', alignItems: 'center', 
+gap: 4 }}>
           🤖 Jedida AI Assistant
         </div>
       )}
@@ -240,7 +262,8 @@ export default function ChatPanelV2({ embedded = false }) {
         </div>
       )}
       <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.68rem', color: embedded ? glass.subText : '#8A9189' }}>{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        <span style={{ fontSize: '0.68rem', color: embedded ? glass.subText : '#8A9189' }}>{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: 
+'2-digit' })}</span>
         {m.status === 'read' && <span style={{ fontSize: '0.68rem', color: embedded ? '#C9EFA0' : 'var(--forest)' }}>✓✓ Read</span>}
         {m.reactions && Object.entries(m.reactions).map(([emoji, userIds]) => (
           userIds.length > 0 && <span key={emoji} style={{ fontSize: '0.75rem' }}>{emoji} {userIds.length}</span>
@@ -253,12 +276,14 @@ export default function ChatPanelV2({ embedded = false }) {
           {m.pinned ? '📌 Unpin' : '📌'}
         </button>
         {!m.deleted_for_everyone && (
-          <button onClick={() => deleteForEveryone(m.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '0.68rem', color: embedded ? '#F5A398' : '#8A2E10' }}>
+          <button onClick={() => deleteForEveryone(m.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '0.68rem', color: embedded ? 
+'#F5A398' : '#8A2E10' }}>
             Delete
           </button>
         )}
         {!m.deleted_for_everyone && (
-          <button onClick={() => openForwardPicker(m.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '0.68rem', color: embedded ? glass.subText : '#8A9189' }}>
+          <button onClick={() => openForwardPicker(m.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '0.68rem', color: embedded ? 
+glass.subText : '#8A9189' }}>
             ↪ Forward
           </button>
         )}
@@ -302,15 +327,18 @@ export default function ChatPanelV2({ embedded = false }) {
               {requestingHuman ? 'Connecting…' : '👤 Talk to a human'}
             </button>
           )}
-          <button onClick={() => setSearchOpen((v) => !v)} title="Search messages" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '0.85rem' }}>🔎</button>
+          <button onClick={() => setSearchOpen((v) => !v)} title="Search messages" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 
+'0.85rem' }}>🔎</button>
           <button onClick={clearChat} title="Delete chat" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '0.85rem' }}>🗑️</button>
           {otherUserId && (
-            <button onClick={() => blockOtherUser(otherUserId)} title="Block this user" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '0.85rem' }}>🚫</button>
+            <button onClick={() => blockOtherUser(otherUserId)} title="Block this user" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 
+'0.85rem' }}>🚫</button>
           )}
           <select
             value={myLanguage}
             onChange={(e) => changeLanguage(e.target.value)}
-            style={{ fontSize: '0.75rem', padding: '2px 4px', borderRadius: 6, border: embedded ? `1px solid ${glass.border}` : undefined, background: embedded ? 'rgba(255,255,255,0.12)' : undefined, color: embedded ? glass.text : 'inherit' }}
+            style={{ fontSize: '0.75rem', padding: '2px 4px', borderRadius: 6, border: embedded ? `1px solid ${glass.border}` : undefined, background: embedded ? 
+'rgba(255,255,255,0.12)' : undefined, color: embedded ? glass.text : 'inherit' }}
             title="Messages you receive will be translated into this language where possible"
           >
             {LANGUAGES.map((l) => <option key={l.key} value={l.key} style={{ color: '#10241A' }}>{l.label}</option>)}
@@ -336,24 +364,51 @@ export default function ChatPanelV2({ embedded = false }) {
       )}
 
       {moderationWarning && (
-        <div style={{ background: '#FFF4E5', border: '1px solid #8BC53F', borderRadius: 8, padding: '8px 10px', marginBottom: 8, fontSize: '0.78rem', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ background: '#FFF4E5', border: '1px solid #8BC53F', borderRadius: 8, padding: '8px 10px', marginBottom: 8, fontSize: '0.78rem', display: 
+'flex', justifyContent: 'space-between', gap: 8 }}>
           <span>🛡️ <strong>Petiti AI:</strong> {moderationWarning.reminder}</span>
           <button onClick={dismissModerationWarning} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>✕</button>
         </div>
       )}
 
       {blockedNotice && (
-        <div style={{ background: '#FDECEA', border: '1px solid #C0392B', borderRadius: 8, padding: '8px 10px', marginBottom: 8, fontSize: '0.78rem', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ background: '#FDECEA', border: '1px solid #C0392B', borderRadius: 8, padding: '8px 10px', marginBottom: 8, fontSize: '0.78rem', display: 
+'flex', justifyContent: 'space-between', gap: 8 }}>
           <span>🛡️ <strong>Petiti AI:</strong> {blockedNotice}</span>
           <button onClick={() => setBlockedNotice(null)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>✕</button>
         </div>
       )}
 
       {conversation?.escalated && (
-        <div style={{ background: embedded ? 'rgba(139,197,63,0.18)' : '#EAF4EC', border: `1px solid ${embedded ? glass.border : 'var(--forest)'}`, borderRadius: 8, padding: '8px 10px', marginBottom: 8, fontSize: '0.78rem', color: embedded ? glass.text : 'inherit' }}>
-          👤 A verified Jedida representative has been looped in and will reply here shortly.
+        <div style={{
+          background: hasLiveAdminReply ? (embedded ? 'rgba(139,197,63,0.22)' : '#EAF4EC') : (embedded ? 'rgba(255,255,255,0.10)' : '#F6F4EC'),
+          border: `1px solid ${embedded ? glass.border : (hasLiveAdminReply ? 'var(--forest)' : '#D9D2BE')}`,
+          borderRadius: 10, padding: '9px 12px', marginBottom: 8, fontSize: '0.78rem',
+          color: embedded ? glass.text : 'inherit', display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          {hasLiveAdminReply ? (
+            <>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3FA35A', flexShrink: 0, boxShadow: '0 0 0 3px rgba(63,163,90,0.22)' }} />
+              <span>✔️ A verified Jedida representative is here and live in this chat.</span>
+            </>
+          ) : (
+            <>
+              <span style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+                {[0, 1, 2].map((d) => (
+                  <span key={d} style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: embedded ? glass.text : 'var(--forest)',
+                    opacity: 0.85,
+                    animation: `jp-connect-dot 1.1s ${d * 0.15}s ease-in-out infinite`,
+                  }} />
+                ))}
+              </span>
+              <span>Connecting to a live assistant… a verified Jedida representative is being notified now.</span>
+            </>
+          )}
         </div>
       )}
+      <style>{`@keyframes jp-connect-dot { 0%, 80%, 100% { transform: translateY(0); opacity: 0.5; } 40% { transform: translateY(-3px); opacity: 1; } }`}</style>
 
       {pinnedMessages.length > 0 && searchResults === null && (
         <div style={{ background: '#FFF7E6', borderRadius: 8, padding: '6px 10px', marginBottom: 8, fontSize: '0.78rem' }}>

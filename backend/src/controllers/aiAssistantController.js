@@ -142,3 +142,28 @@ export async function postAssistantChat(req, res) {
     return res.status(500).json({ error: 'Jedida AI is unavailable right now — try again in a moment.' });
   }
 }
+const COLLECTION_KEYWORDS = {
+  agriculture: ['farm', 'crop', 'harvest', 'agri', 'livestock', 'seed', 'irrigation'],
+  manufacturing: ['factory', 'manufactur', 'production line', 'assembly'],
+  suppliers: ['supplier', 'sourcing', 'moq', 'factory profile'],
+  wholesale: ['wholesale', 'bulk order', 'quote request', 'b2b'],
+  delivery: ['delivery', 'courier', 'shipping', 'dispatch', 'warehouse'],
+  payments: ['payment', 'mobile money', 'mtn', 'airtel', 'escrow', 'withdrawal', 'refund'],
+  seller_success: ['storefront', 'listing', 'shop feed', 'seller dashboard', 'verified shop'],
+  buyer_support: ['order', 'return', 'buyer', 'track', 'complaint'],
+  admin_operations: ['admin', 'moderation', 'dispute', 'kyc', 'fraud'],
+};
+
+function classifyCollection(text) { /* keyword match, defaults to general_marketplace */ }
+function titleFrom(text) { /* first ~120 chars, clean whitespace */ }
+
+export async function postAssistantTeach(req, res) {
+  const { message, conversationId, audience } = req.body;
+  // 1. log the admin's turn to ai_assistant_messages (is_training=TRUE)
+  // 2. scanKnowledgeContent(message) — reuses the existing safety guard;
+  //    flagged content is NOT saved, AI explains why in-chat
+  // 3. classify + insert straight into ai_knowledge_items as status='published'
+  //    (reviewed_by/approved_by/published_by = the admin, timestamps = now())
+  // 4. reply: `Got it — I've learned that, and I'll use it going forward
+  //    for ${collection} questions. Saved as "${title}".`
+}
