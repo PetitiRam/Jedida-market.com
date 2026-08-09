@@ -137,18 +137,6 @@ function heuristicScan(buffer, mimetype) {
 }
 
 // Real AV engine — a local ClamAV daemon (clamd), talked to via the
-// `clamdscan` CLI over its unix socket. No network call, no external API,
-// no API key: the binary and the virus database both live in this
-// container (see backend/Dockerfile + docker/entrypoint.sh). clamd stays
-// resident with definitions loaded in memory, so each scan is fast.
-//
-// Set CLAMAV_ENABLED=false to explicitly disable (falls back to
-// heuristic-only). Otherwise this auto-detects: if `clamdscan` isn't on
-// PATH (e.g. running locally outside the Docker image), it logs once and
-// skips — same heuristic-only behavior as before, so local dev without
-// Docker still works.
-let clamAvailabilityWarned = false;
-
 async function externalScan(buffer, filename) {
   if (process.env.CLAMAV_ENABLED === 'false') return null;
 
@@ -156,19 +144,22 @@ async function externalScan(buffer, filename) {
   try {
     await fs.writeFile(tmpPath, buffer);
 
-    const socket = process.env.CLAMD_SOCKET || '/var/run/clamav/clamd.ctl';
-    const { stdout } = await execFileAsync('clamdscan', ['--no-summary', tmpPath], {
-      env: { ...process.env, CLAMD_SOCKET: socket },
-      timeout: 15000
-    });
-    // clamdscan prints "<path>: OK" when clean, "<path>: <SignatureName> FOUND" when infected.
+    // Standalone clamscan (not clamdscan/clamd) — no resident daemon.
+    // Loads the virus database fresh for this one scan and exits, so
+    // memory is only used in a short burst per upload instead of being
+    // held permanently. Trades scan speed (a few seconds instead of
+    // milliseconds) for a much smaller steady-state memory footprint,
+    // which matters on memory-constrained hosting tiers.
+    const bin = process.env.CLAMSCAN_BIN || 'clamscan';
+    const { stdout } = await execFileAsync(bin, ['--no-summary', tmpPath], { timeout: 30000 });
+    // clamscan prints "<path>: OK" when clean, "<path>: <SignatureName> FOUND" when infected.
     if (/FOUND\s*$/m.test(stdout)) {
       const match = stdout.match(/:\s*(.+?)\s+FOUND/);
       return { clean: false, reason: `Malware detected: ${match ? match[1] : 'unknown signature'}.` };
     }
     return { clean: true };
   } catch (err) {
-    // execFile throws on clamdscan's nonzero exit code too (1 = infected,
+    // execFile throws on clamscan's nonzero exit code too (1 = infected,
     // 2 = error) — distinguish "infected" (still useful signal in stdout)
     // from "couldn't run it at all".
     if (err.stdout && /FOUND\s*$/m.test(err.stdout)) {
@@ -176,11 +167,11 @@ async function externalScan(buffer, filename) {
       return { clean: false, reason: `Malware detected: ${match ? match[1] : 'unknown signature'}.` };
     }
     if (err.code === 'ENOENT') {
-      // clamdscan binary not present — not installed on this host (e.g.
+      // clamscan binary not present — not installed on this host (e.g.
       // local dev without the Docker image). Don't fail closed for a
       // missing tool, only for a configured tool that errors.
       if (!clamAvailabilityWarned) {
-        console.warn('clamdscan not found on PATH — running with heuristic-only scanning. Deploy via backend/Dockerfile to enable ClamAV.');
+        console.warn('clamscan not found on PATH — running with heuristic-only scanning. Deploy via backend/Dockerfile to enable ClamAV.');
         clamAvailabilityWarned = true;
       }
       return null;
@@ -191,7 +182,6 @@ async function externalScan(buffer, filename) {
     await fs.unlink(tmpPath).catch(() => {});
   }
 }
-
 async function scanForThreats(buffer, mimetype, filename) {
   const heuristic = heuristicScan(buffer, mimetype);
   if (!heuristic.clean) return heuristic;
