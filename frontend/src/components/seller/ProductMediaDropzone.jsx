@@ -20,9 +20,10 @@ export default function ProductMediaDropzone({ onUploaded, onError, maxItems = 1
       }
       const formData = new FormData();
       formData.append('file', finalFile);
-      const { data } = await client.post('/uploads', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      // See MediaUploader.jsx for why Content-Type must NOT be set
+      // manually here — it strips the required multipart boundary and
+      // breaks upload parsing server-side, especially for larger files.
+      const { data } = await client.post('/uploads', formData);
       onUploaded({
         type: file.type.startsWith('video/') ? 'video' : 'image',
         url: data.media.url

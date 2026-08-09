@@ -18,13 +18,13 @@ export default function MediaUploader({
     setUploading(true);
 
     try {
-      // 🖼 Instant preview (before upload)
+      //  Instant preview (before upload)
       const previewUrl = URL.createObjectURL(file);
       setPreview(previewUrl);
 
       let finalFile = file;
 
-      // ⚡ Compress only images
+      //  Compress only images
       if (file.type.startsWith('image/')) {
         finalFile = await compressImage(file);
       }
@@ -32,9 +32,15 @@ export default function MediaUploader({
       const formData = new FormData();
       formData.append('file', finalFile);
 
-      const { data } = await client.post('/uploads', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      // IMPORTANT: do NOT set Content-Type manually for a FormData body.
+      // A multipart request needs a `boundary=...` parameter in the
+      // Content-Type header, and the browser only generates that boundary
+      // when it sets the header itself. Setting 'multipart/form-data'
+      // explicitly here overrides that with a header that has no boundary
+      // at all, which breaks the server's multipart parser (multer) —
+      // most visibly on larger files like video, where the malformed
+      // body reliably fails instead of occasionally limping through.
+      const { data } = await client.post('/uploads', formData);
 
       // cleanup preview after success
       setPreview(null);
