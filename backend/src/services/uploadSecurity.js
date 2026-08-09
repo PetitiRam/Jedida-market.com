@@ -16,6 +16,13 @@
 //      fails closed (rejects the upload) rather than silently skipping it.
 
 import crypto from 'crypto';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import fs from 'fs/promises';
+import os from 'os';
+import path from 'path';
+
+const execFileAsync = promisify(execFile);
 
 // ---------------------------------------------------------------------
 // 1. Category definitions — MIME allowlist + size cap in one place, so
@@ -129,27 +136,59 @@ function heuristicScan(buffer, mimetype) {
   return { clean: true };
 }
 
-// Pluggable real AV hook. Set CLAMAV_API_URL to a clamd REST bridge (e.g.
-// clamav-rest) that accepts a raw file POST and returns { infected, name }.
-// Fails closed: if configured but unreachable/erroring, the upload is
-// rejected rather than silently allowed through unscanned.
+// Real AV engine — a local ClamAV daemon (clamd), talked to via the
+// `clamdscan` CLI over its unix socket. No network call, no external API,
+// no API key: the binary and the virus database both live in this
+// container (see backend/Dockerfile + docker/entrypoint.sh). clamd stays
+// resident with definitions loaded in memory, so each scan is fast.
+//
+// Set CLAMAV_ENABLED=false to explicitly disable (falls back to
+// heuristic-only). Otherwise this auto-detects: if `clamdscan` isn't on
+// PATH (e.g. running locally outside the Docker image), it logs once and
+// skips — same heuristic-only behavior as before, so local dev without
+// Docker still works.
+let clamAvailabilityWarned = false;
+
 async function externalScan(buffer, filename) {
-  if (!process.env.CLAMAV_API_URL) return null; // not configured — heuristic-only
+  if (process.env.CLAMAV_ENABLED === 'false') return null;
+
+  const tmpPath = path.join(os.tmpdir(), `upload-scan-${crypto.randomBytes(8).toString('hex')}${path.extname(filename || '')}`);
   try {
-    const res = await fetch(process.env.CLAMAV_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': filename },
-      body: buffer
+    await fs.writeFile(tmpPath, buffer);
+
+    const socket = process.env.CLAMD_SOCKET || '/var/run/clamav/clamd.ctl';
+    const { stdout } = await execFileAsync('clamdscan', ['--no-summary', tmpPath], {
+      env: { ...process.env, CLAMD_SOCKET: socket },
+      timeout: 15000
     });
-    if (!res.ok) throw new Error(`scanner responded ${res.status}`);
-    const data = await res.json();
-    if (data.infected) {
-      return { clean: false, reason: `Malware detected: ${data.name || 'unknown signature'}.` };
+    // clamdscan prints "<path>: OK" when clean, "<path>: <SignatureName> FOUND" when infected.
+    if (/FOUND\s*$/m.test(stdout)) {
+      const match = stdout.match(/:\s*(.+?)\s+FOUND/);
+      return { clean: false, reason: `Malware detected: ${match ? match[1] : 'unknown signature'}.` };
     }
     return { clean: true };
   } catch (err) {
-    console.error('External malware scan failed (failing closed):', err.message);
+    // execFile throws on clamdscan's nonzero exit code too (1 = infected,
+    // 2 = error) — distinguish "infected" (still useful signal in stdout)
+    // from "couldn't run it at all".
+    if (err.stdout && /FOUND\s*$/m.test(err.stdout)) {
+      const match = err.stdout.match(/:\s*(.+?)\s+FOUND/);
+      return { clean: false, reason: `Malware detected: ${match ? match[1] : 'unknown signature'}.` };
+    }
+    if (err.code === 'ENOENT') {
+      // clamdscan binary not present — not installed on this host (e.g.
+      // local dev without the Docker image). Don't fail closed for a
+      // missing tool, only for a configured tool that errors.
+      if (!clamAvailabilityWarned) {
+        console.warn('clamdscan not found on PATH — running with heuristic-only scanning. Deploy via backend/Dockerfile to enable ClamAV.');
+        clamAvailabilityWarned = true;
+      }
+      return null;
+    }
+    console.error('ClamAV scan failed (failing closed):', err.message);
     return { clean: false, reason: 'Could not complete a security scan of this file. Please try again shortly.' };
+  } finally {
+    await fs.unlink(tmpPath).catch(() => {});
   }
 }
 
