@@ -137,6 +137,7 @@ function heuristicScan(buffer, mimetype) {
 }
 
 // Real AV engine — a local ClamAV daemon (clamd), talked to via the
+let clamAvailabilityWarned = false;
 async function externalScan(buffer, filename) {
   if (process.env.CLAMAV_ENABLED === 'false') return null;
 
