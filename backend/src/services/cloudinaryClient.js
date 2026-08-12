@@ -1,9 +1,3 @@
-// Real media upload via Cloudinary's unsigned/signed upload API (no SDK
-// dependency — plain HTTPS multipart request keeps this consistent with
-// the other service clients in this folder). Configure CLOUDINARY_CLOUD_NAME
-// + CLOUDINARY_API_KEY + CLOUDINARY_API_SECRET to enable; without them the
-// upload route returns a clear 501 instead of silently failing.
-
 import crypto from 'crypto';
 import { randomStorageName } from './uploadSecurity.js';
 
@@ -17,19 +11,14 @@ function signParams(params) {
 }
 
 /**
- * @param {Buffer} fileBuffer
- * @param {string} filename
- * @param {'image'|'video'|'raw'} resourceType 'raw' covers non-media files
- *   (PDF, DOC/DOCX, etc.) — used by document-upload flows like Partner
- *   applications. Existing image/video callers are unaffected.
- * @param {string} [folder] optional Cloudinary subfolder override
- * @param {object} [opts]
- * @param {boolean} [opts.sensitive] Store as Cloudinary's private
- *   'authenticated' delivery type instead of the public default — the
- *   returned `url` is then a time-limited signed URL (see
- *   signedDeliveryUrl below) rather than a permanently-public one. Use
- *   for KYC/partner/business documents; leave false for anything meant
- *   to be publicly viewable (product photos, shop logos, chat media).
+ * Upload file to Cloudinary with signed authentication
+ * @param {Buffer} fileBuffer - File contents
+ * @param {string} filename - Original filename (used for extension only, name is randomized)
+ * @param {'image'|'video'|'raw'} resourceType - Resource type for Cloudinary
+ * @param {string} [folder] - Cloudinary folder path (default: 'jedida-marketplace')
+ * @param {object} [opts] - Additional options
+ * @param {boolean} [opts.sensitive] - Store as authenticated delivery (time-limited URLs)
+ * @returns {Promise<{url, publicId, resourceType, thumbnailUrl, bytes, width, height, durationSeconds}>}
  */
 export async function uploadToCloudinary(fileBuffer, filename, resourceType = 'image', folder = 'jedida-marketplace', opts = {}) {
   if (!isCloudinaryConfigured()) {
@@ -38,16 +27,17 @@ export async function uploadToCloudinary(fileBuffer, filename, resourceType = 'i
 
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   const timestamp = Math.floor(Date.now() / 1000);
-  // Storage key is always a random name we generate — never the
-  // user-supplied original filename — so nothing about how a file was
-  // named locally ends up in a public URL, a log line, or another
-  // user's view of shared content. 'raw' (document) delivery needs the
-  // extension kept in the public_id for Cloudinary to serve the right
-  // format; image/video derive format automatically, so drop it there
-  // to avoid a cosmetic double-extension in the resulting URL.
+  
+  // Storage key is always a random name we generate — never the user-supplied
+  // original filename — so nothing about how a file was named locally ends up
+  // in a public URL, a log line, or another user's view of shared content.
+  // 'raw' (document) delivery needs the extension kept in the public_id for
+  // Cloudinary to serve the right format; image/video derive format
+  // automatically, so drop it there to avoid a cosmetic double-extension.
   const randomName = randomStorageName(filename);
   const publicId = resourceType === 'raw' ? randomName : randomName.replace(/\.[a-zA-Z0-9]+$/, '');
   const type = opts.sensitive ? 'authenticated' : 'upload';
+  
   const signParamsObj = { folder, public_id: publicId, timestamp, type };
   const signature = signParams(signParamsObj);
 
@@ -87,11 +77,17 @@ export async function uploadToCloudinary(fileBuffer, filename, resourceType = 'i
   };
 }
 
-// Signed, time-limited delivery URL for a private ('authenticated')
-// asset. Used both right after upload (uploadToCloudinary above) and any
-// time a private document needs to be re-shared later (e.g. an admin
-// reviewing a KYC/partner document) without ever making the asset
-// permanently public.
+/**
+ * Generate a signed, time-limited delivery URL for a private ('authenticated') asset
+ * Used both right after upload and any time a private document needs to be
+ * re-shared later (e.g. an admin reviewing a KYC/partner document) without
+ * ever making the asset permanently public.
+ * 
+ * @param {string} publicId - Cloudinary public_id
+ * @param {'image'|'video'|'raw'} resourceType - Resource type
+ * @param {number} [expiresInSeconds] - URL lifetime in seconds (default: 3600 = 1 hour)
+ * @returns {string} - Signed delivery URL with time-limited access
+ */
 export function signedDeliveryUrl(publicId, resourceType = 'image', expiresInSeconds = 3600) {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   const expiresAt = Math.floor(Date.now() / 1000) + expiresInSeconds;
