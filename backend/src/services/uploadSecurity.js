@@ -6,23 +6,19 @@
 // renamed executable "image/jpeg" and every prior check would pass it
 // straight through to storage.
 //
-// Three layers, all mandatory (fail closed on any of them):
+// Two layers, both mandatory (fail closed on any of them):
 //   1. MIME allowlist   — same category-based lists each controller had.
 //   2. Magic-byte check — the file's actual leading bytes must match what
 //      the claimed type looks like. Defeats simple relabeling.
-//   3. Threat scan       — heuristic signature scan always runs; if a real
-//      AV engine is configured (CLAMAV_API_URL or VIRUSTOTAL_API_KEY),
-//      that runs too and its verdict wins. Unreachable-when-configured
-//      fails closed (rejects the upload) rather than silently skipping it.
+// Plus a heuristic threat scan (executable signatures / embedded script
+// markers) that always runs in-process — no external AV engine, daemon,
+// or binary required, so this module has zero runtime dependency on the
+// container it's deployed in. (An earlier version shelled out to a local
+// ClamAV `clamscan` binary; that's been removed — see git history if you
+// need to reintroduce a real AV engine behind an HTTP API instead.)
 
 import crypto from 'crypto';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-import fs from 'fs/promises';
-import os from 'os';
 import path from 'path';
-
-const execFileAsync = promisify(execFile);
 
 // ---------------------------------------------------------------------
 // 1. Category definitions — MIME allowlist + size cap in one place, so
@@ -102,7 +98,6 @@ function matchesSignature(buffer, mimetype) {
 // 3. Threat scan — heuristic byte-signature checks always run (catch
 //    the common "polyglot" tricks: an executable or script smuggled
 //    inside a file that otherwise passes the magic-byte check above).
-//    A real AV engine layers on top when configured.
 // ---------------------------------------------------------------------
 const EXECUTABLE_SIGNATURES = [
   { name: 'Windows executable (MZ/PE)', bytes: Buffer.from('4d5a', 'hex') },       // MZ header
@@ -136,59 +131,8 @@ function heuristicScan(buffer, mimetype) {
   return { clean: true };
 }
 
-// Real AV engine — a local ClamAV daemon (clamd), talked to via the
-let clamAvailabilityWarned = false;
-async function externalScan(buffer, filename) {
-  if (process.env.CLAMAV_ENABLED === 'false') return null;
-
-  const tmpPath = path.join(os.tmpdir(), `upload-scan-${crypto.randomBytes(8).toString('hex')}${path.extname(filename || '')}`);
-  try {
-    await fs.writeFile(tmpPath, buffer);
-
-    // Standalone clamscan (not clamdscan/clamd) — no resident daemon.
-    // Loads the virus database fresh for this one scan and exits, so
-    // memory is only used in a short burst per upload instead of being
-    // held permanently. Trades scan speed (a few seconds instead of
-    // milliseconds) for a much smaller steady-state memory footprint,
-    // which matters on memory-constrained hosting tiers.
-    const bin = process.env.CLAMSCAN_BIN || 'clamscan';
-    const { stdout } = await execFileAsync(bin, ['--no-summary', tmpPath], { timeout: 30000 });
-    // clamscan prints "<path>: OK" when clean, "<path>: <SignatureName> FOUND" when infected.
-    if (/FOUND\s*$/m.test(stdout)) {
-      const match = stdout.match(/:\s*(.+?)\s+FOUND/);
-      return { clean: false, reason: `Malware detected: ${match ? match[1] : 'unknown signature'}.` };
-    }
-    return { clean: true };
-  } catch (err) {
-    // execFile throws on clamscan's nonzero exit code too (1 = infected,
-    // 2 = error) — distinguish "infected" (still useful signal in stdout)
-    // from "couldn't run it at all".
-    if (err.stdout && /FOUND\s*$/m.test(err.stdout)) {
-      const match = err.stdout.match(/:\s*(.+?)\s+FOUND/);
-      return { clean: false, reason: `Malware detected: ${match ? match[1] : 'unknown signature'}.` };
-    }
-    if (err.code === 'ENOENT') {
-      // clamscan binary not present — not installed on this host (e.g.
-      // local dev without the Docker image). Don't fail closed for a
-      // missing tool, only for a configured tool that errors.
-      if (!clamAvailabilityWarned) {
-        console.warn('clamscan not found on PATH — running with heuristic-only scanning. Deploy via backend/Dockerfile to enable ClamAV.');
-        clamAvailabilityWarned = true;
-      }
-      return null;
-    }
-    console.error('ClamAV scan failed (failing closed):', err.message);
-    return { clean: false, reason: 'Could not complete a security scan of this file. Please try again shortly.' };
-  } finally {
-    await fs.unlink(tmpPath).catch(() => {});
-  }
-}
-async function scanForThreats(buffer, mimetype, filename) {
-  const heuristic = heuristicScan(buffer, mimetype);
-  if (!heuristic.clean) return heuristic;
-  const external = await externalScan(buffer, filename);
-  if (external && !external.clean) return external;
-  return { clean: true };
+async function scanForThreats(buffer, mimetype) {
+  return heuristicScan(buffer, mimetype);
 }
 
 // ---------------------------------------------------------------------
@@ -233,7 +177,7 @@ export async function validateUpload(file, category, context = {}) {
     });
     return { ok: false, error: 'This file does not appear to be a valid file of the type it claims to be.' };
   }
-  const scan = await scanForThreats(file.buffer, file.mimetype, file.originalname);
+  const scan = await scanForThreats(file.buffer, file.mimetype);
   if (!scan.clean) {
     recordSecurityEvent({
       eventType: 'malware_detected', severity: 5, ipAddress: context.ipAddress, userId: context.userId,

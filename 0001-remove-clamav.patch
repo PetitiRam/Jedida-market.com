@@ -1,0 +1,319 @@
+From 398de2fa9186f683b38e0840eaef59e940173f06 Mon Sep 17 00:00:00 2001
+From: Jedida Dev <dev@jedida-market.com>
+Date: Wed, 12 Aug 2026 19:05:04 +0000
+Subject: [PATCH] Remove ClamAV from Docker image and upload security pipeline
+
+- backend/Dockerfile, Dockerfile: drop clamav/clamav-daemon/freshclam
+  packages and clamd socket setup; CMD now starts node directly
+- backend/docker/entrypoint.sh: removed (only existed to boot clamd)
+- backend/src/services/uploadSecurity.js: drop external clamscan
+  shell-out; rely on MIME allowlist + magic-byte check + in-process
+  heuristic threat scan (executable signatures, embedded script
+  markers)
+- .env.example, MEDIA_UPLOADER_DEPLOYMENT.md: remove dead
+  CLAMSCAN_BIN/CLAMAV_ENABLED vars
+---
+ .env.example                           |  4 --
+ Dockerfile                             | 32 +++++------
+ MEDIA_UPLOADER_DEPLOYMENT.md           |  4 +-
+ backend/Dockerfile                     | 18 +++----
+ backend/docker/entrypoint.sh           | 35 ------------
+ backend/src/services/uploadSecurity.js | 74 ++++----------------------
+ 6 files changed, 29 insertions(+), 138 deletions(-)
+ delete mode 100644 backend/docker/entrypoint.sh
+
+diff --git a/.env.example b/.env.example
+index 2810dc4..574385d 100644
+--- a/.env.example
++++ b/.env.example
+@@ -16,10 +16,6 @@ CLOUDINARY_CLOUD_NAME=your-cloud-name
+ CLOUDINARY_API_KEY=your-api-key
+ CLOUDINARY_API_SECRET=your-api-secret
+ 
+-# ClamAV (Optional: Malware scanning)
+-CLAMSCAN_BIN=/usr/bin/clamscan
+-CLAMAV_ENABLED=false
+-
+ # Optional: SSL/TLS direct termination (most deployments use a proxy instead)
+ SSL_KEY_PATH=
+ SSL_CERT_PATH=
+diff --git a/Dockerfile b/Dockerfile
+index b76c4f8..32465f8 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -6,36 +6,31 @@
+ # All COPY paths below are prefixed with backend/ to account for that.
+ #
+ # Why this file exists: Render/Railway's default buildpack (Nixpacks) has
+-# no apt-get access, so system binaries like ClamAV and LibreOffice can't
+-# be installed on their standard Node runtime. A Docker-based deploy gives
++# no apt-get access, so system binaries like LibreOffice can't be
++# installed on their standard Node runtime. A Docker-based deploy gives
+ # full apt access at build time. Everything below runs LOCALLY inside
+-# this container — no external scanning API, no external conversion API.
++# this container — no external conversion API.
++#
++# No ClamAV here. Upload safety (backend/src/services/uploadSecurity.js)
++# is handled entirely in-process: MIME allowlist + magic-byte
++# verification + a heuristic threat scan (executable signatures /
++# embedded script markers). That needs no system AV binary or daemon,
++# so the image stays smaller and there's nothing to keep updated or
++# wait on at boot.
+ 
+ FROM node:20-bookworm-slim
+ 
+ # ---- System packages -------------------------------------------------
+-# clamav-daemon : clamd, the scanning daemon (kept warm/loaded — fast)
+-# clamav-freshclam : keeps virus definitions updated
+ # libreoffice-* : headless doc/spreadsheet -> PDF conversion via `soffice`
+ #   (the -writer/-calc subsets keep the image smaller than the full
+ #   `libreoffice` metapackage; add libreoffice-impress if you need
+ #   .ppt/.pptx conversion too)
+ RUN apt-get update && apt-get install -y --no-install-recommends \
+-      clamav-daemon \
+-      clamav-freshclam \
+       libreoffice-writer \
+       libreoffice-calc \
+       fonts-dejavu \
+       curl \
+-    && rm -rf /var/lib/apt/lists/* \
+-    && mkdir -p /var/run/clamav /var/lib/clamav \
+-    && chown -R clamav:clamav /var/run/clamav /var/lib/clamav
+-
+-# clamd config: listen on a local unix socket, not TCP — nothing outside
+-# this container can ever reach it.
+-RUN sed -i 's/^Foreground .*/Foreground true/' /etc/clamav/clamd.conf \
+-    && sed -i 's|^LocalSocket .*|LocalSocket /var/run/clamav/clamd.ctl|' /etc/clamav/clamd.conf \
+-    && sed -i 's/^#*LocalSocketGroup .*/LocalSocketGroup clamav/' /etc/clamav/clamd.conf
++    && rm -rf /var/lib/apt/lists/*
+ 
+ WORKDIR /app
+ 
+@@ -48,12 +43,9 @@ RUN npm ci --omit=dev
+ # frontend/mobile/desktop-shell source never ends up in this image.
+ COPY backend/ .
+ 
+-RUN chmod +x docker/entrypoint.sh
+-
+ ENV NODE_ENV=production
+-ENV CLAMD_SOCKET=/var/run/clamav/clamd.ctl
+ ENV SOFFICE_BIN=/usr/bin/soffice
+ 
+ EXPOSE 5000
+ 
+-ENTRYPOINT ["./docker/entrypoint.sh"]
++CMD ["node", "src/server.js"]
+diff --git a/MEDIA_UPLOADER_DEPLOYMENT.md b/MEDIA_UPLOADER_DEPLOYMENT.md
+index 2c52271..c0dbe32 100644
+--- a/MEDIA_UPLOADER_DEPLOYMENT.md
++++ b/MEDIA_UPLOADER_DEPLOYMENT.md
+@@ -146,8 +146,6 @@ node backend/src/config/migrate.js
+ | `CLOUDINARY_CLOUD_NAME` | ✓ | — | Cloudinary account ID |
+ | `CLOUDINARY_API_KEY` | ✓ | — | Cloudinary API key (public) |
+ | `CLOUDINARY_API_SECRET` | ✓ | — | Cloudinary API secret (private, never expose) |
+-| `CLAMSCAN_BIN` | | `/usr/bin/clamscan` | Path to clamscan binary (for malware scanning) |
+-| `CLAMAV_ENABLED` | | `false` | Enable ClamAV scanning |
+ 
+ ### File Size Limits (backend/src/services/uploadSecurity.js)
+ - Image: 8 MB (includes JPEG, PNG, WebP, GIF)
+@@ -161,7 +159,7 @@ To change: edit `FILE_CATEGORIES` in `uploadSecurity.js`
+ 
+ 1. **Never commit `.env` files** — they contain secrets
+ 2. **Cloudinary API Secret** — keep this private, never expose in frontend
+-3. **File validation** — uses MIME allowlist + magic byte verification + threat scan
++3. **File validation** — uses MIME allowlist + magic byte verification + an in-process heuristic threat scan (no ClamAV/external AV dependency in Docker)
+ 4. **Audit logging** — all upload attempts logged to `media_upload_audit` table
+ 5. **User isolation** — uploads tagged with authenticated user's ID, cannot be attributed to another user
+ 
+diff --git a/backend/Dockerfile b/backend/Dockerfile
+index 4c2d7c3..0d8c845 100644
+--- a/backend/Dockerfile
++++ b/backend/Dockerfile
+@@ -1,20 +1,18 @@
+ FROM node:20-bookworm-slim
+ 
++# System packages: LibreOffice for headless doc/spreadsheet -> PDF
++# conversion via `soffice`. No ClamAV — the upload security layer
++# (backend/src/services/uploadSecurity.js) does MIME allowlisting,
++# magic-byte verification, and an in-process heuristic threat scan;
++# none of that needs a system AV binary or daemon.
+ RUN apt-get update && apt-get install -y --no-install-recommends \
+       ca-certificates \
+-      clamav \
+-      clamav-freshclam \
+       libreoffice-writer \
+       libreoffice-calc \
+       fonts-dejavu \
+     && update-ca-certificates \
+     && rm -rf /var/lib/apt/lists/*
+ 
+-# Bake the virus database into the image at BUILD time — network is
+-# reliable during build, so this is the primary source. Boot-time
+-# freshclam (in CMD below) is best-effort on top of this, not required.
+-RUN freshclam --quiet || echo "freshclam at build time failed — image will rely on boot-time freshclam only"
+-
+ WORKDIR /app
+ 
+ COPY package*.json ./
+@@ -24,11 +22,7 @@ COPY . .
+ 
+ ENV NODE_ENV=production
+ ENV SOFFICE_BIN=/usr/bin/soffice
+-ENV CLAMSCAN_BIN=/usr/bin/clamscan
+ 
+ EXPOSE 5000
+ 
+-# No resident daemon anymore — clamscan loads the virus DB fresh per
+-# scan and exits, so nothing sits in memory between uploads. Freshclam
+-# at boot is fire-and-forget (best-effort refresh), doesn't block startup.
+-CMD ["/bin/sh", "-c", "freshclam --quiet || echo 'freshclam skipped/failed, continuing with existing database'; echo 'starting node app'; exec node src/server.js"]
++CMD ["node", "src/server.js"]
+diff --git a/backend/docker/entrypoint.sh b/backend/docker/entrypoint.sh
+deleted file mode 100644
+index df614a2..0000000
+--- a/backend/docker/entrypoint.sh
++++ /dev/null
+@@ -1,35 +0,0 @@
+-#!/bin/sh
+-# Container entrypoint: bring up ClamAV's daemon locally, then hand off to
+-# the Node process. LibreOffice needs no daemon — it's invoked on demand
+-# per-conversion by documentConversionService.js — so there's nothing to
+-# start for it here.
+-set -e
+-
+-echo "[entrypoint] Updating virus definitions (freshclam)..."
+-# `|| true`: on a redeploy the definitions from the previous image layer
+-# are usually still recent; don't block startup if the mirror is slow or
+-# briefly unreachable. clamd will run with whatever's on disk.
+-freshclam --quiet || echo "[entrypoint] freshclam failed/skipped, continuing with existing definitions"
+-
+-echo "[entrypoint] Starting clamd..."
+-clamd &
+-CLAMD_PID=$!
+-
+-# Wait for clamd's socket to actually exist before starting the app —
+-# uploadSecurity.js fails closed if it can't reach clamd, so a slow first
+-# boot (definitions loading into memory) shouldn't cause early uploads to
+-# be wrongly rejected.
+-echo "[entrypoint] Waiting for clamd socket..."
+-for i in $(seq 1 60); do
+-  [ -S "$CLAMD_SOCKET" ] && break
+-  sleep 1
+-done
+-
+-if [ -S "$CLAMD_SOCKET" ]; then
+-  echo "[entrypoint] clamd is ready."
+-else
+-  echo "[entrypoint] WARNING: clamd socket never appeared after 60s — uploads will fail closed until it does."
+-fi
+-
+-echo "[entrypoint] Starting Node app..."
+-exec node src/server.js
+diff --git a/backend/src/services/uploadSecurity.js b/backend/src/services/uploadSecurity.js
+index 1f6d06f..fd3051b 100644
+--- a/backend/src/services/uploadSecurity.js
++++ b/backend/src/services/uploadSecurity.js
+@@ -6,24 +6,20 @@
+ // renamed executable "image/jpeg" and every prior check would pass it
+ // straight through to storage.
+ //
+-// Three layers, all mandatory (fail closed on any of them):
++// Two layers, both mandatory (fail closed on any of them):
+ //   1. MIME allowlist   — same category-based lists each controller had.
+ //   2. Magic-byte check — the file's actual leading bytes must match what
+ //      the claimed type looks like. Defeats simple relabeling.
+-//   3. Threat scan       — heuristic signature scan always runs; if a real
+-//      AV engine is configured (CLAMAV_API_URL or VIRUSTOTAL_API_KEY),
+-//      that runs too and its verdict wins. Unreachable-when-configured
+-//      fails closed (rejects the upload) rather than silently skipping it.
++// Plus a heuristic threat scan (executable signatures / embedded script
++// markers) that always runs in-process — no external AV engine, daemon,
++// or binary required, so this module has zero runtime dependency on the
++// container it's deployed in. (An earlier version shelled out to a local
++// ClamAV `clamscan` binary; that's been removed — see git history if you
++// need to reintroduce a real AV engine behind an HTTP API instead.)
+ 
+ import crypto from 'crypto';
+-import { execFile } from 'child_process';
+-import { promisify } from 'util';
+-import fs from 'fs/promises';
+-import os from 'os';
+ import path from 'path';
+ 
+-const execFileAsync = promisify(execFile);
+-
+ // ---------------------------------------------------------------------
+ // 1. Category definitions — MIME allowlist + size cap in one place, so
+ //    every endpoint that accepts "an image" or "a document" agrees on
+@@ -136,58 +132,8 @@ function heuristicScan(buffer, mimetype) {
+   return { clean: true };
+ }
+ 
+-// Real AV engine — a local ClamAV daemon (clamd), talked to via the
+-async function externalScan(buffer, filename) {
+-  if (process.env.CLAMAV_ENABLED === 'false') return null;
+-
+-  const tmpPath = path.join(os.tmpdir(), `upload-scan-${crypto.randomBytes(8).toString('hex')}${path.extname(filename || '')}`);
+-  try {
+-    await fs.writeFile(tmpPath, buffer);
+-
+-    // Standalone clamscan (not clamdscan/clamd) — no resident daemon.
+-    // Loads the virus database fresh for this one scan and exits, so
+-    // memory is only used in a short burst per upload instead of being
+-    // held permanently. Trades scan speed (a few seconds instead of
+-    // milliseconds) for a much smaller steady-state memory footprint,
+-    // which matters on memory-constrained hosting tiers.
+-    const bin = process.env.CLAMSCAN_BIN || 'clamscan';
+-    const { stdout } = await execFileAsync(bin, ['--no-summary', tmpPath], { timeout: 30000 });
+-    // clamscan prints "<path>: OK" when clean, "<path>: <SignatureName> FOUND" when infected.
+-    if (/FOUND\s*$/m.test(stdout)) {
+-      const match = stdout.match(/:\s*(.+?)\s+FOUND/);
+-      return { clean: false, reason: `Malware detected: ${match ? match[1] : 'unknown signature'}.` };
+-    }
+-    return { clean: true };
+-  } catch (err) {
+-    // execFile throws on clamscan's nonzero exit code too (1 = infected,
+-    // 2 = error) — distinguish "infected" (still useful signal in stdout)
+-    // from "couldn't run it at all".
+-    if (err.stdout && /FOUND\s*$/m.test(err.stdout)) {
+-      const match = err.stdout.match(/:\s*(.+?)\s+FOUND/);
+-      return { clean: false, reason: `Malware detected: ${match ? match[1] : 'unknown signature'}.` };
+-    }
+-    if (err.code === 'ENOENT') {
+-      // clamscan binary not present — not installed on this host (e.g.
+-      // local dev without the Docker image). Don't fail closed for a
+-      // missing tool, only for a configured tool that errors.
+-      if (!clamAvailabilityWarned) {
+-        console.warn('clamscan not found on PATH — running with heuristic-only scanning. Deploy via backend/Dockerfile to enable ClamAV.');
+-        clamAvailabilityWarned = true;
+-      }
+-      return null;
+-    }
+-    console.error('ClamAV scan failed (failing closed):', err.message);
+-    return { clean: false, reason: 'Could not complete a security scan of this file. Please try again shortly.' };
+-  } finally {
+-    await fs.unlink(tmpPath).catch(() => {});
+-  }
+-}
+-async function scanForThreats(buffer, mimetype, filename) {
+-  const heuristic = heuristicScan(buffer, mimetype);
+-  if (!heuristic.clean) return heuristic;
+-  const external = await externalScan(buffer, filename);
+-  if (external && !external.clean) return external;
+-  return { clean: true };
++async function scanForThreats(buffer, mimetype) {
++  return heuristicScan(buffer, mimetype);
+ }
+ 
+ // ---------------------------------------------------------------------
+@@ -232,7 +178,7 @@ export async function validateUpload(file, category, context = {}) {
+     });
+     return { ok: false, error: 'This file does not appear to be a valid file of the type it claims to be.' };
+   }
+-  const scan = await scanForThreats(file.buffer, file.mimetype, file.originalname);
++  const scan = await scanForThreats(file.buffer, file.mimetype);
+   if (!scan.clean) {
+     recordSecurityEvent({
+       eventType: 'malware_detected', severity: 5, ipAddress: context.ipAddress, userId: context.userId,
+-- 
+2.43.0
