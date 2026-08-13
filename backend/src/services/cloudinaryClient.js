@@ -18,6 +18,9 @@ function signParams(params) {
  * @param {string} [folder] - Cloudinary folder path (default: 'jedida-marketplace')
  * @param {object} [opts] - Additional options
  * @param {boolean} [opts.sensitive] - Store as authenticated delivery (time-limited URLs)
+ * @param {boolean} [opts.audioOnly] - True when this is an audio file uploaded under
+ *   Cloudinary's 'video' resource type (audio has no video resource type of its own).
+ *   Skips generating a fake video-frame thumbnail for it — see note below.
  * @returns {Promise<{url, publicId, resourceType, thumbnailUrl, bytes, width, height, durationSeconds}>}
  */
 export async function uploadToCloudinary(fileBuffer, filename, resourceType = 'image', folder = 'jedida-marketplace', opts = {}) {
@@ -65,11 +68,21 @@ export async function uploadToCloudinary(fileBuffer, filename, resourceType = 'i
     ? signedDeliveryUrl(data.public_id, resourceType)
     : data.secure_url;
 
+  // Audio files are uploaded under Cloudinary's 'video' resource type
+  // (audio has no resource type of its own), so `resourceType === 'video'`
+  // alone can't tell an actual video apart from an audio-only file. That
+  // used to mean every audio upload got a thumbnailUrl computed the same
+  // way as a video's — replacing the extension with `.jpg` and asking
+  // Cloudinary for a frame grab that doesn't exist for an audio-only
+  // asset, producing a broken image link. opts.audioOnly (set by the
+  // caller, which already knows the real MIME type) opts out of that.
+  const isActualVideo = resourceType === 'video' && !opts.audioOnly;
+
   return {
     url,
     publicId: data.public_id,
     resourceType,
-    thumbnailUrl: resourceType === 'video' && !opts.sensitive ? data.secure_url.replace(/\.\w+$/, '.jpg') : url,
+    thumbnailUrl: isActualVideo && !opts.sensitive ? data.secure_url.replace(/\.\w+$/, '.jpg') : url,
     bytes: data.bytes,
     width: data.width,
     height: data.height,

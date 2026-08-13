@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import client from '../../api/client';
+import { uploadFormData, timeoutForFileSize } from '../../api/client';
 import { compressImage } from '../../../utils/compressImage';
 import { runOcr, extractIdFields } from '../../utils/ocr';
 
@@ -84,13 +84,22 @@ export default function DocumentUploadCard({ label, required, onExtracted, initi
 
       const formData = new FormData();
       formData.append('file', finalFile);
-      const { data } = await client.post('/uploads', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      // Do NOT set Content-Type manually here — a multipart request needs
+      // a `boundary=...` the browser generates itself; overriding the
+      // header with a boundary-less value breaks the server's multipart
+      // parser. uploadFormData also scales its timeout to the file's
+      // actual size, since ID photos can take a while to upload on mobile.
+      const { data } = await uploadFormData('/uploads', formData, {
+        timeout: timeoutForFileSize(finalFile.size),
+        onUploadProgress: (evt) => {
+          if (evt.total) setProgress(Math.round((evt.loaded / evt.total) * 100));
+        }
       });
 
       let extracted = null;
       if (file.type.startsWith('image/')) {
         setStatus('ocr');
+        setProgress(0);
         try {
           const { text, confidence } = await runOcr(finalFile, setProgress);
           extracted = extractIdFields(text);
@@ -105,11 +114,13 @@ export default function DocumentUploadCard({ label, required, onExtracted, initi
       const finalDoc = { url: data.media.url, previewUrl, name: file.name, size: file.size, quality: q };
       setDoc(finalDoc);
       setStatus('done');
+      setProgress(0);
       onExtracted?.({ document: finalDoc, extracted });
     } catch (err) {
       console.error('Document upload error:', err);
-      setError(err.response?.data?.error || 'Upload failed. Please try again.');
+      setError(err.friendlyMessage || err.response?.data?.error || 'Upload failed. Please try again.');
       setStatus('error');
+      setProgress(0);
     }
   };
 
@@ -168,7 +179,7 @@ export default function DocumentUploadCard({ label, required, onExtracted, initi
         onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
       />
 
-      {status === 'uploading' && <div className="kyc-status-line">Uploading…</div>}
+      {status === 'uploading' && <div className="kyc-status-line">Uploading… {progress}%</div>}
       {status === 'ocr' && <div className="kyc-status-line">Reading document… {progress}%</div>}
       {quality && status !== 'uploading' && (
         <div className={`kyc-quality-check ${quality.passed ? 'ok' : 'warn'}`}>

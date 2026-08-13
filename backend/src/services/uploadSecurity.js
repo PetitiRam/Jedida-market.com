@@ -35,7 +35,7 @@ export const FILE_CATEGORIES = {
     maxBytes: 50 * 1024 * 1024
   },
   audio: {
-    mimes: ['audio/webm', 'audio/mpeg', 'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/x-m4a'],
+    mimes: ['audio/webm', 'audio/mpeg', 'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/x-wav', 'audio/x-m4a', 'audio/aac', 'audio/3gpp'],
     maxBytes: 15 * 1024 * 1024
   },
   document: {
@@ -51,10 +51,24 @@ export const FILE_CATEGORIES = {
 };
 
 function categoryOf(mimetype) {
+  const base = normalizeMimeType(mimetype);
   for (const [name, def] of Object.entries(FILE_CATEGORIES)) {
-    if (def.mimes.includes(mimetype)) return name;
+    if (def.mimes.includes(base)) return name;
   }
   return null;
+}
+
+// Browsers/recorders don't always send a bare MIME type. A file picked
+// from a phone's voice-memo app, or (if a live recorder is ever added)
+// a MediaRecorder Blob, commonly reports something like
+// "audio/webm;codecs=opus" or "video/mp4; codecs=avc1" — same format,
+// extra codec parameters. Comparing that raw string against our
+// allowlist ('audio/webm', 'video/mp4', ...) always fails, which used to
+// mean a perfectly valid audio/video file could be rejected purely
+// because of a codecs suffix. Every place that reads file.mimetype in
+// this module goes through this first.
+function normalizeMimeType(mimetype) {
+  return String(mimetype || '').split(';')[0].trim().toLowerCase();
 }
 
 // ---------------------------------------------------------------------
@@ -64,7 +78,7 @@ function categoryOf(mimetype) {
 function matchesSignature(buffer, mimetype) {
   const b = buffer;
   const hex = (n) => b.subarray(0, n).toString('hex');
-  switch (mimetype) {
+  switch (normalizeMimeType(mimetype)) {
     case 'image/jpeg': return hex(3) === 'ffd8ff';
     case 'image/png': return hex(8) === '89504e470d0a1a0a';
     case 'image/gif': return b.subarray(0, 6).toString('ascii') === 'GIF87a' || b.subarray(0, 6).toString('ascii') === 'GIF89a';
@@ -73,11 +87,15 @@ function matchesSignature(buffer, mimetype) {
     case 'video/quicktime': return b.subarray(4, 8).toString('ascii') === 'ftyp' || b.subarray(4, 8).toString('ascii') === 'moov' || b.subarray(4, 8).toString('ascii') === 'free';
     case 'video/webm': return hex(4) === '1a45dfa3';
     case 'audio/mpeg': return hex(3) === '494433' /* ID3 */ || hex(2) === 'fffb' || hex(2) === 'fff3' || hex(2) === 'fff2';
-    case 'audio/wav': return b.subarray(0, 4).toString('ascii') === 'RIFF' && b.subarray(8, 12).toString('ascii') === 'WAVE';
+    case 'audio/wav':
+    case 'audio/x-wav': return b.subarray(0, 4).toString('ascii') === 'RIFF' && b.subarray(8, 12).toString('ascii') === 'WAVE';
     case 'audio/ogg': return b.subarray(0, 4).toString('ascii') === 'OggS';
     case 'audio/mp4':
-    case 'audio/x-m4a': return b.subarray(4, 8).toString('ascii') === 'ftyp';
+    case 'audio/x-m4a':
+    case 'audio/3gpp': return b.subarray(4, 8).toString('ascii') === 'ftyp';
     case 'audio/webm': return hex(4) === '1a45dfa3';
+    // AAC "ADTS" stream — starts with a 12-bit sync word (0xFFF).
+    case 'audio/aac': return hex(2) === 'fff1' || hex(2) === 'fff9';
     case 'application/pdf': return b.subarray(0, 4).toString('ascii') === '%PDF';
     // Legacy .doc/.xls (OLE compound file) share one signature.
     case 'application/msword':
@@ -158,7 +176,9 @@ export async function validateUpload(file, category, context = {}) {
   if (!def) return { ok: false, error: 'Unsupported upload category.' };
   if (!file) return { ok: false, error: 'No file was uploaded.' };
 
-  if (!def.mimes.includes(file.mimetype)) {
+  const mimetype = normalizeMimeType(file.mimetype);
+
+  if (!def.mimes.includes(mimetype)) {
     recordSecurityEvent({
       eventType: 'mime_rejected', severity: 2, ipAddress: context.ipAddress, userId: context.userId,
       summary: `Upload rejected: declared MIME type "${file.mimetype}" not allowed for category "${category}".`,
@@ -169,7 +189,7 @@ export async function validateUpload(file, category, context = {}) {
   if (file.size > def.maxBytes) {
     return { ok: false, error: `File too large. Max size is ${Math.round(def.maxBytes / (1024 * 1024))}MB.` };
   }
-  if (!matchesSignature(file.buffer, file.mimetype)) {
+  if (!matchesSignature(file.buffer, mimetype)) {
     recordSecurityEvent({
       eventType: 'mime_rejected', severity: 3, ipAddress: context.ipAddress, userId: context.userId,
       summary: `Upload rejected: file content doesn't match its declared type "${file.mimetype}" (possible spoofed extension).`,
@@ -177,7 +197,7 @@ export async function validateUpload(file, category, context = {}) {
     });
     return { ok: false, error: 'This file does not appear to be a valid file of the type it claims to be.' };
   }
-  const scan = await scanForThreats(file.buffer, file.mimetype);
+  const scan = await scanForThreats(file.buffer, mimetype);
   if (!scan.clean) {
     recordSecurityEvent({
       eventType: 'malware_detected', severity: 5, ipAddress: context.ipAddress, userId: context.userId,
@@ -195,7 +215,8 @@ export async function validateUpload(file, category, context = {}) {
 // declared MIME type.
 export async function validateUploadAny(file, categories, context = {}) {
   if (!file) return { ok: false, error: 'No file was uploaded.' };
-  const matchedCategory = categories.find((c) => FILE_CATEGORIES[c]?.mimes.includes(file.mimetype));
+  const mimetype = normalizeMimeType(file.mimetype);
+  const matchedCategory = categories.find((c) => FILE_CATEGORIES[c]?.mimes.includes(mimetype));
   if (!matchedCategory) {
     recordSecurityEvent({
       eventType: 'mime_rejected', severity: 2, ipAddress: context.ipAddress, userId: context.userId,

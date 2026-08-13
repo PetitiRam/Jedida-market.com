@@ -7,6 +7,20 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api';
 // callers can still catch a timeout and show a retry affordance.
 const DEFAULT_TIMEOUT_MS = 15000;
 
+// Media uploads (logos, product photos/video, KYC documents, selfies,
+// partner documents, payment proofs...) are not ordinary API calls: the
+// browser has to push the actual file bytes up the wire, then the server
+// has to run it through validation, push it to Cloudinary, and write the
+// DB row, before any response comes back. On a real mobile connection —
+// not a dev machine on wifi — that routinely takes well past 15s once you
+// add a few MB of video. Applying the same 15s ceiling used for a
+// lightweight JSON call meant every upload that took slightly too long
+// timed out with no server response at all, which every uploader in the
+// app then reported as an opaque "Upload failed" with no explanation.
+// This is deliberately generous — a slow upload finishing late is fine;
+// a fast one being killed early is the actual bug.
+const UPLOAD_TIMEOUT_MS = 120000;
+
 const client = axios.create({ baseURL: API_BASE, timeout: DEFAULT_TIMEOUT_MS });
 
 client.interceptors.request.use((config) => {
@@ -120,6 +134,59 @@ export function normalizeError(error) {
     friendlyMessage,
   });
   return normalized;
+}
+
+// The one function every file-upload call site in the app should use.
+// Two things every one of them needs to get right, that several didn't:
+//
+// 1. Never set `Content-Type` on a FormData body. A multipart request
+//    needs a `boundary=...` parameter in that header, and only the
+//    browser can generate it (it's a random value tied to how it chose
+//    to split the body). Passing `'multipart/form-data'` explicitly
+//    overrides the header the browser would have set with one that has
+//    no boundary at all, which breaks the server's multipart parser —
+//    most visibly on larger files, where the malformed body reliably
+//    fails instead of occasionally limping through on a small one.
+//    This function intentionally accepts no `headers` override for that
+//    reason — there is no correct value to pass here.
+// 2. Use a timeout long enough for an actual file to finish uploading
+//    (see UPLOAD_TIMEOUT_MS above), not the short default meant for
+//    JSON calls — and scale it further for large files (see
+//    timeoutForFileSize below), since a fixed ceiling that's generous
+//    for a 2MB photo can still be too tight for a 45MB product video.
+//
+// `onUploadProgress` is passed straight through to axios so callers can
+// render a real progress bar instead of an indefinite spinner.
+// `signal` accepts an AbortController signal so callers can offer a
+// Cancel button on long video/audio uploads instead of forcing someone
+// to wait out a full timeout to back out.
+export function uploadFormData(url, formData, { onUploadProgress, timeout, signal } = {}) {
+  return client.post(url, formData, {
+    timeout: timeout || UPLOAD_TIMEOUT_MS,
+    onUploadProgress,
+    signal,
+    // Uploads must never be silently auto-retried by the response
+    // interceptor — retrying a multipart POST blind risks creating a
+    // duplicate file/record server-side. `idempotent` defaults to
+    // undefined (falsy), so this is just documenting that we deliberately
+    // don't opt in, not changing behavior.
+  });
+}
+
+// Scales the upload timeout to the actual file size instead of using one
+// fixed number for everything. A tiny image and a 45MB product video
+// don't deserve the same ceiling — this assumes a conservative ~300KB/s
+// sustained upload speed (well below average mobile speeds, so it's a
+// floor, not a target) plus a flat allowance for compression, server-side
+// validation, and the Cloudinary round-trip, and never goes below the
+// UPLOAD_TIMEOUT_MS baseline or above 6 minutes.
+export function timeoutForFileSize(bytes) {
+  const BASELINE_MS = UPLOAD_TIMEOUT_MS; // 120s — covers small files entirely
+  const ASSUMED_BYTES_PER_SEC = 300 * 1024;
+  const PROCESSING_OVERHEAD_MS = 20000;
+  const MAX_MS = 360000; // 6 minutes
+  const estimate = Math.round((bytes / ASSUMED_BYTES_PER_SEC) * 1000) + PROCESSING_OVERHEAD_MS;
+  return Math.min(MAX_MS, Math.max(BASELINE_MS, estimate));
 }
 
 // Called when the app returns to the foreground (see SessionGuard.jsx) so

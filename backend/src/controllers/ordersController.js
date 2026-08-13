@@ -5,7 +5,8 @@ import crypto from 'crypto';
 import { cached, cacheDel } from '../utils/cache.js';
 import { creditSaleCommission, alertHeldSaleCommission } from '../services/affiliateService.js';
 import { createOrderConfirmation, createDigitalReceipt, createDeliveryReceipt, createRefundReceipt, createPaymentConfirmation } from '../services/documentService.js';
-
+import { uploadToCloudinary, isCloudinaryConfigured } from '../services/cloudinaryClient.js';
+import { validateUploadAny } from '../services/uploadSecurity.js';
 // Document generation must never break the payment/escrow flow it's hooked
 // into — a receipt failing to render is a bug to fix, not a reason to fail
 // someone's checkout. Every hook below is wrapped with this.
@@ -1028,14 +1029,43 @@ export async function submitManualPayment(req, res) {
 
   const { checkoutGroupId } = req.params;
 
+  // The frontend (PaymentCenter.jsx) sends this as multipart/form-data
+  // with the proof screenshot as a binary file field named `proof` — not
+  // as a `proofImage` URL string in a JSON body. This route is mounted
+  // behind multer (see routes/orders.js), so text fields land in
+  // req.body and the file lands in req.file, same shape as every other
+  // upload endpoint on this platform.
   const {
     phoneNumber,
-    transactionReference,
-    proofImage
+    transactionReference
   } = req.body;
 
-  if (!transactionReference || !proofImage) {
+  if (!transactionReference || !req.file) {
     return res.status(400).json({ error: 'A transaction reference and proof image are required.' });
+  }
+
+  if (!isCloudinaryConfigured()) {
+    return res.status(501).json({
+      error: 'Payment proof upload is not configured on this server yet. Please contact support.'
+    });
+  }
+
+  const check = await validateUploadAny(req.file, ['image', 'document'], {
+    userId: req.user.id,
+    ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown'
+  });
+  if (!check.ok) {
+    return res.status(400).json({ error: check.error });
+  }
+
+  let proofImage;
+  try {
+    const resourceType = req.file.mimetype === 'application/pdf' ? 'raw' : 'image';
+    const uploaded = await uploadToCloudinary(req.file.buffer, req.file.originalname, resourceType, 'jedida-marketplace/payment-proofs');
+    proofImage = uploaded.url;
+  } catch (err) {
+    console.error('Payment proof upload failed:', err.message);
+    return res.status(502).json({ error: 'Could not upload your payment proof. Please try again shortly.' });
   }
 
   try {

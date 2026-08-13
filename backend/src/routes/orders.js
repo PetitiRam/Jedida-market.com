@@ -1,4 +1,5 @@
 import express from 'express';
+import multer from 'multer';
 import {
   createOrder, confirmPayment, confirmDelivery, releaseFunds, autoReleaseExpiredEscrow,
   myOrdersAsBuyer, myOrdersAsSeller, myOrdersAsDelivery, allOrders,cancelOrder,reorder,getReceipt,contactSellerAboutOrder,submitManualPayment, assignDelivery, adminRefundOrder
@@ -7,6 +8,11 @@ import { requireAuth, requireAdmin, requirePermission } from '../middleware/auth
 import { checkoutCart, confirmCartPayment } from '../controllers/ordersController.js';
 import { paymentsGate } from '../middleware/platformLockdown.js';
 import { requireFaceVerification } from '../middleware/faceVerification.js';
+import { multerErrorHandler } from '../middleware/multerErrorHandler.js';
+
+// Payment proof screenshots — same 8MB image ceiling as every other
+// image upload on the platform (see uploadSecurity.js FILE_CATEGORIES).
+const uploadProof = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
 
 const router = express.Router();
 
@@ -32,6 +38,8 @@ router.post(
  "/cart-checkout/:checkoutGroupId/submit-payment",
 requireAuth,
  paymentsGate,
+ uploadProof.single('proof'),
+ multerErrorHandler,
  submitManualPayment
 );
 

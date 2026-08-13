@@ -78,8 +78,11 @@ export async function uploadMedia(req, res) {
   const mediaType = isVideo ? 'video' : isAudio ? 'audio' : isDocument ? 'document' : 'image';
 
   try {
-    // Upload to Cloudinary
-    const result = await uploadToCloudinary(file.buffer, file.originalname, resourceType);
+    // Upload to Cloudinary. Audio has no resource type of its own on
+    // Cloudinary, so it's uploaded under 'video' (same as isVideo) — the
+    // audioOnly flag tells uploadToCloudinary not to generate a fake
+    // video-frame thumbnail for it.
+    const result = await uploadToCloudinary(file.buffer, file.originalname, resourceType, 'jedida-marketplace', { audioOnly: isAudio });
 
     // Insert metadata into PostgreSQL
     const dbResult = await query(

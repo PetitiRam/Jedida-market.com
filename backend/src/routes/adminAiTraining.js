@@ -2,13 +2,11 @@ import express from 'express';
 import multer from 'multer';
 import * as ctrl from '../controllers/aiTrainingController.js';
 import { requireAuth, requirePermission } from '../middleware/auth.js';
+import { multerErrorHandler } from '../middleware/multerErrorHandler.js';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 const router = express.Router();
 
-// Same 'ai' permission area the existing AI Command Center uses (see
-// ADMIN_ROLE_PERMISSIONS in middleware/auth.js — ai_manager already has
-// this) so no new admin role is needed for Stage 1.
 router.use(requireAuth, requirePermission('ai'));
 
 // Knowledge Library
@@ -20,7 +18,7 @@ router.post('/knowledge/:id/submit-review', ctrl.submitForReview);
 router.post('/knowledge/:id/review', ctrl.reviewKnowledgeItem);
 router.post('/knowledge/:id/archive', ctrl.archiveKnowledgeItem);
 router.post('/knowledge/:id/new-version', ctrl.createNewVersion);
-router.post('/knowledge/upload', upload.single('file'), ctrl.uploadKnowledgeFile);
+router.post('/knowledge/upload', upload.single('file'), multerErrorHandler, ctrl.uploadKnowledgeFile);
 
 // Published Knowledge (what the AI currently draws on)
 router.get('/published', ctrl.listPublishedKnowledge);

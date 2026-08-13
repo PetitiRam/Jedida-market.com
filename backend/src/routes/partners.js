@@ -9,6 +9,7 @@ import {
   listProfileChangeRequests, reviewProfileChangeRequest
 } from '../controllers/partnerController.js';
 import { requireAuth, requireAdmin, requirePermission, requireSuperAdmin } from '../middleware/auth.js';
+import { multerErrorHandler } from '../middleware/multerErrorHandler.js';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
@@ -24,7 +25,7 @@ const applyLimiter = rateLimit({
 const router = express.Router();
 
 // Public: application intake
-router.post('/documents', applyLimiter, upload.single('file'), uploadPartnerDocument);
+router.post('/documents', applyLimiter, upload.single('file'), multerErrorHandler, uploadPartnerDocument);
 router.post('/apply', applyLimiter, submitApplication);
 
 // Admin: review queue — mounted separately below under /api/admin/partners
