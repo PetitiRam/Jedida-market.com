@@ -8,6 +8,7 @@ import ErrorBoundary from './components/system/ErrorBoundary';
 import NativeAppShell from './native/NativeAppShell';
 import BiometricGate from './native/BiometricGate';
 import SessionGuard from './native/SessionGuard';
+import OfflineGate from './components/OfflineGate';                 {/* ← added */}
 import NativeBottomNav from './components/native/NativeBottomNav';
 import PageTransition from './components/native/PageTransition';
 import GetStarted from './pages/GetStarted';
@@ -95,6 +96,7 @@ export default function App() {
     <BrowserRouter>
     <NativeAppShell>
       <SessionGuard />
+      <OfflineGate />                                                {/* ← added */}
       <PetitiStyleInjector />
       <RoutedContent>
       <PageTransition>

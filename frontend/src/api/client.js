@@ -23,10 +23,46 @@ const UPLOAD_TIMEOUT_MS = 120000;
 
 const client = axios.create({ baseURL: API_BASE, timeout: DEFAULT_TIMEOUT_MS });
 
+// Global connectivity signal — a single, app-wide "are we online" state
+// that OfflineScreen (via useNetworkStatus) listens for, so a lost
+// connection is detected no matter which page or component made the
+// request that discovered it. Two custom events, dispatched only from
+// here (the one place every request already passes through):
+//
+//   'jedida:network-offline' — a request just failed with a genuine
+//   network error (kind 'offline' in normalizeError: no response came
+//   back at all — covers both "device has no connectivity" and
+//   "internet is fine but our backend can't be reached").
+//
+//   'jedida:network-online' — a request just completed successfully.
+//   Fired on every success, not just after a prior failure, so recovery
+//   is detected the moment ANY call gets through again — no polling
+//   required. useNetworkStatus() treats this as idempotent (setting
+//   "online" when already online is a no-op).
+//
+// File uploads are deliberately excluded (see uploadFormData below): a
+// slow/failed upload is surfaced inline by the uploader itself and
+// should never trigger a jarring full-screen takeover mid-upload.
+function notifyNetworkOnline() {
+  window.dispatchEvent(new CustomEvent('jedida:network-online'));
+}
+function notifyNetworkOffline(endpoint) {
+  window.dispatchEvent(new CustomEvent('jedida:network-offline', { detail: { endpoint } }));
+}
+
 client.interceptors.request.use((config) => {
   const token = localStorage.getItem('jedida_access_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
+});
+
+// Any request that completes successfully is proof the network — and our
+// backend — is reachable right now, regardless of what else may have
+// failed recently. Kept separate from the retry/refresh logic below so it
+// runs unconditionally on the success path.
+client.interceptors.response.use((res) => {
+  notifyNetworkOnline();
+  return res;
 });
 
 const MAX_RETRIES = 2;
@@ -126,6 +162,17 @@ export function normalizeError(error) {
   // the one that broke, or why.
   console.error(`[API] ${endpoint} failed (${status ?? kind}):`, serverMessage || error.message);
 
+  // Genuine network failures drive the global offline screen (see
+  // useNetworkStatus.js) — but only for ordinary API calls. File uploads
+  // opt out via `skipOfflineScreen` (set by uploadFormData below): a
+  // failed/timed-out upload is already surfaced inline by the uploader
+  // itself, and category 3/400/401/404 validation & auth errors never
+  // reach here as kind 'offline' in the first place, so this can't
+  // accidentally swallow those.
+  if (kind === 'offline' && !error.config?.skipOfflineScreen) {
+    notifyNetworkOffline(endpoint);
+  }
+
   const normalized = Object.assign(error, {
     isNormalized: true,
     kind,
@@ -165,6 +212,14 @@ export function uploadFormData(url, formData, { onUploadProgress, timeout, signa
     timeout: timeout || UPLOAD_TIMEOUT_MS,
     onUploadProgress,
     signal,
+    // A failed or slow upload (timeout, dropped connection mid-transfer,
+    // Cloudinary hiccup) is surfaced inline by the uploader's own error
+    // state — see MediaUploader.jsx's Cancel/Retry UI — never by the
+    // full-screen global offline takeover. If the device is genuinely
+    // offline, the browser's native online/offline events (also wired
+    // into useNetworkStatus) will still show the global screen; this
+    // flag only stops THIS request's failure from being the trigger.
+    skipOfflineScreen: true,
     // Uploads must never be silently auto-retried by the response
     // interceptor — retrying a multipart POST blind risks creating a
     // duplicate file/record server-side. `idempotent` defaults to

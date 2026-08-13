@@ -1,0 +1,288 @@
+/* ============================================================
+   Global offline screen — full-screen takeover shown only for
+   genuine connectivity failures (see hooks/useNetworkStatus.js).
+   Pure CSS "rotating globe" illusion: no Three.js / WebGL, no
+   animation library — a handful of tilted, independently-rotating
+   rings (transform: rotateX + rotateY) plus a moving highlight
+   sweep, all GPU-cheap `transform`/`opacity` animations.
+   ============================================================ */
+
+.jd-offline-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 20px;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(139, 197, 63, 0.12), transparent 42%),
+    radial-gradient(circle at 88% 82%, rgba(46, 125, 50, 0.16), transparent 48%),
+    linear-gradient(165deg, #0a1d15 0%, #062818 55%, #0B3D24 100%);
+  color: #F6FBF7;
+  animation: jd-overlay-fade-in 0.28s ease-out;
+}
+
+@keyframes jd-overlay-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Faint static dot texture — adds depth without costing anything
+   per-frame (no animation on this layer at all). */
+.jd-offline-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 26px 26px;
+  pointer-events: none;
+}
+
+.jd-offline-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 420px;
+}
+
+/* ---------- Globe ---------- */
+
+.jd-offline-globe-wrap {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  perspective: 800px;
+}
+
+.jd-offline-globe-glow {
+  position: absolute;
+  inset: -34px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139, 197, 63, 0.38) 0%, rgba(11, 61, 36, 0.16) 45%, transparent 72%);
+  filter: blur(6px);
+  animation: jd-glow-pulse 4s ease-in-out infinite;
+}
+
+@keyframes jd-glow-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.07); }
+}
+
+/* Dashed "network orbit" ring + two small glowing nodes drifting around
+   it — the subtle disconnected/searching-for-signal cue. */
+.jd-offline-orbit-ring {
+  position: absolute;
+  inset: -30px;
+  border-radius: 50%;
+  border: 1px dashed rgba(246, 251, 247, 0.16);
+}
+
+.jd-offline-node-orbit {
+  position: absolute;
+  inset: -30px;
+  animation: jd-orbit-spin 16s linear infinite;
+}
+.jd-offline-node-orbit.is-reverse {
+  animation-duration: 22s;
+  animation-direction: reverse;
+}
+
+.jd-offline-node {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  border-radius: 50%;
+  background: #8BC53F;
+  box-shadow: 0 0 9px rgba(139, 197, 63, 0.85);
+}
+
+@keyframes jd-orbit-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.jd-offline-globe {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 26%, #4FA968 0%, #6FA82E 16%, #0B3D24 56%, #062818 100%);
+  box-shadow:
+    inset -16px -16px 44px rgba(0, 0, 0, 0.55),
+    inset 10px 10px 28px rgba(255, 255, 255, 0.07),
+    0 0 46px rgba(139, 197, 63, 0.22);
+  overflow: hidden;
+}
+
+/* Moving highlight sweep — sells "rotation" for near-zero cost: a single
+   conic-gradient shifting via background-position, no 3D transform. */
+.jd-offline-globe::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 255, 255, 0.18) 35deg,
+    transparent 85deg,
+    transparent 250deg,
+    rgba(139, 197, 63, 0.22) 295deg,
+    transparent 335deg
+  );
+  animation: jd-sheen-spin 9s linear infinite;
+  mix-blend-mode: screen;
+}
+
+@keyframes jd-sheen-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Three tilted "meridian" rings, each independently rotating around its
+   own (already-tilted) axis at a different speed/phase — a lightweight
+   wireframe-globe illusion using only `transform` on plain elements. */
+.jd-offline-globe-band {
+  position: absolute;
+  inset: 4%;
+  border: 1px solid rgba(246, 251, 247, 0.26);
+  border-radius: 50%;
+  transform-style: preserve-3d;
+}
+.jd-offline-globe-band.band-a { animation: jd-band-spin-a 8s linear infinite; }
+.jd-offline-globe-band.band-b { animation: jd-band-spin-b 12s linear infinite; border-color: rgba(139, 197, 63, 0.3); }
+.jd-offline-globe-band.band-c { animation: jd-band-spin-c 15s linear infinite; }
+
+@keyframes jd-band-spin-a {
+  from { transform: rotateX(0deg) rotateY(0deg); }
+  to { transform: rotateX(0deg) rotateY(360deg); }
+}
+@keyframes jd-band-spin-b {
+  from { transform: rotateX(64deg) rotateY(0deg); }
+  to { transform: rotateX(64deg) rotateY(-360deg); }
+}
+@keyframes jd-band-spin-c {
+  from { transform: rotateX(64deg) rotateY(120deg); }
+  to { transform: rotateX(64deg) rotateY(480deg); }
+}
+
+/* Brand wordmark, curved along the globe's upper arc — a separate,
+   static layer on top of the rotating rings/sheen, so the animation
+   never carries the text with it and it stays fully readable at every
+   moment. Only a slow glow pulse is applied, never a rotation. */
+.jd-offline-globe-label {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.jd-offline-globe-label text {
+  fill: #F6FBF7;
+  font-family: var(--font-display, 'Sora', system-ui, sans-serif);
+  font-weight: 800;
+  font-size: 14.5px;
+  letter-spacing: 0.2px;
+  animation: jd-label-glow 4s ease-in-out infinite;
+}
+
+@keyframes jd-label-glow {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(246, 251, 247, 0.35)); }
+  50% { filter: drop-shadow(0 0 7px rgba(139, 197, 63, 0.95)); }
+}
+
+/* ---------- Copy + CTA ---------- */
+
+.jd-offline-title {
+  font-family: var(--font-display, 'Sora', system-ui, sans-serif);
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 30px 0 10px;
+  color: #F6FBF7;
+}
+
+.jd-offline-desc {
+  font-size: 0.95rem;
+  color: rgba(246, 251, 247, 0.74);
+  line-height: 1.55;
+  margin: 0;
+  max-width: 360px;
+}
+
+.jd-offline-retry-btn {
+  margin-top: 26px;
+  padding: 13px 36px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #8BC53F 0%, #6FA82E 100%);
+  color: #0B3D24;
+  font-family: var(--font-display, 'Sora', system-ui, sans-serif);
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(139, 197, 63, 0.28);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+.jd-offline-retry-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px rgba(139, 197, 63, 0.36);
+}
+.jd-offline-retry-btn:active:not(:disabled) { transform: translateY(0); }
+.jd-offline-retry-btn:disabled { opacity: 0.72; cursor: default; }
+.jd-offline-retry-btn:focus-visible {
+  outline: 3px solid #F6FBF7;
+  outline-offset: 3px;
+}
+
+.jd-offline-hint {
+  margin: 14px 0 0;
+  font-size: 0.82rem;
+  color: #FFD9A0;
+  font-weight: 600;
+  min-height: 1.2em;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 480px) {
+  .jd-offline-globe-wrap { width: 152px; height: 152px; }
+  .jd-offline-globe-label text { font-size: 11px; }
+  .jd-offline-title { font-size: 1.28rem; margin-top: 24px; }
+  .jd-offline-desc { font-size: 0.88rem; }
+  .jd-offline-retry-btn { padding: 12px 30px; }
+}
+
+@media (min-width: 900px) {
+  .jd-offline-globe-wrap { width: 240px; height: 240px; }
+  .jd-offline-globe-label text { font-size: 17px; }
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .jd-offline-overlay { animation: none; }
+  .jd-offline-globe::after,
+  .jd-offline-globe-band,
+  .jd-offline-node-orbit,
+  .jd-offline-globe-label text {
+    animation: none !important;
+  }
+  /* Keep the globe feeling alive, just not in motion — a slow, subtle
+     opacity breathe instead of the continuous rotation/sweep. */
+  .jd-offline-globe-glow {
+    animation: jd-glow-pulse-reduced 5s ease-in-out infinite;
+  }
+}
+
+@keyframes jd-glow-pulse-reduced {
+  0%, 100% { opacity: 0.65; }
+  50% { opacity: 0.85; }
+}
