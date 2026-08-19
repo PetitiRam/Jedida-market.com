@@ -141,6 +141,29 @@ export async function coinbaseWebhook(req, res) {
 // call DPO's own verifyToken API back and ask *them* what the status
 // is, server-to-server, rather than trusting anything the client or an
 // inbound request claims.
+// PesaJet has no documented webhook in this project yet — see the long
+// comment on createPesajetCharge() in paymentProviders.js for the full list
+// of what's missing (payload shape, signature/auth scheme, event types).
+// This handler intentionally does NOT confirm any payment. It only logs
+// that a callback arrived (for later debugging once docs exist) and
+// returns 501, so PesaJet's dashboard shows a clear delivery failure
+// instead of silently believing an unverified callback confirmed a
+// payment.
+export async function pesajetWebhook(req, res) {
+  const payload = req.body || null;
+  await logPaymentEvent({
+    provider: 'pesajet',
+    signatureValid: false,
+    actionTaken: 'rejected',
+    detail: 'PesaJet webhook payload/signature scheme is not documented yet — not trusted, order not confirmed.',
+    payload,
+    req
+  });
+  return res.status(501).json({
+    error: 'PesaJet webhook handling is not implemented yet — official payload and signature documentation is required first.'
+  });
+}
+
 export async function dpoWebhook(req, res) {
   const token = req.body?.TransactionToken || req.query?.TransactionToken;
   if (!token) {

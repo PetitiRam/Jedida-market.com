@@ -24,7 +24,7 @@ const SECTION_COLUMNS = {
     fields: [
       'mobileMoneyNumber', 'alternativeMobileNumber', 'bankName', 'bankAccount',
       'accountName', 'paymentInstructions', 'acceptedMethods',
-      'enableMobileMoney', 'enableBankTransfer', 'enableCash', 'enableCardPayments'
+      'enableMobileMoney', 'enableBankTransfer', 'enableCash', 'enableCardPayments', 'enablePesajet'
     ]
   },
   commission: {

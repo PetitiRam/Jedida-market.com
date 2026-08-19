@@ -47,6 +47,8 @@ export default function Checkout() {
   const [accessId, setAccessId] = useState(null);
   const [quantity, setQuantity] = useState(Math.max(1, Number(params.get("qty") || 1)));
   const [method, setMethod] = useState("mtn_mobile_money");
+  const [pesajetNetwork, setPesajetNetwork] = useState("mtn");
+  const [pesajetPhone, setPesajetPhone] = useState("");
   const [address, setAddress] = useState("");
 
   const [busy, setBusy] = useState(false);
@@ -175,6 +177,11 @@ export default function Checkout() {
       return;
     }
 
+    if (method === "pesajet" && !pesajetPhone.trim()) {
+      setError("Please enter the mobile money phone number for PesaJet.");
+      return;
+    }
+
     if (outOfStock) {
       setError("This product is currently out of stock.");
       return;
@@ -185,12 +192,17 @@ export default function Checkout() {
 
     try {
 
+      const pesajetFields = method === "pesajet"
+        ? { phoneNumber: pesajetPhone.trim(), network: pesajetNetwork }
+        : {};
+
       const { data } = accessId
         ? await dropshipApi.createDropshipOrder({
             accessId,
             quantity,
             shippingAddress: address,
             method,
+            ...pesajetFields,
             ...(appliedCoupon ? { couponCode: appliedCoupon.code } : {})
           })
         : await client.post(
@@ -202,16 +214,20 @@ export default function Checkout() {
 
               // manual payment identifier
               method,
+              ...pesajetFields,
               ...(appliedCoupon ? { couponCode: appliedCoupon.code } : {})
             }
           );
 
-      /*
-        Redirect buyer to manual payment center
-        with created order id
-      */
-
-      navigate(`/payment-center/${data.order.id}`);
+      // Cash on Delivery and PesaJet never go through the manual proof-of-
+      // payment screen — COD has nothing to submit, and PesaJet is an
+      // automated charge, not a proof upload. Every other method (manual
+      // mtn/airtel/bank) still goes to the Payment Center as before.
+      if (data.codPending || method === "pesajet") {
+        navigate(`/orders/${data.order.id}`);
+      } else {
+        navigate(`/payment-center/${data.order.id}`);
+      }
 
     } catch (err) {
       setError(err.response?.data?.error || "Failed creating order.");
@@ -464,10 +480,55 @@ export default function Checkout() {
 
               <PaymentMethodSelector value={method} onChange={setMethod} />
 
-              <div className="jpco-payment-hint">
-                <Icon name="clock" size={14} />
-                <span>You'll enter your mobile money number and submit your transaction reference on the next screen, JEDIDA Payment Center.</span>
-              </div>
+              {method === "pesajet" && (
+                <div className="jpco-pesajet-form" style={{ marginTop: 12, display: "grid", gap: 10 }}>
+                  <div className="field-group">
+                    <label>Mobile Money Network</label>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        type="button"
+                        className={pesajetNetwork === "mtn" ? "btn-primary" : "btn-secondary"}
+                        onClick={() => setPesajetNetwork("mtn")}
+                      >
+                        MTN Mobile Money
+                      </button>
+                      <button
+                        type="button"
+                        className={pesajetNetwork === "airtel" ? "btn-primary" : "btn-secondary"}
+                        onClick={() => setPesajetNetwork("airtel")}
+                      >
+                        Airtel Money
+                      </button>
+                    </div>
+                  </div>
+                  <div className="field-group">
+                    <label>Phone number</label>
+                    <input
+                      value={pesajetPhone}
+                      onChange={(e) => setPesajetPhone(e.target.value)}
+                      placeholder="+256XXXXXXXXX"
+                      aria-label="PesaJet phone number"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {method === "cash_on_delivery" ? (
+                <div className="jpco-payment-hint">
+                  <Icon name="clock" size={14} />
+                  <span>You will pay {product.currency} {total} to the delivery agent when your order is delivered.</span>
+                </div>
+              ) : method === "pesajet" ? (
+                <div className="jpco-payment-hint">
+                  <Icon name="clock" size={14} />
+                  <span>You'll be prompted to authorize the payment on your phone after placing your order.</span>
+                </div>
+              ) : (
+                <div className="jpco-payment-hint">
+                  <Icon name="clock" size={14} />
+                  <span>You'll enter your mobile money number and submit your transaction reference on the next screen, JEDIDA Payment Center.</span>
+                </div>
+              )}
             </section>
 
             <section className="jp-panel jpco-trust-card jpco-anim jpco-d5">

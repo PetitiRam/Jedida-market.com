@@ -36,7 +36,8 @@ export default function PaymentSettingsTab() {
           </div>
 
           <div style={{ marginTop: 10 }}>
-            <Toggle checked={form.enableMobileMoney} onChange={setToggle('enableMobileMoney')} label="Enable mobile money" />
+            <Toggle checked={form.enablePesajet} onChange={setToggle('enablePesajet')} label="Enable PesaJet Pay (mobile money)" />
+            <Toggle checked={form.enableMobileMoney} onChange={setToggle('enableMobileMoney')} label="Enable mobile money (manual/legacy)" />
             <Toggle checked={form.enableBankTransfer} onChange={setToggle('enableBankTransfer')} label="Enable bank transfer" />
             <Toggle checked={form.enableCash} onChange={setToggle('enableCash')} label="Enable cash on delivery" />
             <Toggle checked={form.enableCardPayments} onChange={setToggle('enableCardPayments')} label="Enable card payments" />

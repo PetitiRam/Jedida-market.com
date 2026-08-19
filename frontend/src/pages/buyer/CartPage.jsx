@@ -17,8 +17,10 @@ export default function CartPage() {
 
   const [checkoutResult, setCheckoutResult] = useState(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [pesajetNetwork, setPesajetNetwork] = useState("mtn");
   const [transactionReference, setTransactionReference] = useState("");
   const [proof, setProof] = useState(null);
   const [proofPreview, setProofPreview] = useState(null);
@@ -42,19 +44,30 @@ export default function CartPage() {
 
     try {
 
+      const pesajetFields = method === "pesajet"
+        ? { phoneNumber, network: pesajetNetwork }
+        : {};
+
       const { data } = await client.post(
         "/orders/cart-checkout",
         {
           method,
-          shippingAddress: ""
+          shippingAddress: "",
+          ...pesajetFields
         }
       );
 
 
-      // DON'T NAVIGATE
-      // Keep user here and show payment form
-
       setCheckoutResult(data);
+
+      // Cash on Delivery and PesaJet never go through the manual proof-of-
+      // payment form below — COD has nothing to submit (paid at the door)
+      // and PesaJet is an automated charge, not a proof upload. Only the
+      // legacy manual mtn/airtel/bank flow needs the reference+screenshot
+      // step, same split as the single-item Checkout page.
+      if (data.codPending || method === "pesajet") {
+        setSubmitted(true);
+      }
 
 
     } catch (err) {
@@ -89,11 +102,31 @@ export default function CartPage() {
       return;
     }
 
+    if (!proof) {
+      alert("Please attach your payment screenshot.");
+      return;
+    }
+
 
     try {
+      setSubmitting(true);
 
+      const formData = new FormData();
+      formData.append("paymentMethod", method);
+      formData.append("phoneNumber", phoneNumber);
+      formData.append("transactionReference", transactionReference);
+      formData.append("proof", proof);
+
+      // Same proof-upload endpoint the single-item Payment Center uses —
+      // this used to incorrectly call the sandbox-only cart-checkout
+      // "/confirm" endpoint, which rejects anything that wasn't charged
+      // through a sandbox provider reference (i.e. always, for real
+      // mtn/airtel manual payments). Submitting proof here instead queues
+      // it for admin review, same as single-item checkout.
       await client.post(
-        `/orders/cart-checkout/${checkoutResult.checkoutGroupId}/confirm`
+        `/orders/cart-checkout/${checkoutResult.checkoutGroupId}/submit-payment`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
       );
 
       setSubmitted(true);
@@ -110,6 +143,8 @@ export default function CartPage() {
         "Payment submission failed"
       );
 
+    } finally {
+      setSubmitting(false);
     }
 
   };
@@ -174,14 +209,34 @@ export default function CartPage() {
         {submitted ? (
 
           <div className="jp-panel jp-panel-glass">
-            <PaymentSuccessCard
-              reference={transactionReference}
-              amount={checkoutResult?.combinedTotal}
-              methodLabel={method}
-              estimatedVerification="1 – 3 hours"
-              onViewOrders={() => { window.location.href = "/orders"; }}
-              onDone={() => { window.location.href = "/"; }}
-            />
+            {method === "cash_on_delivery" ? (
+              <PaymentSuccessCard
+                reference={null}
+                amount={checkoutResult?.combinedTotal}
+                methodLabel="Cash on Delivery"
+                estimatedVerification="Pay the delivery agent when your order arrives"
+                onViewOrders={() => { window.location.href = "/orders"; }}
+                onDone={() => { window.location.href = "/"; }}
+              />
+            ) : method === "pesajet" ? (
+              <PaymentSuccessCard
+                reference={checkoutResult?.providerReference}
+                amount={checkoutResult?.combinedTotal}
+                methodLabel="Mobile Money (PesaJet)"
+                estimatedVerification="Authorize the payment on your phone to complete it"
+                onViewOrders={() => { window.location.href = "/orders"; }}
+                onDone={() => { window.location.href = "/"; }}
+              />
+            ) : (
+              <PaymentSuccessCard
+                reference={transactionReference}
+                amount={checkoutResult?.combinedTotal}
+                methodLabel={method}
+                estimatedVerification="1 – 3 hours"
+                onViewOrders={() => { window.location.href = "/orders"; }}
+                onDone={() => { window.location.href = "/"; }}
+              />
+            )}
           </div>
 
         ) : !checkoutResult ? (
@@ -196,9 +251,56 @@ export default function CartPage() {
               onChange={setMethod}
             />
 
+            {method === "pesajet" && (
+              <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
+                <div className="jp-field">
+                  <label>Mobile Money Network</label>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      type="button"
+                      className={pesajetNetwork === "mtn" ? "btn-primary" : "btn-secondary"}
+                      onClick={() => setPesajetNetwork("mtn")}
+                    >
+                      MTN Mobile Money
+                    </button>
+                    <button
+                      type="button"
+                      className={pesajetNetwork === "airtel" ? "btn-primary" : "btn-secondary"}
+                      onClick={() => setPesajetNetwork("airtel")}
+                    >
+                      Airtel Money
+                    </button>
+                  </div>
+                </div>
+                <div className="jp-field">
+                  <label>Phone number</label>
+                  <input
+                    className="jp-input"
+                    value={phoneNumber}
+                    onChange={e => setPhoneNumber(e.target.value)}
+                    placeholder="+256XXXXXXXXX"
+                  />
+                </div>
+              </div>
+            )}
+
+            {method === "cash_on_delivery" && (
+              <div className="jp-instructions-banner" style={{ marginTop: 16 }}>
+                You will pay the delivery agent in cash when your order arrives. No payment details needed now.
+              </div>
+            )}
+
             <div style={{ marginTop: 20 }}>
-              <PremiumButton loading={checkingOut} onClick={checkoutCart}>
-                {checkingOut ? "Creating payment..." : "Continue to Payment"}
+              <PremiumButton
+                loading={checkingOut}
+                disabled={method === "pesajet" && !phoneNumber}
+                onClick={checkoutCart}
+              >
+                {checkingOut
+                  ? "Placing order..."
+                  : method === "cash_on_delivery"
+                    ? "Place Order"
+                    : "Continue to Payment"}
               </PremiumButton>
             </div>
 
@@ -266,8 +368,8 @@ export default function CartPage() {
               Your order will then enter escrow.
             </div>
 
-            <PremiumButton onClick={submitPayment}>
-              Submit Payment
+            <PremiumButton loading={submitting} onClick={submitPayment}>
+              {submitting ? "Submitting..." : "Submit Payment"}
             </PremiumButton>
 
 

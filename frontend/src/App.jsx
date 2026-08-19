@@ -36,6 +36,7 @@ import TrendingProducts from './pages/buyer/TrendingProducts';
 import ProductDetail from './pages/buyer/ProductDetail';
 import Checkout from './pages/buyer/Checkout';
 import MyOrders from './pages/buyer/MyOrders';
+import NotificationsPage from './pages/buyer/NotificationsPage';
 import DocumentCenter from './pages/buyer/DocumentCenter';
 import VerifyDocument from './pages/VerifyDocument';
 import KycWizard from './pages/kyc/KycWizard';
@@ -127,6 +128,7 @@ export default function App() {
 <Route path="/p/:slug" element={<DynamicPage />} />
         <Route path="/checkout/:productId" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
         <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         <Route path="/documents" element={<ProtectedRoute><DocumentCenter /></ProtectedRoute>} />
         <Route path="/verify/:code" element={<VerifyDocument />} />
         <Route path="/verify-identity" element={<ProtectedRoute><KycWizard /></ProtectedRoute>} />

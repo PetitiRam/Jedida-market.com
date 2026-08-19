@@ -86,9 +86,88 @@ export async function createCoinbaseCharge({ amount, currency, orderId, returnUr
   return { providerReference: data?.data?.id, checkoutUrl: data?.data?.hosted_url, raw: data };
 }
 
+// PesaJet Pay — mobile money (MTN / Airtel) via https://payments.pesajet.com.
+//
+// STATUS: LIVE REQUEST, MANUAL-VERIFY CONFIRMATION. Confirmed against a
+// real test call against pay.pesajet.com on 2026-08-18:
+//   POST /api/v1/payments  body: { type:'COLLECTION', amount, currency,
+//     phoneNumber, provider:'mtn'|'airtel', reference, idempotencyKey }
+//   -> { transactionId, type, status, amount, fee, currency, provider,
+//        reference, createdAt, expiresAt }  (status seen: "PENDING")
+//   GET /api/v1/payments/:transactionId
+//   -> adds { phoneNumber, description, metadata, providerReference,
+//             failureReason, updatedAt }
+//   Error shape: { message, error, statusCode }
+//
+// STILL MISSING — and still never guessed:
+//   - the terminal status string(s) for a completed vs. failed payment
+//     (only "PENDING" has actually been observed so far)
+//   - the webhook payload shape and its signature/auth scheme
+// Because of that, this adapter still never marks a payment 'succeeded'
+// on its own. createPesajetCharge() makes the real POST and stores the
+// real transactionId. verifyPesajetPayment() makes the real GET. The only
+// thing that moves a PesaJet payment toward 'succeeded' is
+// checkPesajetStatus() in ordersController.js, which surfaces PesaJet's
+// raw status text into the existing admin payment-review queue (the same
+// one manual mtn/airtel proof submissions go through) for a human to read
+// and approve — never an automatic string match against a guessed value.
+export async function createPesajetCharge({ amount, currency, orderId, returnUrl, phoneNumber, network }) {
+  if (!process.env.PESAJET_API_KEY) return sandbox('pesajet', orderId);
+
+  if (!phoneNumber || !network) {
+    throw new Error('PesaJet requires a phone number and network (mtn or airtel).');
+  }
+
+  const baseUrl = process.env.PESAJET_BASE_URL || 'https://payments.pesajet.com/api/v1';
+  const idempotencyKey = `${orderId}-${Date.now()}`;
+
+  const response = await fetch(`${baseUrl}/payments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-API-Key': process.env.PESAJET_API_KEY },
+    body: JSON.stringify({
+      type: 'COLLECTION',
+      amount,
+      currency,
+      phoneNumber,
+      provider: network,
+      reference: String(orderId),
+      idempotencyKey
+    })
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(`PesaJet payment request failed (${data.statusCode || response.status}): ${data.message || data.error || response.statusText}`);
+  }
+
+  return {
+    providerReference: data.transactionId,
+    checkoutUrl: null,
+    raw: data
+  };
+}
+
+export async function verifyPesajetPayment(transactionId) {
+  if (!process.env.PESAJET_API_KEY) throw new Error('PESAJET_API_KEY is not set — cannot verify a live PesaJet payment.');
+
+  const baseUrl = process.env.PESAJET_BASE_URL || 'https://payments.pesajet.com/api/v1';
+  const response = await fetch(`${baseUrl}/payments/${transactionId}`, {
+    headers: { 'X-API-Key': process.env.PESAJET_API_KEY }
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(`PesaJet status check failed (${data.statusCode || response.status}): ${data.message || data.error || response.statusText}`);
+  }
+
+  return data;
+}
+
 export const ADAPTERS = {
 
   stripe: createStripeCharge,
+  pesajet: createPesajetCharge,
   flutterwave: createFlutterwaveCharge,
   dpo: createDpoCharge,
   coinbase: createCoinbaseCharge,

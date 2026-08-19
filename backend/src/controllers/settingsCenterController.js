@@ -21,6 +21,7 @@ export async function getPublicPaymentSettings(req, res) {
       enableBankTransfer: !!value.enableBankTransfer,
       enableCash: !!value.enableCash,
       enableCardPayments: !!value.enableCardPayments,
+      enablePesajet: !!value.enablePesajet,
       mobileMoneyNumber: value.mobileMoneyNumber || null,
       bankName: value.bankName || null,
       bankAccount: value.bankAccount || null,

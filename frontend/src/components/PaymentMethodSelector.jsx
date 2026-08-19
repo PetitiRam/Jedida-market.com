@@ -5,6 +5,10 @@ import Icon from "./icons/icon";
 import "../styles/payment-forms.css";
 
 const LOGOS = {
+  pesajet:
+    "https://upload.wikimedia.org/wikipedia/commons/9/93/New-mtn-logo.jpg",
+  cash_on_delivery:
+    "https://cdn-icons-png.flaticon.com/512/2830/2830284.png",
   mtn_mobile_money:
     "https://upload.wikimedia.org/wikipedia/commons/9/93/New-mtn-logo.jpg",
   airtel_money:
@@ -20,6 +24,8 @@ const LOGOS = {
 };
 
 const DESCRIPTIONS = {
+  pesajet: "Instant mobile money via PesaJet",
+  cash_on_delivery: "Pay when your order arrives",
   mtn_mobile_money: "Pay via MTN MoMo",
   airtel_money: "Pay via Airtel Money",
   card: "Cards coming soon",
@@ -29,6 +35,8 @@ const DESCRIPTIONS = {
 };
 
 const PROCESSING_TIME = {
+  pesajet: "Instant",
+  cash_on_delivery: "On delivery",
   mtn_mobile_money: "Instant – 5 mins",
   airtel_money: "Instant – 5 mins",
   bank: "1 – 2 hours",
@@ -41,6 +49,8 @@ const PROCESSING_TIME = {
 // controls it. Methods with no toggle here (paypal, crypto) have no
 // admin-facing "enable" control yet, so they stay off until one exists.
 const AVAILABILITY_KEY = {
+  pesajet: 'enablePesajet',
+  cash_on_delivery: 'enableCash',
   mtn_mobile_money: 'enableMobileMoney',
   airtel_money: 'enableMobileMoney',
   bank: 'enableBankTransfer',

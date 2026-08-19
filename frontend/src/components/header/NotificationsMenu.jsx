@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import DropdownShell from './DropdownShell';
 import RippleIconButton from './RippleIconButton';
 import Icon from '../icons/icon';
@@ -83,6 +84,9 @@ export default function NotificationsMenu() {
               </button>
             ))}
           </div>
+          <Link to="/notifications" className="jd-menu-footer-action" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
+            See all notifications
+          </Link>
         </>
       )}
     </DropdownShell>

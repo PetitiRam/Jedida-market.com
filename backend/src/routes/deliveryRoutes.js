@@ -11,6 +11,7 @@ router.get('/drivers', requireAuth, requireAdmin, requirePermission('delivery'),
 router.post('/', requireAuth, requireAdmin, requirePermission('delivery'), ctrl.createDelivery);
 router.post('/:id/assign-driver', requireAuth, requireAdmin, requirePermission('delivery'), ctrl.assignDriver);
 router.post('/:id/status', requireAuth, ctrl.updateStatus);
+router.post('/:id/collect-cash', requireAuth, ctrl.collectCash);
 router.post('/:id/location', requireAuth, ctrl.updateLocation);
 router.get('/:id/timeline', requireAuth, ctrl.getTimeline);
 router.get('/by-order/:orderId', requireAuth, ctrl.getByOrder);

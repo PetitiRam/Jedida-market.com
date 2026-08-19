@@ -1,6 +1,6 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { stripeWebhook, flutterwaveWebhook, coinbaseWebhook, dpoWebhook } from '../controllers/paymentWebhooksController.js';
+import { stripeWebhook, flutterwaveWebhook, coinbaseWebhook, dpoWebhook, pesajetWebhook } from '../controllers/paymentWebhooksController.js';
 
 const router = express.Router();
 
@@ -25,5 +25,9 @@ router.post('/coinbase', express.raw({ type: 'application/json' }), coinbaseWebh
 // DPO posts back application/x-www-form-urlencoded and isn't
 // HMAC-verified (see dpoWebhook) — parsed normally, not as raw bytes.
 router.post('/dpo', express.urlencoded({ extended: false }), dpoWebhook);
+// PesaJet: no documented signature scheme yet, so parsed as JSON like a
+// normal request rather than express.raw() — there's nothing to verify a
+// signature against yet. See pesajetWebhook()'s comment.
+router.post('/pesajet', express.json(), pesajetWebhook);
 
 export default router;

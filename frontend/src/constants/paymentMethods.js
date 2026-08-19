@@ -1,5 +1,20 @@
 export const PAYMENT_METHODS = [
   {
+    id: "pesajet",
+    label: "Mobile Money (PesaJet)",
+    network: "MTN / Airtel",
+    logo: "/payment-logos/mtn.png",
+    available: true
+  },
+
+  {
+    id: "cash_on_delivery",
+    label: "Cash on Delivery",
+    logo: "/payment-logos/mobile-banking.png",
+    available: true
+  },
+
+  {
   id:"mtn_mobile_money",
     label: 'MTN Mobile Money',
     network: 'MTN',

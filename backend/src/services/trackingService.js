@@ -6,9 +6,23 @@ export const STATUS_FLOW = [
 ];
 
 export async function createDeliveryForOrder(orderId, { pickupAddress, dropoffAddress } = {}) {
+  // If this order is being paid Cash on Delivery, stamp the amount the
+  // driver is expected to collect onto the delivery record right away —
+  // this is what the delivery agent's UI and the collect-cash endpoint
+  // (deliveryController.js's collectCash()) read from, and it's set once
+  // here rather than trusting whatever a driver later types in as the
+  // "amount due".
+  const codResult = await query(
+    `SELECT o.total_amount FROM orders o
+     JOIN payments p ON p.order_id = o.id
+     WHERE o.id = $1 AND p.method = 'cash_on_delivery' LIMIT 1`,
+    [orderId]
+  );
+  const codExpectedAmount = codResult.rows[0]?.total_amount ?? null;
+
   const result = await query(
-    `INSERT INTO deliveries (order_id, pickup_address, dropoff_address) VALUES ($1,$2,$3) RETURNING *`,
-    [orderId, pickupAddress || null, dropoffAddress || null]
+    `INSERT INTO deliveries (order_id, pickup_address, dropoff_address, cod_expected_amount) VALUES ($1,$2,$3,$4) RETURNING *`,
+    [orderId, pickupAddress || null, dropoffAddress || null, codExpectedAmount]
   );
   await addEvent(result.rows[0].id, 'pending', 'Delivery record created.');
   return result.rows[0];

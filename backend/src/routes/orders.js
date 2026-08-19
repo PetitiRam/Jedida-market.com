@@ -2,7 +2,8 @@ import express from 'express';
 import multer from 'multer';
 import {
   createOrder, confirmPayment, confirmDelivery, releaseFunds, autoReleaseExpiredEscrow,
-  myOrdersAsBuyer, myOrdersAsSeller, myOrdersAsDelivery, allOrders,cancelOrder,reorder,getReceipt,contactSellerAboutOrder,submitManualPayment, assignDelivery, adminRefundOrder
+  myOrdersAsBuyer, myOrdersAsSeller, myOrdersAsDelivery, allOrders,cancelOrder,reorder,getReceipt,contactSellerAboutOrder,submitManualPayment, assignDelivery, adminRefundOrder,
+  checkPesajetStatus
 } from '../controllers/ordersController.js';
 import { requireAuth, requireAdmin, requirePermission } from '../middleware/auth.js';
 import { checkoutCart, confirmCartPayment } from '../controllers/ordersController.js';
@@ -23,6 +24,7 @@ router.post('/:orderId/release-funds', requireAuth, requireAdmin, requirePermiss
 router.post('/escrow/auto-release', requireAuth, requireAdmin, requirePermission('orders'), autoReleaseExpiredEscrow);
 router.post('/:orderId/assign-delivery', requireAuth, requireAdmin, requirePermission('orders'), assignDelivery);
 router.post('/:orderId/admin-refund', requireAuth, requireAdmin, requirePermission('orders'), requireFaceVerification('admin_refund'), adminRefundOrder);
+router.post('/:orderId/pesajet/check-status', requireAuth, requireAdmin, requirePermission('withdrawals'), checkPesajetStatus);
 
 router.get('/mine/buyer', requireAuth, myOrdersAsBuyer);
 router.get('/mine/seller', requireAuth, myOrdersAsSeller);

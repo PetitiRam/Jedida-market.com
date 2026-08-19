@@ -1,6 +1,6 @@
 import { query, withTransaction } from '../config/db.js';
 import { logSecurityEvent } from '../services/securityLogService.js';
-import { ADAPTERS } from '../services/paymentProviders.js';
+import { ADAPTERS, verifyPesajetPayment } from '../services/paymentProviders.js';
 import crypto from 'crypto';
 import { cached, cacheDel } from '../utils/cache.js';
 import { creditSaleCommission, alertHeldSaleCommission } from '../services/affiliateService.js';
@@ -43,12 +43,82 @@ export function invalidateSettingsCache() {
   cacheDel('platform_settings');
 }
 
+// Cash on Delivery never goes through a payment adapter — there is no
+// charge to create. isCashOnDelivery() + insertCodPayment() are shared by
+// createOrder() and checkoutCart() below so both entry points treat COD
+// identically: order created as normal, payment row inserted as 'pending'
+// (never 'succeeded'), and the escrow-crediting path is never touched.
+// COD only becomes 'succeeded' later, when a driver records the cash
+// handoff — see deliveryController.js's collectCash().
+function isCashOnDelivery(method) {
+  return method === 'cash_on_delivery';
+}
+
+// Accepts either the pool-level `query` or a transaction's `client.query`
+// — both share the same (sql, params) => Promise signature.
+async function insertCodPayment(queryFn, { orderId, amount, currency }) {
+  await queryFn(
+    `INSERT INTO payments (order_id, method, amount, currency, status, provider_reference, raw_response)
+     VALUES ($1,'cash_on_delivery',$2,$3,'pending',NULL,$4)`,
+    [orderId, amount, currency, { note: 'Cash on Delivery — collected at delivery, not prepaid.' }]
+  );
+}
+
+// Admin-only. Calls PesaJet's real GET /payments/:id and surfaces the raw
+// status into the SAME admin payment-review queue that manual mtn/airtel
+// proof submissions already go through (getPendingPayments/approvePayment
+// in adminPaymentsController.js) — nothing here decides "this succeeded"
+// on its own. We still don't have PesaJet's documented terminal status
+// strings, so instead of guessing, this stores PesaJet's raw status text
+// into the existing transaction_reference column (already rendered in
+// AdminPayments.jsx) and flips the payment to 'submitted' so a human admin
+// reads PesaJet's own words and clicks the existing Approve/Reject button.
+export async function checkPesajetStatus(req, res) {
+  const { orderId } = req.params;
+  try {
+    const paymentResult = await query(
+      `SELECT * FROM payments WHERE order_id = $1 AND method = 'pesajet' LIMIT 1`,
+      [orderId]
+    );
+    const payment = paymentResult.rows[0];
+    if (!payment) return res.status(404).json({ error: 'No PesaJet payment found for this order.' });
+    if (!payment.provider_reference) return res.status(400).json({ error: 'This payment has no PesaJet transaction id on file.' });
+    if (payment.status !== 'initiated' && payment.status !== 'submitted') {
+      return res.status(409).json({ error: `Payment is already '${payment.status}' — nothing to check.` });
+    }
+
+    const pesajetData = await verifyPesajetPayment(payment.provider_reference);
+
+    await query(
+      `UPDATE payments SET status = 'submitted', transaction_reference = $1, raw_response = $2 WHERE id = $3`,
+      [pesajetData.status || 'UNKNOWN', pesajetData, payment.id]
+    );
+
+    return res.json({
+      message: 'PesaJet status fetched — review it in the admin payments queue and approve/reject manually.',
+      pesajetStatus: pesajetData.status,
+      failureReason: pesajetData.failureReason || null,
+      raw: pesajetData
+    });
+  } catch (err) {
+    console.error('PesaJet status check error:', err);
+    return res.status(502).json({ error: err.message || 'Could not check PesaJet status.' });
+  }
+}
+
 // Buyer initiates checkout for a product -> creates an order in pending_payment.
 export async function createOrder(req, res) {
-  const { productId, quantity = 1, shippingAddress, method, couponCode } = req.body;
+  const { productId, quantity = 1, shippingAddress, method, couponCode, phoneNumber, network } = req.body;
   if (!productId || !method) return res.status(400).json({ error: 'Product and payment method are required.' });
 
   try {
+    const cod = isCashOnDelivery(method);
+    if (cod) {
+      const settings = await getSettings();
+      if (!settings.payment_settings?.enableCash) {
+        return res.status(400).json({ error: 'Cash on Delivery is not currently enabled.' });
+      }
+    }
     // A double-tapped "Buy now" (or a retried request) within the same
     // couple of seconds gets the just-created order handed back instead of
     // a second one — prevents duplicate pending orders (and, if the buyer
@@ -69,93 +139,196 @@ export async function createOrder(req, res) {
     }
 
     const adapter = ADAPTERS[method];
-    if (!adapter) return res.status(400).json({ error: 'Unsupported payment method.' });
+    if (!cod && !adapter) return res.status(400).json({ error: 'Unsupported payment method.' });
 
-    const order = await withTransaction(async (client) => {
-      // Row lock held for the stock check + order insert so two concurrent
-      // purchases of the last unit of the same product can't both pass.
-      const productResult = await client.query(
-        `SELECT p.*, s.id AS shop_id, u.primary_role AS shop_owner_role
+    // For any real payment method (never for COD, which has no such step),
+    // the order must not be written to the database unless the payer has
+    // actually been prompted to pay — i.e. the provider accepted the charge
+    // request (for PesaJet: the customer gets the PIN prompt). So the
+    // charge happens FIRST, against a lightweight read-only preview of the
+    // price (product + coupon validated but not yet locked/redeemed — that
+    // still only happens once, inside the transaction below, so a coupon
+    // is never consumed for a charge that fails). Only if that charge
+    // succeeds does the real order-creation transaction run.
+    let candidateOrderId = null;
+    let charge = null;
+    if (!cod) {
+      const preview = await query(
+        `SELECT p.price, p.currency, p.quantity_available, p.minimum_order_quantity, s.id AS shop_id, u.primary_role AS shop_owner_role
          FROM products p JOIN shops s ON s.id = p.shop_id JOIN users u ON u.id = s.owner_id
-         WHERE p.id = $1 AND p.status = 'active' FOR UPDATE OF p`,
+         WHERE p.id = $1 AND p.status = 'active'`,
         [productId]
       );
-      const product = productResult.rows[0];
-      if (!product) { const err = new Error('PRODUCT_NOT_FOUND'); err.code = 'PRODUCT_NOT_FOUND'; throw err; }
-      if (product.quantity_available < quantity) { const err = new Error('OUT_OF_STOCK'); err.code = 'OUT_OF_STOCK'; throw err; }
-      // Manufacturers/suppliers/farmers are bulk-only — a retail-sized single
-      // order is rejected outright so the buyer is pointed at the bulk order /
-      // request-quote flow instead (see b2b/quoteController.js).
-      if (['manufacturer', 'supplier', 'farmer'].includes(product.shop_owner_role) && quantity < product.minimum_order_quantity) {
-        const err = new Error('MOQ_NOT_MET'); err.code = 'MOQ_NOT_MET'; err.moq = product.minimum_order_quantity; throw err;
+      const previewProduct = preview.rows[0];
+      if (!previewProduct) return res.status(404).json({ error: 'Product not available.' });
+      if (previewProduct.quantity_available < quantity) return res.status(400).json({ error: 'Not enough stock available.' });
+      if (['manufacturer', 'supplier', 'farmer'].includes(previewProduct.shop_owner_role) && quantity < previewProduct.minimum_order_quantity) {
+        return res.status(400).json({
+          error: `This is a bulk-only listing — minimum order is ${previewProduct.minimum_order_quantity} units. Request a quote instead if you need a smaller amount.`,
+          minimumOrderQuantity: previewProduct.minimum_order_quantity
+        });
       }
 
       const settings = await getSettings();
       const feePercent = Number(settings.platform_fee_percent);
-      const unitPrice = Number(product.price);
-      const subtotal = unitPrice * quantity;
+      const subtotal = Number(previewProduct.price) * quantity;
 
-      // Coupon redemption: validated and locked (FOR UPDATE) inside this
-      // same transaction, then uses_count is incremented atomically with
-      // the overuse guard baked into the WHERE clause — so two concurrent
-      // checkouts racing on the last remaining use can't both redeem it,
-      // and a coupon actually gets consumed instead of being infinitely
-      // reusable. Previously coupons/validate computed a discount that was
-      // never applied to an order and never decremented remaining uses.
-      let coupon = null;
       let discount = 0;
       if (couponCode) {
-        const couponResult = await client.query(
+        const couponResult = await query(
           `SELECT * FROM coupons WHERE code = $1 AND (shop_id = $2 OR shop_id IS NULL) AND is_active = TRUE
-             AND (expires_at IS NULL OR expires_at > now()) FOR UPDATE`,
-          [couponCode.toUpperCase(), product.shop_id]
+             AND (expires_at IS NULL OR expires_at > now())`,
+          [couponCode.toUpperCase(), previewProduct.shop_id]
         );
-        coupon = couponResult.rows[0];
-        if (!coupon) { const err = new Error('COUPON_INVALID'); err.code = 'COUPON_INVALID'; throw err; }
-        if (subtotal < Number(coupon.min_order_amount)) {
-          const err = new Error('COUPON_MIN_ORDER'); err.code = 'COUPON_MIN_ORDER'; err.minOrderAmount = coupon.min_order_amount; throw err;
+        const previewCoupon = couponResult.rows[0];
+        if (!previewCoupon) return res.status(404).json({ error: 'Invalid or expired coupon code.' });
+        if (subtotal < Number(previewCoupon.min_order_amount)) {
+          return res.status(400).json({ error: `This coupon requires a minimum order of ${previewCoupon.min_order_amount}.` });
         }
-        const redeemed = await client.query(
-          `UPDATE coupons SET uses_count = uses_count + 1
-           WHERE id = $1 AND (max_uses IS NULL OR uses_count < max_uses) RETURNING *`,
-          [coupon.id]
-        );
-        if (redeemed.rows.length === 0) { const err = new Error('COUPON_EXHAUSTED'); err.code = 'COUPON_EXHAUSTED'; throw err; }
-        coupon = redeemed.rows[0];
-        discount = coupon.discount_type === 'percent'
-          ? Math.round(subtotal * (Number(coupon.discount_value) / 100) * 100) / 100
-          : Math.min(Number(coupon.discount_value), subtotal);
+        if (previewCoupon.max_uses != null && previewCoupon.uses_count >= previewCoupon.max_uses) {
+          return res.status(409).json({ error: 'This coupon has just reached its usage limit.' });
+        }
+        discount = previewCoupon.discount_type === 'percent'
+          ? Math.round(subtotal * (Number(previewCoupon.discount_value) / 100) * 100) / 100
+          : Math.min(Number(previewCoupon.discount_value), subtotal);
       }
 
       const discountedSubtotal = subtotal - discount;
       const feeAmount = Math.round(discountedSubtotal * feePercent) / 100;
-      const total = discountedSubtotal + feeAmount;
+      const previewTotal = discountedSubtotal + feeAmount;
 
-      const orderResult = await client.query(
-        `INSERT INTO orders (buyer_id, shop_id, product_id, quantity, unit_price, currency, platform_fee_percent, platform_fee_amount, total_amount, shipping_address, coupon_id, coupon_code, discount_amount)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
-        [req.user.id, product.shop_id, product.id, quantity, unitPrice, product.currency, feePercent, feeAmount, total, shippingAddress || null, coupon?.id || null, coupon?.code || null, discount]
-      );
-      return orderResult.rows[0];
-    });
+      candidateOrderId = crypto.randomUUID();
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      try {
+        charge = await adapter({
+          amount: previewTotal, currency: previewProduct.currency, orderId: candidateOrderId,
+          returnUrl: `${frontendUrl}/orders/${candidateOrderId}`,
+          phoneNumber, network
+        });
+      } catch (chargeErr) {
+        console.error('Payment charge failed before order creation:', chargeErr.message);
+        return res.status(502).json({ error: chargeErr.message || 'Could not start payment. Your order was not created.' });
+      }
+    }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const charge = await adapter({
-      amount: order.total_amount, currency: order.currency, orderId: order.id,
-      returnUrl: `${frontendUrl}/orders/${order.id}`
-    });
+    let order;
+    try {
+      order = await withTransaction(async (client) => {
+        // Row lock held for the stock check + order insert so two concurrent
+        // purchases of the last unit of the same product can't both pass.
+        const productResult = await client.query(
+          `SELECT p.*, s.id AS shop_id, u.primary_role AS shop_owner_role
+           FROM products p JOIN shops s ON s.id = p.shop_id JOIN users u ON u.id = s.owner_id
+           WHERE p.id = $1 AND p.status = 'active' FOR UPDATE OF p`,
+          [productId]
+        );
+        const product = productResult.rows[0];
+        if (!product) { const err = new Error('PRODUCT_NOT_FOUND'); err.code = 'PRODUCT_NOT_FOUND'; throw err; }
+        if (product.quantity_available < quantity) { const err = new Error('OUT_OF_STOCK'); err.code = 'OUT_OF_STOCK'; throw err; }
+        // Manufacturers/suppliers/farmers are bulk-only — a retail-sized single
+        // order is rejected outright so the buyer is pointed at the bulk order /
+        // request-quote flow instead (see b2b/quoteController.js).
+        if (['manufacturer', 'supplier', 'farmer'].includes(product.shop_owner_role) && quantity < product.minimum_order_quantity) {
+          const err = new Error('MOQ_NOT_MET'); err.code = 'MOQ_NOT_MET'; err.moq = product.minimum_order_quantity; throw err;
+        }
 
-    await query(
-      `INSERT INTO payments (order_id, method, amount, currency, status, provider_reference, raw_response)
-       VALUES ($1,$2,$3,$4,'initiated',$5,$6)`,
-      [order.id, method, order.total_amount, order.currency, charge.providerReference, charge.raw]
-    );
+        const settings = await getSettings();
+        const feePercent = Number(settings.platform_fee_percent);
+        const unitPrice = Number(product.price);
+        const subtotal = unitPrice * quantity;
+
+        // Coupon redemption: validated and locked (FOR UPDATE) inside this
+        // same transaction, then uses_count is incremented atomically with
+        // the overuse guard baked into the WHERE clause — so two concurrent
+        // checkouts racing on the last remaining use can't both redeem it,
+        // and a coupon actually gets consumed instead of being infinitely
+        // reusable. Previously coupons/validate computed a discount that was
+        // never applied to an order and never decremented remaining uses.
+        let coupon = null;
+        let discount = 0;
+        if (couponCode) {
+          const couponResult = await client.query(
+            `SELECT * FROM coupons WHERE code = $1 AND (shop_id = $2 OR shop_id IS NULL) AND is_active = TRUE
+               AND (expires_at IS NULL OR expires_at > now()) FOR UPDATE`,
+            [couponCode.toUpperCase(), product.shop_id]
+          );
+          coupon = couponResult.rows[0];
+          if (!coupon) { const err = new Error('COUPON_INVALID'); err.code = 'COUPON_INVALID'; throw err; }
+          if (subtotal < Number(coupon.min_order_amount)) {
+            const err = new Error('COUPON_MIN_ORDER'); err.code = 'COUPON_MIN_ORDER'; err.minOrderAmount = coupon.min_order_amount; throw err;
+          }
+          const redeemed = await client.query(
+            `UPDATE coupons SET uses_count = uses_count + 1
+             WHERE id = $1 AND (max_uses IS NULL OR uses_count < max_uses) RETURNING *`,
+            [coupon.id]
+          );
+          if (redeemed.rows.length === 0) { const err = new Error('COUPON_EXHAUSTED'); err.code = 'COUPON_EXHAUSTED'; throw err; }
+          coupon = redeemed.rows[0];
+          discount = coupon.discount_type === 'percent'
+            ? Math.round(subtotal * (Number(coupon.discount_value) / 100) * 100) / 100
+            : Math.min(Number(coupon.discount_value), subtotal);
+        }
+
+        const discountedSubtotal = subtotal - discount;
+        const feeAmount = Math.round(discountedSubtotal * feePercent) / 100;
+        const total = discountedSubtotal + feeAmount;
+
+        const orderResult = await client.query(
+          candidateOrderId
+            ? `INSERT INTO orders (id, buyer_id, shop_id, product_id, quantity, unit_price, currency, platform_fee_percent, platform_fee_amount, total_amount, shipping_address, coupon_id, coupon_code, discount_amount)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`
+            : `INSERT INTO orders (buyer_id, shop_id, product_id, quantity, unit_price, currency, platform_fee_percent, platform_fee_amount, total_amount, shipping_address, coupon_id, coupon_code, discount_amount)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+          candidateOrderId
+            ? [candidateOrderId, req.user.id, product.shop_id, product.id, quantity, unitPrice, product.currency, feePercent, feeAmount, total, shippingAddress || null, coupon?.id || null, coupon?.code || null, discount]
+            : [req.user.id, product.shop_id, product.id, quantity, unitPrice, product.currency, feePercent, feeAmount, total, shippingAddress || null, coupon?.id || null, coupon?.code || null, discount]
+        );
+        const newOrder = orderResult.rows[0];
+
+        // Payment row inserted in the SAME transaction as the order, so the
+        // two can never exist independently of each other.
+        if (cod) {
+          await insertCodPayment(client.query.bind(client), { orderId: newOrder.id, amount: newOrder.total_amount, currency: newOrder.currency });
+        } else {
+          await client.query(
+            `INSERT INTO payments (order_id, method, amount, currency, status, provider_reference, raw_response)
+             VALUES ($1,$2,$3,$4,'initiated',$5,$6)`,
+            [newOrder.id, method, newOrder.total_amount, newOrder.currency, charge.providerReference, charge.raw]
+          );
+        }
+
+        return newOrder;
+      });
+    } catch (txErr) {
+      // A charge already went through above (candidateOrderId/charge are
+      // set) but the order itself failed to save — e.g. someone else took
+      // the last unit, or the coupon was exhausted, in the moment between
+      // the pre-charge preview and this locked transaction. We can't
+      // safely auto-refund without a documented PesaJet refund endpoint,
+      // so this surfaces clearly instead of silently losing the charge.
+      if (charge) {
+        console.error(`Order creation failed AFTER a successful charge (reference ${charge.providerReference}):`, txErr.message);
+        return res.status(409).json({
+          error: `Your payment was initiated (reference ${charge.providerReference}) but we could not finalize the order — ${
+            txErr.code === 'OUT_OF_STOCK' ? 'the item just sold out.' :
+            txErr.code === 'MOQ_NOT_MET' ? 'the quantity no longer meets the minimum order requirement.' :
+            txErr.code === 'COUPON_INVALID' ? 'the coupon is no longer valid.' :
+            txErr.code === 'COUPON_EXHAUSTED' ? 'the coupon just reached its usage limit.' :
+            'please contact support.'
+          } Please contact support with this reference number — do not attempt to pay again until this is resolved.`,
+          providerReference: charge.providerReference
+        });
+      }
+      throw txErr;
+    }
 
     await safeGenerateDocument(() => createOrderConfirmation(order.id), 'order_confirmation:createOrder');
 
     return res.status(201).json({
-      message: 'Order created. Complete payment to move funds into escrow.',
-      order, checkoutUrl: charge.checkoutUrl, providerReference: charge.providerReference
+      message: cod
+        ? 'Order created. Pay the delivery agent in cash when your order arrives.'
+        : 'Order created. Complete payment to move funds into escrow.',
+      order, codPending: cod, checkoutUrl: charge?.checkoutUrl, providerReference: charge?.providerReference
     });
   } catch (err) {
     if (err.code === 'PRODUCT_NOT_FOUND') return res.status(404).json({ error: 'Product not available.' });
@@ -691,11 +864,18 @@ export async function assignDelivery(req, res) {
   res.json({ message: 'Delivery personnel assigned.', order: result.rows[0] });
 }
 export async function checkoutCart(req, res) {
-  const { method, shippingAddress } = req.body;
+  const { method, shippingAddress, phoneNumber, network } = req.body;
+  const cod = isCashOnDelivery(method);
   const adapter = ADAPTERS[method];
-  if (!adapter) return res.status(400).json({ error: 'Unsupported payment method.' });
+  if (!cod && !adapter) return res.status(400).json({ error: 'Unsupported payment method.' });
 
   try {
+    if (cod) {
+      const settingsCheck = await query('SELECT payment_settings FROM platform_settings WHERE id = 1');
+      if (!settingsCheck.rows[0]?.payment_settings?.enableCash) {
+        return res.status(400).json({ error: 'Cash on Delivery is not currently enabled.' });
+      }
+    }
     // A buyer that's already mid-checkout (an unpaid group created in the
     // last 2 minutes) gets that group handed back instead of a fresh one —
     // guards against a double-tapped "Checkout" button creating two sets of
@@ -723,69 +903,136 @@ export async function checkoutCart(req, res) {
     const feePercent = Number(settings.rows[0].platform_fee_percent);
     const checkoutGroupId = crypto.randomUUID();
 
+    // Same principle as createOrder(): for any real payment method, no
+    // order should exist unless the payer was actually charged/prompted.
+    // combinedTotal is previewed read-only (no lock, no mutation) purely to
+    // know what to charge; the transaction below re-validates everything
+    // under FOR UPDATE locks exactly as before and is what actually
+    // creates the orders.
+    let charge = null;
+    if (!cod) {
+      const preview = await query(
+        `SELECT ci.quantity, p.price, p.currency, p.quantity_available, p.minimum_order_quantity, u.primary_role AS shop_owner_role
+         FROM cart_items ci JOIN products p ON p.id = ci.product_id JOIN shops s ON s.id = p.shop_id
+         JOIN users u ON u.id = s.owner_id
+         WHERE ci.user_id = $1 AND p.status = 'active'`,
+        [req.user.id]
+      );
+      if (preview.rows.length === 0) return res.status(400).json({ error: 'Your cart is empty.' });
+      for (const item of preview.rows) {
+        if (item.quantity > item.quantity_available) return res.status(400).json({ error: 'Not enough stock for one of your cart items.' });
+        if (['manufacturer', 'supplier', 'farmer'].includes(item.shop_owner_role) && item.quantity < item.minimum_order_quantity) {
+          return res.status(400).json({
+            error: `One of your cart items is bulk-only with a minimum order of ${item.minimum_order_quantity} units. Adjust the quantity or request a quote instead.`,
+            minimumOrderQuantity: item.minimum_order_quantity
+          });
+        }
+      }
+      let previewTotal = 0;
+      for (const item of preview.rows) {
+        const subtotal = Number(item.price) * item.quantity;
+        previewTotal += subtotal + Math.round(subtotal * feePercent) / 100;
+      }
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      try {
+        charge = await adapter({
+          amount: previewTotal, currency: preview.rows[0].currency, orderId: `cart-${checkoutGroupId}`,
+          returnUrl: `${frontendUrl}/orders?checkoutGroup=${checkoutGroupId}`,
+          phoneNumber, network
+        });
+      } catch (chargeErr) {
+        console.error('Cart payment charge failed before order creation:', chargeErr.message);
+        return res.status(502).json({ error: chargeErr.message || 'Could not start payment. No orders were created.' });
+      }
+    }
+
     // Order rows are created inside one transaction, and the stock check
     // uses SELECT ... FOR UPDATE to lock each product row for the duration
     // of the checkout — so two buyers racing to check out the last unit of
     // the same product can't both pass the "enough stock" check at once.
-    const { createdOrders, combinedTotal, currency } = await withTransaction(async (client) => {
-      const cartResult = await client.query(
-        `SELECT ci.id AS cart_item_id, ci.quantity, p.id AS product_id, p.price, p.currency, p.quantity_available,
-                p.minimum_order_quantity, s.id AS shop_id, u.primary_role AS shop_owner_role
-         FROM cart_items ci JOIN products p ON p.id = ci.product_id JOIN shops s ON s.id = p.shop_id
-         JOIN users u ON u.id = s.owner_id
-         WHERE ci.user_id = $1 AND p.status = 'active'
-         FOR UPDATE OF p`,
-        [req.user.id]
-      );
-      if (cartResult.rows.length === 0) {
-        const err = new Error('EMPTY_CART'); err.code = 'EMPTY_CART'; throw err;
-      }
-      for (const item of cartResult.rows) {
-        if (item.quantity > item.quantity_available) {
-          const err = new Error('OUT_OF_STOCK'); err.code = 'OUT_OF_STOCK'; throw err;
-        }
-        if (['manufacturer', 'supplier', 'farmer'].includes(item.shop_owner_role) && item.quantity < item.minimum_order_quantity) {
-          const err = new Error('MOQ_NOT_MET'); err.code = 'MOQ_NOT_MET'; err.moq = item.minimum_order_quantity; throw err;
-        }
-      }
-
-      let total = 0;
-      const orders = [];
-      for (const item of cartResult.rows) {
-        const subtotal = Number(item.price) * item.quantity;
-        const feeAmount = Math.round(subtotal * feePercent) / 100;
-        const orderTotal = subtotal + feeAmount;
-        total += orderTotal;
-
-        const orderResult = await client.query(
-          `INSERT INTO orders (buyer_id, shop_id, product_id, quantity, unit_price, currency, platform_fee_percent, platform_fee_amount, total_amount, shipping_address, checkout_group_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-          [req.user.id, item.shop_id, item.product_id, item.quantity, item.price, item.currency, feePercent, feeAmount, orderTotal, shippingAddress || null, checkoutGroupId]
+    let createdOrders, combinedTotal, currency;
+    try {
+      ({ createdOrders, combinedTotal, currency } = await withTransaction(async (client) => {
+        const cartResult = await client.query(
+          `SELECT ci.id AS cart_item_id, ci.quantity, p.id AS product_id, p.price, p.currency, p.quantity_available,
+                  p.minimum_order_quantity, s.id AS shop_id, u.primary_role AS shop_owner_role
+           FROM cart_items ci JOIN products p ON p.id = ci.product_id JOIN shops s ON s.id = p.shop_id
+           JOIN users u ON u.id = s.owner_id
+           WHERE ci.user_id = $1 AND p.status = 'active'
+           FOR UPDATE OF p`,
+          [req.user.id]
         );
-        orders.push(orderResult.rows[0]);
-      }
-      return { createdOrders: orders, combinedTotal: total, currency: cartResult.rows[0].currency };
-    });
+        if (cartResult.rows.length === 0) {
+          const err = new Error('EMPTY_CART'); err.code = 'EMPTY_CART'; throw err;
+        }
+        for (const item of cartResult.rows) {
+          if (item.quantity > item.quantity_available) {
+            const err = new Error('OUT_OF_STOCK'); err.code = 'OUT_OF_STOCK'; throw err;
+          }
+          if (['manufacturer', 'supplier', 'farmer'].includes(item.shop_owner_role) && item.quantity < item.minimum_order_quantity) {
+            const err = new Error('MOQ_NOT_MET'); err.code = 'MOQ_NOT_MET'; err.moq = item.minimum_order_quantity; throw err;
+          }
+        }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const charge = await adapter({
-      amount: combinedTotal, currency, orderId: `cart-${checkoutGroupId}`,
-      returnUrl: `${frontendUrl}/orders?checkoutGroup=${checkoutGroupId}`
-    });
+        let total = 0;
+        const orders = [];
+        for (const item of cartResult.rows) {
+          const subtotal = Number(item.price) * item.quantity;
+          const feeAmount = Math.round(subtotal * feePercent) / 100;
+          const orderTotal = subtotal + feeAmount;
+          total += orderTotal;
+
+          const orderResult = await client.query(
+            `INSERT INTO orders (buyer_id, shop_id, product_id, quantity, unit_price, currency, platform_fee_percent, platform_fee_amount, total_amount, shipping_address, checkout_group_id)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+            [req.user.id, item.shop_id, item.product_id, item.quantity, item.price, item.currency, feePercent, feeAmount, orderTotal, shippingAddress || null, checkoutGroupId]
+          );
+          orders.push(orderResult.rows[0]);
+        }
+
+        // Payment rows inserted in the SAME transaction as the orders, so
+        // orders and payments can never exist independently of each other.
+        for (const order of orders) {
+          if (cod) {
+            await insertCodPayment(client.query.bind(client), { orderId: order.id, amount: order.total_amount, currency: order.currency });
+          } else {
+            await client.query(
+              `INSERT INTO payments (order_id, method, amount, currency, status, provider_reference, raw_response)
+               VALUES ($1,$2,$3,$4,'initiated',$5,$6)`,
+              [order.id, method, order.total_amount, order.currency, charge.providerReference, charge.raw]
+            );
+          }
+        }
+
+        return { createdOrders: orders, combinedTotal: total, currency: cartResult.rows[0].currency };
+      }));
+    } catch (txErr) {
+      if (charge) {
+        console.error(`Cart order creation failed AFTER a successful charge (reference ${charge.providerReference}):`, txErr.message);
+        return res.status(409).json({
+          error: `Your payment was initiated (reference ${charge.providerReference}) but we could not finalize your orders — ${
+            txErr.code === 'OUT_OF_STOCK' ? 'one item just sold out.' :
+            txErr.code === 'MOQ_NOT_MET' ? 'one item no longer meets its minimum order quantity.' :
+            txErr.code === 'EMPTY_CART' ? 'your cart changed.' :
+            'please contact support.'
+          } Please contact support with this reference number — do not attempt to pay again until this is resolved.`,
+          providerReference: charge.providerReference
+        });
+      }
+      throw txErr;
+    }
 
     for (const order of createdOrders) {
-      await query(
-        `INSERT INTO payments (order_id, method, amount, currency, status, provider_reference, raw_response)
-         VALUES ($1,$2,$3,$4,'initiated',$5,$6)`,
-        [order.id, method, order.total_amount, currency, charge.providerReference, charge.raw]
-      );
       await safeGenerateDocument(() => createOrderConfirmation(order.id), 'order_confirmation:checkoutCart');
     }
 
     return res.status(201).json({
-      message: `Created ${createdOrders.length} order(s) from your cart. Complete payment to move funds into escrow.`,
-      orders: createdOrders, checkoutGroupId,
-      combinedTotal, checkoutUrl: charge.checkoutUrl, providerReference: charge.providerReference
+      message: cod
+        ? `Created ${createdOrders.length} order(s) from your cart. Pay the delivery agent in cash when your order arrives.`
+        : `Created ${createdOrders.length} order(s) from your cart. Complete payment to move funds into escrow.`,
+      orders: createdOrders, checkoutGroupId, codPending: cod,
+      combinedTotal, checkoutUrl: charge?.checkoutUrl, providerReference: charge?.providerReference
     });
   } catch (err) {
     if (err.code === 'EMPTY_CART') return res.status(400).json({ error: 'Your cart is empty.' });
