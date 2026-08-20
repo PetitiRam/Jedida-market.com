@@ -1184,31 +1184,38 @@ html, body { background: var(--cream); color: var(--text-primary); transition: b
 }
 
 /* --- Shop by Category icon row --- */
-.jd-shop-cat-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 14px; }
+/* --- Shop by Category icon row --- */
+@keyframes jd-shop-cat-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.94); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.jd-shop-cat-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; }
 .jd-shop-cat-tile {
-  display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
-  padding: 20px 10px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border-soft);
+  display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+  padding: 14px 6px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border-soft);
   transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  opacity: 0; animation: jd-shop-cat-in .5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 0.06s);
 }
 .jd-shop-cat-tile:hover { transform: translateY(-3px); box-shadow: var(--shadow-card-hover); border-color: rgba(139,197,63,0.4); }
 .jd-shop-cat-icon {
-  width: 56px; height: 56px; border-radius: 16px; background: var(--surface-alt); color: var(--forest);
+  width: 42px; height: 42px; border-radius: 12px; background: var(--surface-alt); color: var(--forest);
   display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;
 }
-.jd-shop-cat-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 16px; }
-/* Small glyph badge overlaid on the live product photo, so the category is
-   still instantly recognisable at a glance even with a real image behind it. */
+.jd-shop-cat-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
 .jd-shop-cat-icon .jd-shop-cat-icon-badge {
-  position: absolute; bottom: -3px; right: -3px; width: 20px; height: 20px; border-radius: 6px;
+  position: absolute; bottom: -3px; right: -3px; width: 16px; height: 16px; border-radius: 5px;
   background: var(--forest); color: #fff; display: flex; align-items: center; justify-content: center;
   border: 2px solid var(--surface);
 }
-.jd-shop-cat-label { font-size: 0.8rem; font-weight: 700; color: var(--text-primary); }
-.jd-shop-cat-count { font-size: 0.66rem; color: var(--text-muted); }
-.jd-shop-cat-tile-skeleton { pointer-events: none; }
+.jd-shop-cat-label { font-size: 0.7rem; font-weight: 700; color: var(--text-primary); }
+.jd-shop-cat-count { font-size: 0.6rem; color: var(--text-muted); }
+.jd-shop-cat-tile-skeleton { pointer-events: none; opacity: 1; }
 .jd-shop-cat-tile-skeleton .jd-shop-cat-icon.skeleton { background: none; }
 .jd-shop-cat-tile-skeleton:hover { transform: none; box-shadow: none; border-color: var(--border-soft); }
-
+@media (prefers-reduced-motion: reduce) {
+  .jd-shop-cat-tile { animation: none !important; opacity: 1; }
+}
 /* --- Flash Deals --- */
 .jd-flash-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
 .jd-flash-head-title { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

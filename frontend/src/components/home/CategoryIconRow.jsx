@@ -19,7 +19,7 @@ export default function CategoryIconRow({ categoryCounts, categoryImages, status
         <div className="home-section-head"><h2>Shop by Category</h2></div>
         <div className="jd-shop-cat-row">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="jd-shop-cat-tile jd-shop-cat-tile-skeleton">
+            <div key={i} className="jd-shop-cat-tile jd-shop-cat-tile-skeleton" style={{ '--i': i }}>
               <span className="jd-shop-cat-icon skeleton" />
               <span className="jd-shop-cat-label skeleton" style={{ width: '70%', height: 10 }} />
             </div>
@@ -38,10 +38,10 @@ export default function CategoryIconRow({ categoryCounts, categoryImages, status
         <Link to="/marketplace" className="view-all">View all →</Link>
       </div>
       <div className="jd-shop-cat-row">
-        {stockedCategories.map((c) => {
+        {stockedCategories.map((c, i) => {
           const liveImage = categoryImages?.[c.value];
           return (
-            <Link key={c.value} to={`/marketplace?category=${c.value}`} className="jd-shop-cat-tile">
+            <Link key={c.value} to={`/marketplace?category=${c.value}`} className="jd-shop-cat-tile" style={{ '--i': i }}>
               <span className="jd-shop-cat-icon">
                 {liveImage ? (
                   <>
