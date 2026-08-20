@@ -1,3 +1,21 @@
+#!/usr/bin/env bash
+# Makes admin-created homepage product/shop sections always scroll
+# horizontally on mobile, matching every other homepage rail (Flash Deals,
+# Featured, Trending, New Arrivals, Featured Shops) — they only did this
+# before if an admin had manually set layout:'rail' on that section.
+# Everything else was already correct: full "Browse Everything" / category
+# / shop-page listings already stay as vertical grids on purpose, and
+# every other rail already scrolled horizontally on mobile.
+set -e
+if [ ! -d backend ] || [ ! -d frontend ]; then
+  echo "ERROR: run this from the project root."
+  exit 1
+fi
+cp frontend/src/components/home/DynamicSection.jsx frontend/src/components/home/DynamicSection.jsx.backup
+echo "Backup created."
+
+echo '== Writing frontend/src/components/home/DynamicSection.jsx =='
+cat > frontend/src/components/home/DynamicSection.jsx <<'JEDIDA_EOF_DYNSEC'
 import { Link } from 'react-router-dom';
 import ProductCard from '../ProductCard';
 import ShopCard from './ShopCard';
@@ -56,3 +74,9 @@ export default function DynamicSection({ section }) {
     </section>
   );
 }
+JEDIDA_EOF_DYNSEC
+
+echo "Done. Restart your frontend dev server and check the home page on a"
+echo "narrow (phone-width) browser window — every curated section should"
+echo "now scroll sideways, while 'Browse Everything' at the bottom, and any"
+echo "category/section 'View all' page, stay as a normal vertical grid."

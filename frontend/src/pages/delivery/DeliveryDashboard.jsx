@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import client from '../../api/client';
 import Logo from '../../components/Logo';
 import TabBar from '../../components/TabBar';
-import ChatPanel from '../../components/ChatPanel';
+import EmbeddedSupportChat from '../../components/chat/EmbeddedSupportChat';
 import WalletKycPanel from '../../components/WalletKycPanel';
 
 function DeliveryOrdersPanel() {
@@ -59,8 +59,8 @@ export default function DeliveryDashboard() {
         <TabBar tabs={TABS} initial="orders">
           {(active) => {
             if (active === 'orders') return <DeliveryOrdersPanel />;
-            if (active === 'wallet') return <WalletKycPanel />;
-            return <ChatPanel />;
+if (active === 'wallet') return <WalletKycPanel />;
+return <EmbeddedSupportChat />;
           }}
         </TabBar>
       </div>

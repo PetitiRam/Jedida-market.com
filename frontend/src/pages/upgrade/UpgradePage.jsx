@@ -3,18 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import client from '../../api/client';
 import Logo from '../../components/Logo';
 import MediaUploader from '../../components/MediaUploader';
-import ChatPanel from '../../components/ChatPanel';
+import EmbeddedSupportChat from '../../components/chat/EmbeddedSupportChat';
 import './upgrade.css';
 
 const BENEFITS = [
-  { icon: '🛡️', title: 'Verified Seller Badge', body: 'Gain trust and credibility with buyers.' },
-  { icon: '🗂️', title: 'More Products', body: 'List unlimited products in your shop.' },
-  { icon: '📈', title: 'Advanced Analytics', body: 'Track sales, views, and growth over time.' },
-  { icon: '⚡', title: 'Priority Support', body: 'Get faster responses from the admin team.' },
-  { icon: '📣', title: 'Marketing Tools', body: 'Boost your visibility across the marketplace.' },
-  { icon: '💰', title: 'Lower Marketplace Fees', body: 'Save more on every sale you make.' },
-  { icon: '🏷️', title: 'Campaigns & Discounts', body: 'Run promotions and special offers.' },
-  { icon: '🤖', title: 'AI Business Assistant', body: 'Smart, tailored recommendations for your shop.' }
+  { title: 'Verified Seller Badge', body: 'Gain trust and credibility with buyers.' },
+  { title: 'More Products', body: 'List unlimited products in your shop.' },
+  { title: 'Advanced Analytics', body: 'Track sales, views, and growth over time.' },
+  { title: 'Priority Support', body: 'Get faster responses from the admin team.' },
+  { title: 'Marketing Tools', body: 'Boost your visibility across the marketplace.' },
+  { title: 'Lower Marketplace Fees', body: 'Save more on every sale you make.' },
+  { title: 'Campaigns & Discounts', body: 'Run promotions and special offers.' },
+  { title: 'AI Business Assistant', body: 'Smart, tailored recommendations for your shop.' }
 ];
 
 // Manufacturer/supplier/dropshipper accounts — built on the same
@@ -22,11 +22,11 @@ const BENEFITS = [
 // accounts rather than an individual's shop. Kept in one place so the
 // type grid, field labels, and summary text all stay in sync.
 const BUSINESS_ROLE_INFO = {
-  manufacturer: { icon: '🏭', label: 'Manufacturer Upgrade', body: 'Produce goods and supply sellers, suppliers, and dropshippers at wholesale prices.' },
-  supplier: { icon: '📦', label: 'Supplier Upgrade', body: 'Stock and distribute wholesale products to sellers and dropshippers.' },
-  dropshipper: { icon: '🚀', label: 'Dropshipper Upgrade', body: 'Resell supplier and manufacturer products without holding your own inventory.' },
-  farmer: { icon: '🌾', label: 'Farmer Upgrade', body: 'List bulk harvests, set seasonal availability, and reach verified buyers and traders directly.' },
-  host: { icon: '🏡', label: 'Jedida Stays Host', body: 'List apartments, villas, lodges, and other short-stay properties with a full booking calendar, media gallery, and Digital Stay Pass.' }
+  manufacturer: { label: 'Manufacturer Upgrade', body: 'Produce goods and supply sellers, suppliers, and dropshippers at wholesale prices.' },
+  supplier: { label: 'Supplier Upgrade', body: 'Stock and distribute wholesale products to sellers and dropshippers.' },
+  dropshipper: { label: 'Dropshipper Upgrade', body: 'Resell supplier and manufacturer products without holding your own inventory.' },
+  farmer: { label: 'Farmer Upgrade', body: 'List bulk harvests, set seasonal availability, and reach verified buyers and traders directly.' },
+  host: { label: 'Jedida Stays Host', body: 'List apartments, villas, lodges, and other short-stay properties with a full booking calendar, media gallery, and Digital Stay Pass.' }
 };
 const BUSINESS_ROLES = Object.keys(BUSINESS_ROLE_INFO);
 const ROLES_REQUIRING_REGISTRATION_NUMBER = ['manufacturer', 'supplier'];
@@ -277,7 +277,6 @@ export default function UpgradePage({ initialType = 'seller' }) {
         <div className="upg-topbar">
           <Logo size={34} />
           <div className="upg-secure-badge">
-            <span style={{ fontSize: '1.2rem' }}>✅</span>
             <span>
               <strong>100% Secure Payment</strong>
               <span>Your payment is safe with Jedida</span>
@@ -292,7 +291,7 @@ export default function UpgradePage({ initialType = 'seller' }) {
               <>
                 <h2 className="upg-title">Upgrade Your Account</h2>
                 <p className="upg-subtitle">Unlock premium features and grow your business on Jedida Marketplace.</p>
-                <div className="upg-onetime-chip">🔒 One-time payment · No subscriptions · Lifetime benefits</div>
+                <div className="upg-onetime-chip">One-time payment · No subscriptions · Lifetime benefits</div>
               </>
             )}
 
@@ -303,19 +302,16 @@ export default function UpgradePage({ initialType = 'seller' }) {
                 <div className="upg-step-label">1. Select upgrade type</div>
                 <div className="upg-type-grid">
                   <div className={`upg-type-card ${upgradeType === 'seller' ? 'active' : ''}`} onClick={() => setUpgradeType('seller')}>
-                    {upgradeType === 'seller' && <span className="upg-type-check">✓</span>}
-                    <div className="upg-type-icon">🏬</div>
+                    {upgradeType === 'seller' && <span className="upg-type-check">Selected</span>}
                     <div><h4>Seller Upgrade</h4><p>Unlock powerful tools to grow your shop and increase sales.</p></div>
                   </div>
                   <div className={`upg-type-card ${upgradeType === 'delivery' ? 'active' : ''}`} onClick={() => setUpgradeType('delivery')}>
-                    {upgradeType === 'delivery' && <span className="upg-type-check">✓</span>}
-                    <div className="upg-type-icon">🛵</div>
+                    {upgradeType === 'delivery' && <span className="upg-type-check">Selected</span>}
                     <div><h4>Delivery Upgrade</h4><p>Unlock professional delivery tools and earn more.</p></div>
                   </div>
                   {BUSINESS_ROLES.map((role) => (
                     <div key={role} className={`upg-type-card ${upgradeType === role ? 'active' : ''}`} onClick={() => setUpgradeType(role)}>
-                      {upgradeType === role && <span className="upg-type-check">✓</span>}
-                      <div className="upg-type-icon">{BUSINESS_ROLE_INFO[role].icon}</div>
+                      {upgradeType === role && <span className="upg-type-check">Selected</span>}
                       <div><h4>{BUSINESS_ROLE_INFO[role].label}</h4><p>{BUSINESS_ROLE_INFO[role].body}</p></div>
                     </div>
                   ))}
@@ -343,7 +339,7 @@ export default function UpgradePage({ initialType = 'seller' }) {
                   <div>
                     <div className="upg-step-label">
                       {stepOffset}. Your country
-                      <span className="upg-auto-badge">📍 auto-detected</span>
+                      <span className="upg-auto-badge">auto-detected</span>
                     </div>
                     <div className="upg-select-wrap">
                       <select value={country} onChange={(e) => setCountry(e.target.value)} disabled={loadingPricing}>
@@ -370,7 +366,6 @@ export default function UpgradePage({ initialType = 'seller' }) {
                   <div>
                     <div className="upg-step-label">{stepOffset + 2}. Mobile number</div>
                     <div className="upg-input-wrap has-icon">
-                      <span className="upg-input-icon">📞</span>
                       <input value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value)} placeholder="+256 700 123 456" />
                     </div>
                     <div className="upg-field-hint">Enter the mobile money number registered in your name.</div>
@@ -379,7 +374,6 @@ export default function UpgradePage({ initialType = 'seller' }) {
                     <div className="upg-step-label">{stepOffset + 3}. Amount</div>
                     <div className="upg-amount-box">
                       <span className="upg-amount-value">{currency} {amount}</span>
-                      <span className="upg-amount-lock">🔒</span>
                     </div>
                     <div className="upg-field-hint">One-time payment (non-refundable).</div>
                   </div>
@@ -401,16 +395,16 @@ export default function UpgradePage({ initialType = 'seller' }) {
                 </label>
 
                 <RippleButton className="upg-cta" disabled={!canSubmit} onClick={submitUpgrade}>
-                  🔒 Upgrade Now — {currency} {amount}
+                  Upgrade Now — {currency} {amount}
                 </RippleButton>
                 <div className="upg-cta-note">You'll be charged once — no recurring billing.</div>
 
                 <div style={{ marginTop: 22 }}>
-                  <h4 style={{ marginBottom: 10, fontSize: '0.9rem' }}>💬 Chat with the Jedida AI assistant</h4>
+                  <h4 style={{ marginBottom: 10, fontSize: '0.9rem' }}>Chat with the Jedida AI assistant</h4>
                   <p className="upg-field-hint" style={{ marginBottom: 10 }}>
                     We've sent the payment number to send to below, and to your notifications — ask here if anything's unclear.
                   </p>
-                  <ChatPanel />
+                  <EmbeddedSupportChat />
                 </div>
               </>
             )}
@@ -442,7 +436,7 @@ export default function UpgradePage({ initialType = 'seller' }) {
             {phase === 'tracking' && upgrade && upgrade.status !== 'approved' && (
               <div style={{ marginTop: 22 }}>
                 <h4 style={{ marginBottom: 10, fontSize: '0.9rem' }}>Message the admin team</h4>
-                <ChatPanel />
+                <EmbeddedSupportChat />
               </div>
             )}
           </div>
@@ -464,16 +458,15 @@ export default function UpgradePage({ initialType = 'seller' }) {
             </div>
 
             <div className="upg-glass-card">
-              <h3 style={{ marginTop: 0, marginBottom: 4, fontFamily: 'var(--font-display)' }}>✅ What you'll unlock</h3>
+              <h3 style={{ marginTop: 0, marginBottom: 4, fontFamily: 'var(--font-display)' }}>What you'll unlock</h3>
               <div className="upg-benefits-list">
                 {BENEFITS.map((b) => (
                   <div className="upg-benefit-row" key={b.title}>
-                    <div className="upg-benefit-icon">{b.icon}</div>
                     <div><h5>{b.title}</h5><p>{b.body}</p></div>
                   </div>
                 ))}
               </div>
-              <div className="upg-gift-note">🎁 …and many more premium tools!</div>
+              <div className="upg-gift-note">…and many more premium tools!</div>
             </div>
           </div>
         </div>
@@ -495,18 +488,18 @@ export default function UpgradePage({ initialType = 'seller' }) {
               <div className="upg-compare-row" key={row.label}>
                 <div className="feature">{row.label}</div>
                 <div style={{ textAlign: 'center' }}>
-                  {row.free === false ? <span className="no">✕ Not available</span> : row.free}
+                  {row.free === false ? <span className="no">Not available</span> : row.free}
                 </div>
-                <div className="pro-cell yes" style={{ textAlign: 'center' }}>✓ {row.pro}</div>
+                <div className="pro-cell yes" style={{ textAlign: 'center' }}>{row.pro}</div>
               </div>
             ))}
           </div>
 
           <div className="upg-trust-strip">
-            <div className="upg-trust-item"><span className="ic">🔒</span><div><h5>Secure Payment</h5><p>Protected with 256-bit encryption</p></div></div>
-            <div className="upg-trust-item"><span className="ic">🛂</span><div><h5>Admin Verified</h5><p>Payments verified by our team</p></div></div>
-            <div className="upg-trust-item"><span className="ic">✅</span><div><h5>Safe &amp; Trusted</h5><p>Thousands of sellers trust Jedida</p></div></div>
-            <div className="upg-trust-item"><span className="ic">♻️</span><div><h5>One-time Payment</h5><p>Pay once, enjoy lifetime benefits</p></div></div>
+            <div className="upg-trust-item"><div><h5>Secure Payment</h5><p>Protected with 256-bit encryption</p></div></div>
+            <div className="upg-trust-item"><div><h5>Admin Verified</h5><p>Payments verified by our team</p></div></div>
+            <div className="upg-trust-item"><div><h5>Safe &amp; Trusted</h5><p>Thousands of sellers trust Jedida</p></div></div>
+            <div className="upg-trust-item"><div><h5>One-time Payment</h5><p>Pay once, enjoy lifetime benefits</p></div></div>
           </div>
         </div>
       </div>
@@ -530,49 +523,49 @@ function StatusTracker({
 
   const content = {
     payment_submitted: {
-      icon: 'pending', emoji: '⏳', title: 'Payment Submitted',
+      icon: 'pending', title: 'Payment Submitted',
       body: 'We\'ve received your mobile money payment details. Waiting for admin verification — this usually takes just a few minutes.'
     },
     pending_payment: {
-      icon: 'pending', emoji: '⏳', title: 'Payment Submitted',
+      icon: 'pending', title: 'Payment Submitted',
       body: 'Waiting for admin verification — this usually takes just a few minutes.'
     },
     payment_rejected: {
-      icon: 'error', emoji: '⚠️', title: 'Payment Could Not Be Verified',
+      icon: 'error', title: 'Payment Could Not Be Verified',
       body: 'Please message the admin team below, or start a new upgrade request.'
     },
     payment_verified: isSeller
-      ? { icon: 'success', emoji: '🪪', title: 'Payment Verified', body: 'Last step — verify your identity to complete your seller upgrade.' }
+      ? { icon: 'success', title: 'Payment Verified', body: 'Last step — verify your identity to complete your seller upgrade.' }
       : (isBusinessRole && needsDocs)
-        ? { icon: 'success', emoji: '🏢', title: 'Payment Verified', body: 'Last step — verify your business to complete your ' + roleLabel + ' upgrade.' }
-        : { icon: 'pending', emoji: '⏳', title: 'Waiting for Final Approval', body: `Your payment is verified. An admin will approve your ${roleLabel} upgrade shortly.` },
+        ? { icon: 'success', title: 'Payment Verified', body: 'Last step — verify your business to complete your ' + roleLabel + ' upgrade.' }
+        : { icon: 'pending', title: 'Waiting for Final Approval', body: `Your payment is verified. An admin will approve your ${roleLabel} upgrade shortly.` },
     kyc_pending: {
-      icon: 'pending', emoji: '⏳', title: 'Waiting for Admin Verification',
+      icon: 'pending', title: 'Waiting for Admin Verification',
       body: isBusinessRole ? 'Your business details and documents were submitted and are being reviewed.' : 'Your identity documents were submitted and are being reviewed.'
     },
     kyc_rejected: {
-      icon: 'error', emoji: '⚠️', title: isBusinessRole ? 'Business Verification Rejected' : 'Identity Verification Rejected',
+      icon: 'error', title: isBusinessRole ? 'Business Verification Rejected' : 'Identity Verification Rejected',
       body: 'Please message the admin team below for details, or start a new upgrade request.'
     },
     kyc_verified: {
-      icon: 'pending', emoji: '⏳', title: 'Waiting for Final Approval',
+      icon: 'pending', title: 'Waiting for Final Approval',
       body: isBusinessRole ? 'Your business is verified. Final admin approval is in progress.' : 'Your identity is verified. Final admin approval is in progress.'
     },
     approved: {
-      icon: 'success', emoji: '🎉', title: 'Upgrade Approved!',
+      icon: 'success', title: 'Upgrade Approved!',
       body: `Welcome aboard — your ${roleLabel} account is now active.`
     },
     rejected: {
-      icon: 'error', emoji: '⚠️', title: 'Application Rejected',
+      icon: 'error', title: 'Application Rejected',
       body: 'Please message the admin team below for details, or start a new upgrade request.'
     }
-  }[upgrade.status] || { icon: 'pending', emoji: '⏳', title: 'Processing…', body: 'Please wait.' };
+  }[upgrade.status] || { icon: 'pending', title: 'Processing…', body: 'Please wait.' };
 
   const isTerminalError = ['payment_rejected', 'kyc_rejected', 'rejected'].includes(upgrade.status);
 
   return (
     <div className="upg-status-wrap">
-      <div className={`upg-status-icon ${content.icon}`}>{content.icon === 'loading' ? <div className="upg-spinner" /> : content.emoji}</div>
+      <div className={`upg-status-icon ${content.icon}`}>{content.icon === 'loading' && <div className="upg-spinner" />}</div>
       <h3 className="upg-status-title">{content.title}</h3>
       <p className="upg-status-body">{content.body}</p>
 
@@ -587,18 +580,18 @@ function StatusTracker({
           <div className="upg-step-label">Identity verification</div>
           <div className="field-group">
             <label>National ID — front</label>
-            <MediaUploader label="🪪 Upload ID front" accept="image/*" onUploaded={(m) => onKycFront(m.url)} />
-            {idFront && <p className="product-card-meta">✔ Attached</p>}
+            <MediaUploader label="Upload ID front" accept="image/*" onUploaded={(m) => onKycFront(m.url)} />
+            {idFront && <p className="product-card-meta">Attached</p>}
           </div>
           <div className="field-group">
             <label>National ID — back</label>
-            <MediaUploader label="🪪 Upload ID back" accept="image/*" onUploaded={(m) => onKycBack(m.url)} />
-            {idBack && <p className="product-card-meta">✔ Attached</p>}
+            <MediaUploader label="Upload ID back" accept="image/*" onUploaded={(m) => onKycBack(m.url)} />
+            {idBack && <p className="product-card-meta">Attached</p>}
           </div>
           <div className="field-group">
             <label>Selfie holding your ID (optional but recommended)</label>
-            <MediaUploader label="🤳 Upload selfie" accept="image/*" onUploaded={(m) => onKycSelfie(m.url)} />
-            {selfie && <p className="product-card-meta">✔ Attached</p>}
+            <MediaUploader label="Upload selfie" accept="image/*" onUploaded={(m) => onKycSelfie(m.url)} />
+            {selfie && <p className="product-card-meta">Attached</p>}
           </div>
           <button className="btn-primary" disabled={kycBusy || !idFront || !idBack}>{kycBusy ? 'Submitting…' : 'Submit KYC documents'}</button>
         </form>
@@ -617,8 +610,8 @@ function StatusTracker({
           </div>
           <div className="field-group">
             <label>Business license or certificate of incorporation</label>
-            <MediaUploader label="📄 Upload document" accept="image/*,application/pdf" onUploaded={onBusinessDoc} />
-            {businessDocUrl && <p className="product-card-meta">✔ Attached{businessDocName ? `: ${businessDocName}` : ''}</p>}
+            <MediaUploader label="Upload document" accept="image/*,application/pdf" onUploaded={onBusinessDoc} />
+            {businessDocUrl && <p className="product-card-meta">Attached{businessDocName ? `: ${businessDocName}` : ''}</p>}
           </div>
           <button className="btn-primary" disabled={businessVerifyBusy || !companyAddress.trim() || !businessDocUrl}>
             {businessVerifyBusy ? 'Submitting…' : 'Submit business verification'}
@@ -628,7 +621,7 @@ function StatusTracker({
 
       {upgrade.status === 'approved' && (
         <RippleButton className="upg-cta" style={{ marginTop: 20 }} onClick={onGoToDashboard}>
-          Go to my {roleLabel} dashboard →
+          Go to my {roleLabel} dashboard
         </RippleButton>
       )}
 

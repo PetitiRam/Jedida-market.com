@@ -22,7 +22,7 @@ import payoutMethodRoutes from './routes/payoutMethods.js';
 import adminRoutes from './routes/admin.js';
 import adsRoutes from './routes/ads.js';
 import publicSettingsRoutes from './routes/publicSettings.js';
-import chatRoutes from './routes/chat.js';
+// import chatRoutes from './routes/chat.js'; // retired — see mount comment below
 import deliveryRoutes from './routes/deliveryRoutes.js';
 import petitiRoutes from '../ai/petiti/petitiRoutes.js';
 import tausiRoutes from '../ai/tausi/tausiRoutes.js';
@@ -38,6 +38,7 @@ import reviewRoutes from './routes/reviews.js';
 import http from 'http';
 import https from 'https';
 import fs from 'fs';
+
 import { initChatSocket } from './chat/chatSocket.js';
 import chatV2Routes from './routes/chatV2.js';
 import commerceActionsRoutes from './routes/commerceActions.js';
@@ -282,7 +283,18 @@ const payoutMethodLimiter = rateLimit({
 // on social media — it serves Open Graph meta tags for crawlers, then
 // redirects real visitors into the SPA. See routes/shareLinkPreview.js.
 app.use(shareLinkPreviewRoutes);
-
+app.use('/api/admin', adminRoutes);
+app.use('/api/ads', adsRoutes);
+app.use('/api/settings', publicSettingsRoutes);
+// Legacy flat user<->admin chat thread endpoint retired (2026-08) — its
+// only clients (ChatPanel.jsx on seller/delivery/upgrade pages, and
+// AdminChatPanel.jsx) now run on chat-v2 (chatV2Routes below), which
+// covers the same "message admin support" case via a seller_id-less
+// conversation (see chatService.getOrCreateConversation) plus context,
+// AI handoff, attachments, and moderation that this endpoint never had.
+// Route/controller files left in place, just unreachable now.
+// app.use('/api/chat', chatRoutes);
+app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/upgrade', upgradeRoutes);
 app.use('/api/shops', shopRoutes);
@@ -301,11 +313,6 @@ app.get('/api/version', (req, res) => {
   res.json({ version: process.env.npm_package_version || '1.0.0', env: process.env.NODE_ENV || 'production' });
 });
 
-app.use('/api/admin', adminRoutes);
-app.use('/api/ads', adsRoutes);
-app.use('/api/settings', publicSettingsRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/ai/petiti', petitiRoutes);
 app.use('/api/ai/tausi', tausiRoutes);
 app.use('/api/site', publicPetitiRoutes);

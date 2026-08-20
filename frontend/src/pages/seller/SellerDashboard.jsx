@@ -3,7 +3,8 @@ import { Link, Navigate } from 'react-router-dom';
 import client from '../../api/client';
 import Logo from '../../components/Logo';
 import TabBar from '../../components/TabBar';
-import ChatPanel from '../../components/ChatPanel';
+// change this import:
+import EmbeddedSupportChat from '../../components/chat/EmbeddedSupportChat';
 import ShopSetupPanel from './ShopSetupPanel';
 import MyProductsPanel from './MyProductsPanel';
 import AddProductPanel from './AddProductPanel';
@@ -189,7 +190,7 @@ export default function SellerDashboard() {
               {active === 'verification' && <SellerVerificationStatus />}
               {active === 'shopFeed' && <SellerFeedComposer />}
               {active === 'growthHub' && <GrowthHubPanel />}
-              {active === 'chat' && <ChatPanel />}
+              {active === 'chat' && <EmbeddedSupportChat />}
               {active === 'shopSettings' && <ShopSettingsPanel />}
             </>
           )}

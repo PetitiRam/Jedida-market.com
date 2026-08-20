@@ -559,11 +559,20 @@ async(req,res)=>{
 
 // Admin conversations — with who each one belongs to, since the
 // admin UI displays the participant's name and role, not raw conversation rows.
+// supportOnly=true restricts to conversations with no counterpart seller —
+// i.e. a user (buyer, seller, delivery agent, or anyone mid-upgrade)
+// messaging Jedida support directly, as opposed to a buyer<->seller
+// marketplace conversation. Same table, same conversation model (see
+// chatService.getOrCreateConversation) — this is a filter, not a
+// separate chat system. Default (no param) is unchanged for existing
+// callers (JedidaCommandCenter, AdminChatBridgePanel).
 router.get('/admin/conversations',
 requireAuth,
 requireAdmin,
 requirePermission('chat'),
 async(req,res)=>{
+
+  const supportOnly = req.query.supportOnly === 'true';
 
   const result = await query(
     `
@@ -571,6 +580,7 @@ async(req,res)=>{
     FROM chat_conversations c
     JOIN users u ON u.id = c.user_id
     WHERE c.status = 'open'
+    ${supportOnly ? 'AND c.seller_id IS NULL' : ''}
     ORDER BY c.created_at DESC
     `
   );
@@ -581,8 +591,6 @@ async(req,res)=>{
   });
 
 });
-
-
 // Admin bridges two conversations so their participants can relay messages
 // through the admin without exchanging direct contact details.
 router.post('/admin/bridge',
