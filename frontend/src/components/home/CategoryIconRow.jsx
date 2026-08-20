@@ -9,8 +9,27 @@ const CATEGORY_ICONS = {
   art_and_crafts: 'box', services: 'checkShield', other: 'grid',
 };
 
-export default function CategoryIconRow({ categoryCounts, categoryImages }) {
+export default function CategoryIconRow({ categoryCounts, categoryImages, status = 'ready' }) {
   const countByCategory = Object.fromEntries((categoryCounts || []).map((c) => [c.category, c.count]));
+  const stockedCategories = CATEGORIES.filter((c) => countByCategory[c.value] > 0);
+
+  if (status === 'loading') {
+    return (
+      <section className="home-section">
+        <div className="home-section-head"><h2>Shop by Category</h2></div>
+        <div className="jd-shop-cat-row">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="jd-shop-cat-tile jd-shop-cat-tile-skeleton">
+              <span className="jd-shop-cat-icon skeleton" />
+              <span className="jd-shop-cat-label skeleton" style={{ width: '70%', height: 10 }} />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (stockedCategories.length === 0) return null;
 
   return (
     <section className="home-section">
@@ -19,7 +38,7 @@ export default function CategoryIconRow({ categoryCounts, categoryImages }) {
         <Link to="/marketplace" className="view-all">View all →</Link>
       </div>
       <div className="jd-shop-cat-row">
-        {CATEGORIES.map((c) => {
+        {stockedCategories.map((c) => {
           const liveImage = categoryImages?.[c.value];
           return (
             <Link key={c.value} to={`/marketplace?category=${c.value}`} className="jd-shop-cat-tile">
@@ -34,9 +53,7 @@ export default function CategoryIconRow({ categoryCounts, categoryImages }) {
                 )}
               </span>
               <span className="jd-shop-cat-label">{c.label}</span>
-              {countByCategory[c.value] > 0 && (
-                <span className="jd-shop-cat-count">{countByCategory[c.value]} items</span>
-              )}
+              <span className="jd-shop-cat-count">{countByCategory[c.value]} items</span>
             </Link>
           );
         })}

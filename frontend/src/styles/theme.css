@@ -1205,6 +1205,9 @@ html, body { background: var(--cream); color: var(--text-primary); transition: b
 }
 .jd-shop-cat-label { font-size: 0.8rem; font-weight: 700; color: var(--text-primary); }
 .jd-shop-cat-count { font-size: 0.66rem; color: var(--text-muted); }
+.jd-shop-cat-tile-skeleton { pointer-events: none; }
+.jd-shop-cat-tile-skeleton .jd-shop-cat-icon.skeleton { background: none; }
+.jd-shop-cat-tile-skeleton:hover { transform: none; box-shadow: none; border-color: var(--border-soft); }
 
 /* --- Flash Deals --- */
 .jd-flash-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }

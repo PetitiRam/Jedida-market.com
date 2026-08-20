@@ -294,7 +294,7 @@ export default function Marketplace() {
 
       <DealsStrip dealBanners={feed?.dealBanners} />
 
-      <CategoryIconRow categoryCounts={feed?.categoryCounts} categoryImages={feed?.categoryImages} />
+      <CategoryIconRow categoryCounts={feed?.categoryCounts} categoryImages={feed?.categoryImages} status={feedStatus} />
 
       {orderedSections.map((section) => (
         <div key={section.key}>
