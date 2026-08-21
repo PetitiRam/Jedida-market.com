@@ -20,7 +20,7 @@ const REQUIRED_APPLICATION_FIELDS = {
 // business verification (business_profiles + business_verification_documents)
 // instead of the personal KYC step. 'seller' is deliberately excluded
 // here: its existing national-ID KYC flow is untouched by this phase.
-const BUSINESS_ROLES = ['manufacturer', 'supplier', 'dropshipper', 'farmer', 'host'];
+const BUSINESS_ROLES = ['manufacturer', 'supplier', 'dropshipper', 'farmer', 'host', 'logistics_provider'];
 
 // Business roles that must attach at least one verification document
 // before their profile can move past kyc_pending. Dropshipper and farmer
@@ -69,6 +69,16 @@ async function loadCountryPricing() {
   return { ...DEFAULT_COUNTRY_PRICING, ...configured };
 }
 
+const ROLE_FEE_KEY = {
+  delivery: 'deliveryAmount',
+  manufacturer: 'manufacturerAmount',
+  supplier: 'supplierAmount',
+  dropshipper: 'dropshipperAmount',
+  farmer: 'farmerAmount',
+  host: 'hostAmount',
+  logistics_provider: 'logisticsProviderAmount'
+};
+
 function pricingForCountry(map, countryCode, role) {
   const entry = map[countryCode];
   if (!entry) {
@@ -82,8 +92,7 @@ function pricingForCountry(map, countryCode, role) {
   return {
     countryName: entry.countryName || countryCode,
     currency: entry.currency || PAYMENT_CURRENCY,
-    amount: role === 'delivery' ? (entry.deliveryAmount ?? entry.sellerAmount ?? PAYMENT_AMOUNT)
-                                 : (entry.sellerAmount ?? entry.deliveryAmount ?? PAYMENT_AMOUNT),
+    amount: (entry[ROLE_FEE_KEY[role]] ?? entry.sellerAmount ?? entry.deliveryAmount ?? PAYMENT_AMOUNT),
     providers: entry.providers?.length ? entry.providers : FALLBACK_PROVIDERS
   };
 }
@@ -111,7 +120,6 @@ export async function getUpgradePricing(req, res) {
   }
 }
 
-// ============================================================
 // STEP 1 — Upgrade request. Auto-attaches full_name/email/phone_number
 // from the authenticated account. Creates the request in pending_payment.
 // ============================================================
@@ -120,7 +128,7 @@ export async function requestUpgrade(req, res) {
   const userId = req.user.id;
 
   if (!assertValidRole(requestedRole)) {
-    return res.status(400).json({ error: 'Requested role must be seller or delivery.' });
+    return res.status(400).json({ error: 'Requested role must be seller, delivery, manufacturer, supplier, dropshipper, farmer, host, or logistics_provider.' });
   }
 
   const data = applicationData || {};
@@ -178,7 +186,7 @@ export async function submitOneTimeUpgrade(req, res) {
   const userId = req.user.id;
 
   if (!assertValidRole(requestedRole)) {
-    return res.status(400).json({ error: 'Requested role must be seller, delivery, manufacturer, supplier, dropshipper, or farmer.' });
+    return res.status(400).json({ error: 'Requested role must be seller, delivery, manufacturer, supplier, dropshipper, farmer, host, or logistics_provider.' });
   }
   if (!country) return res.status(400).json({ error: 'Country is required.' });
   if (!mobileProvider) return res.status(400).json({ error: 'Mobile money provider is required.' });

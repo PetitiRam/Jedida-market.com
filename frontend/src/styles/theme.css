@@ -1251,16 +1251,17 @@ html, body { background: var(--cream); color: var(--text-primary); transition: b
 .jd-bottom-banner.tone-deep { background: linear-gradient(135deg, #1E4A2E 0%, #062818 100%); }
 
 @media (max-width: 1080px) {
-  .jd-bottom-banners { grid-template-columns: repeat(3, 1fr); }
+  .jd-bottom-banners {
+    display: flex; grid-template-columns: none; overflow-x: auto; gap: 14px;
+    padding-bottom: 6px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .jd-bottom-banners::-webkit-scrollbar { display: none; }
+  .jd-bottom-banner { flex: 0 0 230px; scroll-snap-align: start; }
 }
 @media (max-width: 640px) {
-  .jd-bottom-banners { grid-template-columns: repeat(2, 1fr); }
   .jd-flash-row-slot { flex-basis: 190px; }
+  .jd-bottom-banner { flex-basis: 210px; }
 }
-@media (max-width: 420px) {
-  .jd-bottom-banners { grid-template-columns: 1fr; }
-}
-
 /* ============================================================
    Admin Ads panel — publish form, live preview, ad list rows
    ============================================================ */

@@ -78,6 +78,7 @@ import paymentWebhookRoutes from './routes/paymentWebhooks.js';
 import { runSupplyContractCycleSweep } from './controllers/agricultureController.js';
 import { runFullTrustAndProtectionSweep } from './services/trustEngineService.js';
 import { autoReleaseExpiredEscrow } from './controllers/ordersController.js';
+import tradeCaseRoutes from './routes/tradeCase.js';
 import { verifyRequestOrigin } from './middleware/csrfProtection.js';
 
 dotenv.config();
@@ -322,6 +323,7 @@ app.use('/api/admin/kyc-review', adminKycReviewRoutes);
 app.use('/api/admin/settings-center', settingsCenterRoutes);
 app.use('/api/settings', publicSettingsCenterRoutes);
 app.use("/api/admin/payments", adminPaymentsRoutes);
+app.use('/api/trade-cases', tradeCaseRoutes);
 // Legacy direct buyer<->seller Q&A endpoint retired (2026-08) — no shipped
 // client called it, and it let a seller answer a buyer directly,
 // bypassing the admin-mediated moderation the newer Q&A flow
