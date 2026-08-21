@@ -20,15 +20,20 @@ import BottomBannerGrid from '../../components/home/BottomBannerGrid';
 import DealsStrip from '../../components/home/DealsStrip';
 import ProductSection from '../../components/home/ProductSection';
 import ShopsSection from '../../components/home/ShopsSection';
+import ShopCard from '../../components/home/ShopCard';
 import DiscoveryFeedSection from '../../components/home/DiscoveryFeedSection';
 import PromoCardsRow from '../../components/home/PromoCardsRow';
 import { CATEGORIES } from '../../constants/categories';
 
-function ProductGrid({ products }) {
+// rail=true renders the existing horizontal-scroll rail treatment already
+// used by every curated homepage section (Featured, Trending, etc.) —
+// .product-grid-v2.is-rail only takes effect under 760px (see theme.css),
+// so desktop/tablet keep the normal wrapping grid either way.
+function ProductGrid({ products, rail = false }) {
   if (products.length === 0) return <div className="empty-state">No products found.</div>;
   return (
-    <div className="product-grid-v2">
-      {products.map((p) => <ProductCard key={p.id} product={p} />)}
+    <div className={`product-grid-v2${rail ? ' is-rail' : ''}`}>
+      {products.map((p) => <ProductCard key={p.id} product={p} compact={rail} />)}
     </div>
   );
 }
@@ -41,10 +46,6 @@ function AllProductsTab({ coords }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // The moment coordinates resolve, quietly switch to nearest-first —
-  // but only if the person hasn't already picked a sort themselves
-  // (nothing here is a manual "set location" step, just respecting an
-  // explicit choice once one's been made).
   useEffect(() => {
     if (coords && !searchParams.get('sort') && sort === 'newest') {
       setSort('nearest');
@@ -144,8 +145,8 @@ function AllProductsTab({ coords }) {
       </div>
 
       {loading ? (
-        <div className="product-grid-v2">{Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}</div>
-      ) : <ProductGrid products={products} />}
+        <div className={`product-grid-v2${category ? '' : ' is-rail'}`}>{Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}</div>
+      ) : <ProductGrid products={products} rail={!category} />}
     </div>
   );
 }
@@ -157,14 +158,8 @@ function ShopsTab() {
   if (loading) return <div className="empty-state">Loading shops…</div>;
   if (shops.length === 0) return <div className="empty-state">No shops yet.</div>;
   return (
-    <div className="product-grid-v2">
-      {shops.map((s) => (
-        <Link to={`/s/${s.slug}`} key={s.id} className="product-card-v2" style={{ padding: 16, textAlign: 'center', alignItems: 'center', display: 'flex', flexDirection: 'column' }}>
-          {s.logo_url ? <img src={s.logo_url} alt={s.name} loading="lazy" style={{ width: 56, height: 56, borderRadius: 12, marginBottom: 8, objectFit: 'cover' }} /> : null}
-          <strong>{s.name}</strong>
-          <span className="product-card-meta">{s.primary_category?.replace('_', ' ')}</span>
-        </Link>
-      ))}
+    <div className="shop-grid-v2 is-rail">
+      {shops.map((s) => <ShopCard key={s.id} shop={s} />)}
     </div>
   );
 }
@@ -173,13 +168,13 @@ function AgricultureTab() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => { client.get('/products/agriculture').then(({ data }) => setProducts(data.products || [])).finally(() => setLoading(false)); }, []);
-  if (loading) return <div className="product-grid-v2">{Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)}</div>;
+  if (loading) return <div className="product-grid-v2 is-rail">{Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)}</div>;
   return (
     <div>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>
         Agriculture is the backbone of our economy — fresh produce and farm goods straight from sellers.
       </p>
-      <ProductGrid products={products} />
+      <ProductGrid products={products} rail />
     </div>
   );
 }
@@ -191,34 +186,18 @@ const TABS = [
 ];
 
 export default function Marketplace() {
-  // feed/feedStatus now come from useCachedQuery below (cache-first,
-  // persisted, stale-while-revalidate).
   const [searchParams] = useSearchParams();
   const initialTab = TABS.some((t) => t.key === searchParams.get('view')) ? searchParams.get('view') : 'all';
   const { coords } = useAutoLocation();
 
-  // Cache-first + stale-while-revalidate: the homepage feed persists to
-  // localStorage on every successful load, so it's available immediately
-  // (even after a hard refresh while offline) and a failed background
-  // refresh never wipes what's already on screen — see useCachedQuery.
-  // Deals/trending/feed content is inherently short-lived, so a stale
-  // cache older than 6h is treated as no cache at all rather than shown
-  // as if current.
   const { data: feed, status: feedStatus, isStale: feedIsStale, refetch: loadFeed } = useCachedQuery(
     'home-feed',
     () => getHomeFeed(coords).then(({ data }) => data),
     { maxCacheAgeMs: 6 * 60 * 60 * 1000 }
   );
 
-  // The moment geolocation resolves, refetch once to fold "Near You" in —
-  // the cache-first render above already means nothing flashes empty
-  // while this happens.
   useEffect(() => { if (coords) loadFeed(); }, [coords, loadFeed]);
 
-  // The Marketplace Builder's resolved, ordered, currently-live layout —
-  // controls which rails show, in what order, and any admin-added custom
-  // sections. Falls back to the original fixed order below while this is
-  // still loading, so the page never flashes empty.
   const [layout, setLayout] = useState(null);
   useEffect(() => {
     getMarketplaceLayout().then(({ data }) => setLayout(data.sections || [])).catch(() => {});
@@ -233,8 +212,6 @@ export default function Marketplace() {
     recommended: (s) => <ProductSection title={s.title} sectionKey="recommended" products={feed?.recommendedProducts} status={feedStatus} onRetry={loadFeed} />,
     shops_featured: (s) => <ShopsSection title={s.title} viewAllHref="/marketplace?view=shops" shops={feed?.featuredShops} status={feedStatus} onRetry={loadFeed} />,
   };
-  // Same seven rails, same order, used only until the builder's layout
-  // finishes its first fetch (or if that request fails outright).
   const FALLBACK_SECTIONS = [
     { key: 'deals', title: 'Flash Deals' },
     { key: 'nearby', title: 'Near You' },
@@ -250,10 +227,6 @@ export default function Marketplace() {
     <div>
       <MarketplaceHeader />
 
-      {/* Subtle, non-blocking — replaces the old full-width red error
-          banner. Only appears when we're genuinely showing saved data
-          because a refresh couldn't complete; disappears the instant the
-          background refresh succeeds. Never covers or replaces content. */}
       {feedIsStale && (
         <div
           style={{
