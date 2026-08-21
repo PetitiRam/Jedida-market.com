@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import client from '../../api/client';
 import { getHomeFeed } from '../../api/homeApi';
+import useCachedQuery from '../../hooks/useCachedQuery';
 import { getMarketplaceLayout } from '../../api/marketplaceBuilder';
 import DynamicSection from '../../components/home/DynamicSection';
 import useAutoLocation from '../../hooks/useAutoLocation';
@@ -190,26 +191,29 @@ const TABS = [
 ];
 
 export default function Marketplace() {
-  const [feed, setFeed] = useState(null);
-  const [feedStatus, setFeedStatus] = useState('loading'); // loading | ready | error
+  // feed/feedStatus now come from useCachedQuery below (cache-first,
+  // persisted, stale-while-revalidate).
   const [searchParams] = useSearchParams();
   const initialTab = TABS.some((t) => t.key === searchParams.get('view')) ? searchParams.get('view') : 'all';
   const { coords } = useAutoLocation();
 
-  const loadFeed = useCallback(() => {
-    // Only show the full-page skeleton on the very first load. Once the
-    // page already has content, a later refetch (triggered by geolocation
-    // resolving) fills in "Near You" quietly instead of re-flashing
-    // every section back to a loading state.
-    setFeedStatus((prev) => (prev === 'ready' ? 'ready' : 'loading'));
-    getHomeFeed(coords)
-      .then(({ data }) => { setFeed(data); setFeedStatus('ready'); })
-      .catch(() => setFeedStatus((prev) => (prev === 'ready' ? prev : 'error')));
-  }, [coords]);
+  // Cache-first + stale-while-revalidate: the homepage feed persists to
+  // localStorage on every successful load, so it's available immediately
+  // (even after a hard refresh while offline) and a failed background
+  // refresh never wipes what's already on screen — see useCachedQuery.
+  // Deals/trending/feed content is inherently short-lived, so a stale
+  // cache older than 6h is treated as no cache at all rather than shown
+  // as if current.
+  const { data: feed, status: feedStatus, isStale: feedIsStale, refetch: loadFeed } = useCachedQuery(
+    'home-feed',
+    () => getHomeFeed(coords).then(({ data }) => data),
+    { maxCacheAgeMs: 6 * 60 * 60 * 1000 }
+  );
 
-  // Fetches on mount (no coords yet), then again the instant the browser's
-  // Geolocation API resolves — never a manual re-search.
-  useEffect(() => { loadFeed(); }, [loadFeed]);
+  // The moment geolocation resolves, refetch once to fold "Near You" in —
+  // the cache-first render above already means nothing flashes empty
+  // while this happens.
+  useEffect(() => { if (coords) loadFeed(); }, [coords, loadFeed]);
 
   // The Marketplace Builder's resolved, ordered, currently-live layout —
   // controls which rails show, in what order, and any admin-added custom
@@ -246,23 +250,18 @@ export default function Marketplace() {
     <div>
       <MarketplaceHeader />
 
-      {feedStatus === 'error' && (
+      {/* Subtle, non-blocking — replaces the old full-width red error
+          banner. Only appears when we're genuinely showing saved data
+          because a refresh couldn't complete; disappears the instant the
+          background refresh succeeds. Never covers or replaces content. */}
+      {feedIsStale && (
         <div
-          role="alert"
           style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: '1rem', padding: '0.75rem 1.25rem', background: '#FDEEEE',
-            borderBottom: '1px solid #F3C6C6', color: '#7A1F1F', fontSize: '0.9rem',
+            padding: '0.4rem 1.25rem', fontSize: '0.78rem', color: '#5b6b5b',
+            background: '#F2F6F1', textAlign: 'center',
           }}
         >
-          <span>Some parts of the homepage couldn&rsquo;t load just now. Anything already shown below is still up to date.</span>
-          <button
-            type="button"
-            onClick={loadFeed}
-            style={{ border: 'none', background: 'transparent', color: '#7A1F1F', fontWeight: 700, cursor: 'pointer' }}
-          >
-            Retry
-          </button>
+          Showing saved content — updating when connection improves
         </div>
       )}
 
@@ -294,7 +293,7 @@ export default function Marketplace() {
 
       <DealsStrip dealBanners={feed?.dealBanners} />
 
-      <CategoryIconRow categoryCounts={feed?.categoryCounts} categoryImages={feed?.categoryImages} status={feedStatus} />
+      <CategoryIconRow categoryCounts={feed?.categoryCounts} categoryImages={feed?.categoryImages} />
 
       {orderedSections.map((section) => (
         <div key={section.key}>
