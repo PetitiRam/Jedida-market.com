@@ -990,7 +990,17 @@ html, body { background: var(--cream); color: var(--text-primary); transition: b
   padding: 7px 12px; border-radius: 10px; background: var(--ink); color: var(--cream);
   font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; gap: 4px;
 }
-
+@media (max-width: 1080px) {
+  .jd-promo-row {
+    display: flex; grid-template-columns: none; overflow-x: auto;
+    padding: 0 16px 22px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .jd-promo-row::-webkit-scrollbar { display: none; }
+  .jd-promo-card { flex: 0 0 240px; scroll-snap-align: start; }
+}
+@media (max-width: 640px) {
+  .jd-promo-card { flex-basis: 220px; }
+}
 /* ============================================================
    Product Detail — responsive main layout
    Replaces a fixed 3-column inline grid that used to overflow on
