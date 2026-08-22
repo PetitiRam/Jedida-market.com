@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import * as commerceApi from '../api/commerceApi';
 import Icon from './icons/icon';
 import QuickViewModal from './product/QuickViewModal';
+import { DEFAULT_CURRENCY } from '../constants/platformDefaults';
 
 export default function ProductCard({ product, onPress, compact = false }) {
   const navigate = useNavigate();
@@ -159,8 +160,8 @@ export default function ProductCard({ product, onPress, compact = false }) {
           )}
 
           <div className="product-card-v2-price-row">
-            <span className="product-card-v2-price">{product.currency || 'UGX'} {price.toLocaleString()}</span>
-            {oldPrice > price && <span className="product-card-v2-price-old">{product.currency || 'UGX'} {oldPrice.toLocaleString()}</span>}
+            <span className="product-card-v2-price">{product.currency || DEFAULT_CURRENCY} {price.toLocaleString()}</span>
+            {oldPrice > price && <span className="product-card-v2-price-old">{product.currency || DEFAULT_CURRENCY} {oldPrice.toLocaleString()}</span>}
           </div>
 
           {(deliveryEstimate || product.location_city) && (

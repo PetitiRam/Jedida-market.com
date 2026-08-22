@@ -1,4 +1,5 @@
 import { query } from '../config/db.js';
+import { DEFAULT_PLATFORM_CURRENCY } from '../constants/platformDefaults.js';
 
 // ===== Wishlist =====
 export async function toggleWishlist(req, res) {
@@ -128,7 +129,7 @@ const result = await query(
     qty,
     targetPrice || null,
     message || null,
-    currency || "UGX"
+    currency || DEFAULT_PLATFORM_CURRENCY
   ]
 );
   const admins = await query(

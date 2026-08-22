@@ -5,7 +5,7 @@ import Icon from '../icons/icon';
 const PROTECTIONS = [
   { icon: 'checkShield', title: 'Buyer Protection', subtitle: 'Shop with confidence' },
   { icon: 'checkShield', title: 'Verified Sellers', subtitle: 'Trusted and verified' },
-  { icon: 'truck', title: 'Fast Delivery', subtitle: 'Across Uganda' },
+  { icon: 'truck', title: 'Fast Delivery', subtitle: 'Across Africa' },
   { icon: 'settings', title: 'Easy Returns', subtitle: 'No stress returns' },
 ];
 
@@ -46,7 +46,7 @@ export default function MarketplaceHero({ stats }) {
         {/* Left: copy + search + CTAs + stats */}
         <div className="jd-hero-copy">
           <span className="jd-hero-eyebrow">
-            <Icon name="checkShield" size={14} /> Uganda&rsquo;s Trusted Marketplace
+            <Icon name="checkShield" size={14} /> Africa&rsquo;s Trusted Marketplace
           </span>
           <h1 className="jd-hero-heading">
             Everything you need,<br />

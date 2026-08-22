@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react';
 import DropdownShell from './DropdownShell';
 import Icon from '../icons/icon';
+import { CITIES_BY_COUNTRY } from '../../constants/countries';
 
 // A lightweight delivery-location picker for the header. There is no
 // storefront-wide "current delivery address" concept in the backend yet
 // (checkout collects its own address per order), so this stores the
 // person's chosen city locally and is purely a display/filter convenience —
 // it does not change what /products returns.
-const CITIES = ['Kampala, UG', 'Entebbe, UG', 'Jinja, UG', 'Mbale, UG', 'Gulu, UG', 'Mbarara, UG'];
+//
+// Built from the shared CITIES_BY_COUNTRY list (constants/countries.js)
+// rather than its own Uganda-only array, so every African market that
+// list already covers shows up here too instead of just Uganda.
+const CITIES = Object.entries(CITIES_BY_COUNTRY).flatMap(([iso2, cities]) => cities.map((city) => `${city}, ${iso2}`));
 const STORAGE_KEY = 'jedida_delivery_city';
 
 export default function DeliveryLocationMenu() {

@@ -37,7 +37,7 @@ export default function CategorySidebar({ categoryImages }) {
         <div className="jd-cat-sidebar-sell-icon">🏪</div>
         <div>
           <strong>Sell on Jedida</strong>
-          <span>Reach buyers across Uganda and beyond</span>
+          <span>Reach buyers across Africa and beyond</span>
         </div>
       </Link>
     </aside>

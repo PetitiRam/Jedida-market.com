@@ -14,6 +14,13 @@ import JedidaCommandCenter from './JedidaCommandCenter';
 import AICommandCenter from './AICommandCenter';
 import AdminSettingsCenter from './settings/AdminSettingsCenter';
 import AdminChatBridgePanel from './AdminChatBridgePanel';
+import OmnichannelInboxPanel from './OmnichannelInboxPanel';
+import AdminFactoryVerificationPanel from './AdminFactoryVerificationPanel';
+import AdminInspectionsPanel from './AdminInspectionsPanel';
+import AssignmentEnginePanel from './AssignmentEnginePanel';
+import AdminLogisticsHubPanel from './AdminLogisticsHubPanel';
+import CategoryAttributesPanel from './CategoryAttributesPanel';
+import AnalyticsDashboard from './AnalyticsDashboard';
 import AdminQuestionsPanel from './AdminQuestionsPanel';
 import AdminQuotesPanel from './AdminQuotesPanel';
 import AdminPayments from './AdminPayments';
@@ -37,7 +44,9 @@ const TABS = [
   { key: 'shops', label: 'Shops', area: 'shops' },
   { key: 'products', label: 'Products', area: 'products' },
   { key: 'users', label: 'Users', area: 'users' },
+  { key: 'assignmentEngine', label: '🗂️ Customer Groups & Assignment', area: 'users' },
   { key: 'orders', label: 'Orders & Payouts', area: 'orders' },
+  { key: 'analytics', label: '📊 Analytics', area: 'orders' },
   { key: 'delivery', label: 'Delivery', area: 'delivery' },
   { key: 'withdrawals', label: 'Withdrawals', area: 'withdrawals' },
   { key: 'ads', label: 'Ads', area: 'ads' },
@@ -50,8 +59,10 @@ const TABS = [
   { key: 'aiTraining', label: '🎓 AI Training Center', area: 'ai' },
   { key: 'settingsCenter', label: '⚙️ Settings Center', area: null }, // super admin only
   { key: 'chatBridge', label: '🔗 Chat Bridging', area: 'chat' },
+  { key: 'omnichannel', label: '📨 Omnichannel Inbox', area: 'chat' },
   { key: 'questions', label: '❓ Product Questions', area: 'products' },
   { key: 'quotes', label: 'Quote Requests', area: 'products' },
+  { key: 'categoryAttributes', label: '🏷️ Category Attributes', area: 'products' },
   { key: 'payments', label: '💳 Payments', area: 'withdrawals' },
   { key: 'partners', label: '🤝 Partner Management', area: 'partners' },
   { key: 'affiliates', label: '🔗 Affiliate Program', area: 'affiliates' },
@@ -60,6 +71,9 @@ const TABS = [
   { key: 'verification', label: '✅ Verification Levels', area: 'upgrades' },
   { key: 'verifiedShops', label: '🛡️ Verified Shops', area: 'shops' },
   { key: 'kycReview', label: '🪪 KYC Verification Center', area: 'upgrades' },
+  { key: 'factoryVerification', label: '🏭 Factory Verification', area: 'upgrades' },
+  { key: 'inspections', label: '🔍 Inspections', area: 'upgrades' },
+  { key: 'logisticsHub', label: '🚚 Logistics Hub', area: 'upgrades' },
   { key: 'apiCentre', label: '🔌 API Centre', area: null } // super admin only
 ];
 
@@ -107,7 +121,9 @@ export default function AdminPanel() {
           {active === 'shops' && <AdminShopsPanel />}
           {active === 'products' && <AdminProductsPanel />}
           {active === 'users' && <AdminUsersPanel />}
+          {active === 'assignmentEngine' && <AssignmentEnginePanel />}
           {active === 'orders' && <AdminOrdersPanel />}
+          {active === 'analytics' && <AnalyticsDashboard />}
           {active === 'delivery' && <AdminDeliveryPanel />}
           {active === 'withdrawals' && <AdminWithdrawalsPanel />}
           {active === 'payments' && <AdminPayments />}
@@ -121,8 +137,10 @@ export default function AdminPanel() {
           {active === 'aiTraining' && <AdminAiTrainingCenter />}
           {active === 'settingsCenter' && <AdminSettingsCenter />}
           {active === 'chatBridge' && <AdminChatBridgePanel />}
+          {active === 'omnichannel' && <OmnichannelInboxPanel />}
           {active === 'questions' && <AdminQuestionsPanel />}
           {active === 'quotes' && <AdminQuotesPanel />}
+          {active === 'categoryAttributes' && <CategoryAttributesPanel />}
           {active === 'partners' && <AdminPartnersPanel adminRole={user?.admin_role} />}
           {active === 'affiliates' && <AdminAffiliatePanel />}
           {active === 'disputes' && <AdminDisputesPanel />}
@@ -130,6 +148,9 @@ export default function AdminPanel() {
           {active === 'verification' && <AdminVerificationLevelsPanel />}
           {active === 'verifiedShops' && <AdminVerifiedShopsPanel />}
           {active === 'kycReview' && <AdminKycReviewPanel />}
+          {active === 'factoryVerification' && <AdminFactoryVerificationPanel />}
+          {active === 'inspections' && <AdminInspectionsPanel />}
+          {active === 'logisticsHub' && <AdminLogisticsHubPanel />}
           {active === 'apiCentre' && <AdminApiCentrePanel />}
         </>
       )}

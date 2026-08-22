@@ -2,6 +2,7 @@ import cryptoRandomString from 'crypto-random-string';
 import { query, withTransaction } from '../config/db.js';
 import * as settingsService from './settingsService.js';
 import { createAlert, log } from '../../ai/petiti/petitiService.js';
+import { DEFAULT_PLATFORM_CURRENCY } from '../constants/platformDefaults.js';
 
 // Falls back to these when the admin hasn't (or hasn't fully) configured
 // the 'affiliate' settings section yet — every field here is also declared
@@ -251,7 +252,7 @@ export async function creditUpgradeCommission(upgrade) {
     if (!(amount > 0)) return null;
 
     const platformResult = await query('SELECT default_currency FROM platform_settings WHERE id = 1');
-    const currency = platformResult.rows[0]?.default_currency || 'UGX';
+    const currency = platformResult.rows[0]?.default_currency || DEFAULT_PLATFORM_CURRENCY;
 
     const commission = await withTransaction(async (client) => {
       const { status, reason } = await decideCommissionStatus(client, {

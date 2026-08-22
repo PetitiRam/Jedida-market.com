@@ -26,6 +26,8 @@ const SECONDARY_NAV = [
   { to: '/feed', label: 'Feed', emoji: '📣' },
   { to: '/stays', label: 'Stays', emoji: '🏡' },
   { to: '/marketplace?view=shops', label: 'Shops', icon: 'building' },
+  { to: '/wanted', label: 'Jedida Wanted', icon: 'target' },
+  { to: '/logistics', label: 'Logistics Hub', icon: 'truck' },
   { to: '/marketplace?category=services', label: 'Digital Services', icon: 'laptop' },
   { to: '/seller/upgrade', label: 'Sell on Jedida', icon: 'briefcase' },
 ];

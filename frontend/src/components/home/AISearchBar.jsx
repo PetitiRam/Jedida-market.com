@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../icons/icon';
 import { searchProducts } from '../../api/homeApi';
+import { DEFAULT_CURRENCY } from '../../constants/platformDefaults';
 
 export default function AISearchBar() {
   const [term, setTerm] = useState('');
@@ -102,7 +103,7 @@ export default function AISearchBar() {
                   {p.title}
                 </div>
                 <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
-                  {p.currency || 'UGX'} {Number(p.price).toLocaleString()}
+                  {p.currency || DEFAULT_CURRENCY} {Number(p.price).toLocaleString()}
                   {p.shop_name ? ` · ${p.shop_name}` : ''}
                 </div>
               </div>

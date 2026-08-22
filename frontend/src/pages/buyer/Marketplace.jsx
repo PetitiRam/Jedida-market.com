@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import client from '../../api/client';
 import { getHomeFeed } from '../../api/homeApi';
-import useCachedQuery from '../../hooks/useCachedQuery';
 import { getMarketplaceLayout } from '../../api/marketplaceBuilder';
 import DynamicSection from '../../components/home/DynamicSection';
 import useAutoLocation from '../../hooks/useAutoLocation';
@@ -20,20 +19,15 @@ import BottomBannerGrid from '../../components/home/BottomBannerGrid';
 import DealsStrip from '../../components/home/DealsStrip';
 import ProductSection from '../../components/home/ProductSection';
 import ShopsSection from '../../components/home/ShopsSection';
-import ShopCard from '../../components/home/ShopCard';
 import DiscoveryFeedSection from '../../components/home/DiscoveryFeedSection';
 import PromoCardsRow from '../../components/home/PromoCardsRow';
 import { CATEGORIES } from '../../constants/categories';
 
-// rail=true renders the existing horizontal-scroll rail treatment already
-// used by every curated homepage section (Featured, Trending, etc.) —
-// .product-grid-v2.is-rail only takes effect under 760px (see theme.css),
-// so desktop/tablet keep the normal wrapping grid either way.
-function ProductGrid({ products, rail = false }) {
+function ProductGrid({ products }) {
   if (products.length === 0) return <div className="empty-state">No products found.</div>;
   return (
-    <div className={`product-grid-v2${rail ? ' is-rail' : ''}`}>
-      {products.map((p) => <ProductCard key={p.id} product={p} compact={rail} />)}
+    <div className="product-grid-v2">
+      {products.map((p) => <ProductCard key={p.id} product={p} />)}
     </div>
   );
 }
@@ -46,6 +40,10 @@ function AllProductsTab({ coords }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // The moment coordinates resolve, quietly switch to nearest-first —
+  // but only if the person hasn't already picked a sort themselves
+  // (nothing here is a manual "set location" step, just respecting an
+  // explicit choice once one's been made).
   useEffect(() => {
     if (coords && !searchParams.get('sort') && sort === 'newest') {
       setSort('nearest');
@@ -145,8 +143,8 @@ function AllProductsTab({ coords }) {
       </div>
 
       {loading ? (
-        <div className={`product-grid-v2${category ? '' : ' is-rail'}`}>{Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}</div>
-      ) : <ProductGrid products={products} rail={!category} />}
+        <div className="product-grid-v2">{Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}</div>
+      ) : <ProductGrid products={products} />}
     </div>
   );
 }
@@ -158,8 +156,14 @@ function ShopsTab() {
   if (loading) return <div className="empty-state">Loading shops…</div>;
   if (shops.length === 0) return <div className="empty-state">No shops yet.</div>;
   return (
-    <div className="shop-grid-v2 is-rail">
-      {shops.map((s) => <ShopCard key={s.id} shop={s} />)}
+    <div className="product-grid-v2">
+      {shops.map((s) => (
+        <Link to={`/s/${s.slug}`} key={s.id} className="product-card-v2" style={{ padding: 16, textAlign: 'center', alignItems: 'center', display: 'flex', flexDirection: 'column' }}>
+          {s.logo_url ? <img src={s.logo_url} alt={s.name} loading="lazy" style={{ width: 56, height: 56, borderRadius: 12, marginBottom: 8, objectFit: 'cover' }} /> : null}
+          <strong>{s.name}</strong>
+          <span className="product-card-meta">{s.primary_category?.replace('_', ' ')}</span>
+        </Link>
+      ))}
     </div>
   );
 }
@@ -168,13 +172,13 @@ function AgricultureTab() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => { client.get('/products/agriculture').then(({ data }) => setProducts(data.products || [])).finally(() => setLoading(false)); }, []);
-  if (loading) return <div className="product-grid-v2 is-rail">{Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)}</div>;
+  if (loading) return <div className="product-grid-v2">{Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)}</div>;
   return (
     <div>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>
         Agriculture is the backbone of our economy — fresh produce and farm goods straight from sellers.
       </p>
-      <ProductGrid products={products} rail />
+      <ProductGrid products={products} />
     </div>
   );
 }
@@ -186,18 +190,31 @@ const TABS = [
 ];
 
 export default function Marketplace() {
+  const [feed, setFeed] = useState(null);
+  const [feedStatus, setFeedStatus] = useState('loading'); // loading | ready | error
   const [searchParams] = useSearchParams();
   const initialTab = TABS.some((t) => t.key === searchParams.get('view')) ? searchParams.get('view') : 'all';
   const { coords } = useAutoLocation();
 
-  const { data: feed, status: feedStatus, isStale: feedIsStale, refetch: loadFeed } = useCachedQuery(
-    'home-feed',
-    () => getHomeFeed(coords).then(({ data }) => data),
-    { maxCacheAgeMs: 6 * 60 * 60 * 1000 }
-  );
+  const loadFeed = useCallback(() => {
+    // Only show the full-page skeleton on the very first load. Once the
+    // page already has content, a later refetch (triggered by geolocation
+    // resolving) fills in "Near You" quietly instead of re-flashing
+    // every section back to a loading state.
+    setFeedStatus((prev) => (prev === 'ready' ? 'ready' : 'loading'));
+    getHomeFeed(coords)
+      .then(({ data }) => { setFeed(data); setFeedStatus('ready'); })
+      .catch(() => setFeedStatus((prev) => (prev === 'ready' ? prev : 'error')));
+  }, [coords]);
 
-  useEffect(() => { if (coords) loadFeed(); }, [coords, loadFeed]);
+  // Fetches on mount (no coords yet), then again the instant the browser's
+  // Geolocation API resolves — never a manual re-search.
+  useEffect(() => { loadFeed(); }, [loadFeed]);
 
+  // The Marketplace Builder's resolved, ordered, currently-live layout —
+  // controls which rails show, in what order, and any admin-added custom
+  // sections. Falls back to the original fixed order below while this is
+  // still loading, so the page never flashes empty.
   const [layout, setLayout] = useState(null);
   useEffect(() => {
     getMarketplaceLayout().then(({ data }) => setLayout(data.sections || [])).catch(() => {});
@@ -212,6 +229,8 @@ export default function Marketplace() {
     recommended: (s) => <ProductSection title={s.title} sectionKey="recommended" products={feed?.recommendedProducts} status={feedStatus} onRetry={loadFeed} />,
     shops_featured: (s) => <ShopsSection title={s.title} viewAllHref="/marketplace?view=shops" shops={feed?.featuredShops} status={feedStatus} onRetry={loadFeed} />,
   };
+  // Same seven rails, same order, used only until the builder's layout
+  // finishes its first fetch (or if that request fails outright).
   const FALLBACK_SECTIONS = [
     { key: 'deals', title: 'Flash Deals' },
     { key: 'nearby', title: 'Near You' },
@@ -227,14 +246,23 @@ export default function Marketplace() {
     <div>
       <MarketplaceHeader />
 
-      {feedIsStale && (
+      {feedStatus === 'error' && (
         <div
+          role="alert"
           style={{
-            padding: '0.4rem 1.25rem', fontSize: '0.78rem', color: '#5b6b5b',
-            background: '#F2F6F1', textAlign: 'center',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: '1rem', padding: '0.75rem 1.25rem', background: '#FDEEEE',
+            borderBottom: '1px solid #F3C6C6', color: '#7A1F1F', fontSize: '0.9rem',
           }}
         >
-          Showing saved content — updating when connection improves
+          <span>Some parts of the homepage couldn&rsquo;t load just now. Anything already shown below is still up to date.</span>
+          <button
+            type="button"
+            onClick={loadFeed}
+            style={{ border: 'none', background: 'transparent', color: '#7A1F1F', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Retry
+          </button>
         </div>
       )}
 
@@ -248,9 +276,9 @@ export default function Marketplace() {
             <div className="hero-shell">
               <div className="hero-banner hero-banner-placeholder-free">
                 <div className="hero-banner-content">
-                  <span className="hero-badge">Uganda&rsquo;s Trusted Marketplace</span>
+                  <span className="hero-badge">Africa&rsquo;s Trusted Marketplace</span>
                   <h1>Top Deals. Unbeatable Prices.</h1>
-                  <p>Discover amazing products from trusted sellers across Uganda.</p>
+                  <p>Discover amazing products from trusted sellers across Africa.</p>
                   <Link to="/marketplace" className="hero-cta">Shop Now</Link>
                 </div>
               </div>
@@ -266,7 +294,7 @@ export default function Marketplace() {
 
       <DealsStrip dealBanners={feed?.dealBanners} />
 
-      <CategoryIconRow categoryCounts={feed?.categoryCounts} categoryImages={feed?.categoryImages} />
+      <CategoryIconRow categoryCounts={feed?.categoryCounts} categoryImages={feed?.categoryImages} status={feedStatus} />
 
       {orderedSections.map((section) => (
         <div key={section.key}>

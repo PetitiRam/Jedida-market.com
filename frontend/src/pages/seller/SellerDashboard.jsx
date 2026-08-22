@@ -21,6 +21,8 @@ import AIAssistantHubPanel from './AIAssistantHubPanel';
 import BusinessProfilePanel from './BusinessProfilePanel';
 import WholesaleCatalogPanel from './WholesaleCatalogPanel';
 import QuoteRequestsPanel from './QuoteRequestsPanel';
+import WantedInboxPanel from './WantedInboxPanel';
+import TradeCapabilitiesPanel from './TradeCapabilitiesPanel';
 import BusinessAnalyticsPanel from './BusinessAnalyticsPanel';
 import AgriculturePanel from '../agriculture/AgriculturePanel';
 import DropshipPartnersPanel from './DropshipPartnersPanel';
@@ -105,6 +107,8 @@ function tabsForRole(role) {
       { key: 'businessProfile', label: B2B_PROFILE_TAB_LABEL[role] || 'Business Profile' },
       { key: 'wholesaleCatalog', label: 'Wholesale Catalog' },
       { key: 'quoteRequests', label: 'Quote Requests' },
+      { key: 'wantedInbox', label: 'Jedida Wanted' },
+      ...(['manufacturer', 'supplier'].includes(role) ? [{ key: 'tradeCapabilities', label: 'China Trade Hub' }] : []),
       { key: 'businessAnalytics', label: 'Analytics' },
       { key: 'collections', label: 'Collections' },
       { key: 'purchaseAgreements', label: 'Purchase Agreements' },
@@ -174,6 +178,8 @@ export default function SellerDashboard() {
               {active === 'businessProfile' && <BusinessProfilePanel role={user?.primary_role} />}
               {active === 'wholesaleCatalog' && <WholesaleCatalogPanel />}
               {active === 'quoteRequests' && <QuoteRequestsPanel />}
+              {active === 'wantedInbox' && <WantedInboxPanel />}
+              {active === 'tradeCapabilities' && <TradeCapabilitiesPanel />}
               {active === 'businessAnalytics' && <BusinessAnalyticsPanel />}
               {active === 'agriculture' && <AgriculturePanel />}
               {active === 'dropshipNetwork' && <DropshipManagementPanel />}

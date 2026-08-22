@@ -75,10 +75,17 @@ import growthRoutes from './routes/growth.js';
 import { publicRouter as marketplaceLayoutRoutes, adminRouter as marketplaceBuilderRoutes } from './routes/marketplaceBuilder.js';
 import securityOpsRoutes from './routes/securityOps.js';
 import paymentWebhookRoutes from './routes/paymentWebhooks.js';
+import wantedRoutes from './routes/wanted.js';
+import omnichannelRoutes from './routes/omnichannel.js';
+import chinaTradeHubRoutes from './routes/chinaTradeHub.js';
+import assignmentEngineRoutes from './routes/assignmentEngine.js';
+import logisticsHubRoutes from './routes/logisticsHub.js';
+import translationRoutes from './routes/translation.js';
+import categoryAttributesRoutes from './routes/categoryAttributes.js';
+import analyticsRoutes from './routes/analytics.js';
 import { runSupplyContractCycleSweep } from './controllers/agricultureController.js';
 import { runFullTrustAndProtectionSweep } from './services/trustEngineService.js';
 import { autoReleaseExpiredEscrow } from './controllers/ordersController.js';
-import tradeCaseRoutes from './routes/tradeCase.js';
 import { verifyRequestOrigin } from './middleware/csrfProtection.js';
 
 dotenv.config();
@@ -323,7 +330,6 @@ app.use('/api/admin/kyc-review', adminKycReviewRoutes);
 app.use('/api/admin/settings-center', settingsCenterRoutes);
 app.use('/api/settings', publicSettingsCenterRoutes);
 app.use("/api/admin/payments", adminPaymentsRoutes);
-app.use('/api/trade-cases', tradeCaseRoutes);
 // Legacy direct buyer<->seller Q&A endpoint retired (2026-08) — no shipped
 // client called it, and it let a seller answer a buyer directly,
 // bypassing the admin-mediated moderation the newer Q&A flow
@@ -388,6 +394,14 @@ app.use('/api/admin/security-ops', securityOpsRoutes);
 // binary links stay plain, cacheable, CDN-friendly URLs.
 app.use('/downloads', downloadsRoutes);
 app.use('/api/downloads', downloadsRoutes);
+app.use('/api/wanted', wantedRoutes);
+app.use('/api/omnichannel', omnichannelRoutes);
+app.use('/api/china-trade-hub', chinaTradeHubRoutes);
+app.use('/api/assignment-engine', assignmentEngineRoutes);
+app.use('/api/logistics-hub', logisticsHubRoutes);
+app.use('/api/translation', translationRoutes);
+app.use('/api/category-attributes', categoryAttributesRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'JEDIDA Marketplace API', phase: 4 });

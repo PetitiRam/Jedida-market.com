@@ -4,8 +4,10 @@
 // No LLM fallback of any kind (see backend/src/ai/orchestrator.js for why
 // the AI ecosystem runs on local logic / non-LLM APIs only). Honest
 // limitation as a result: LibreTranslate is built on Argos Translate
-// models, which cover major world languages — English, French, Swahili
-// among them — but do NOT include Luganda or Lusoga, and there is no
+// models, which cover major world languages — English, French, Swahili,
+// Chinese, Arabic and Portuguese among them (the language set the China
+// Trade Hub / omnichannel comms need for African-Chinese trade
+// communication) — but do NOT include Luganda or Lusoga, and there is no
 // other non-LLM engine wired in for those two right now. Rather than
 // silently mistranslating or quietly downgrading quality, lg/xog are
 // marked unsupported until a real (non-LLM) engine covers them —
@@ -21,6 +23,9 @@ export const SUPPORTED_LANGUAGES = {
   en: { label: 'English', code: 'en', supported: true },
   fr: { label: 'French', code: 'fr', supported: true },
   sw: { label: 'Swahili', code: 'sw', supported: true },
+  zh: { label: 'Chinese', code: 'zh', supported: true },
+  ar: { label: 'Arabic', code: 'ar', supported: true },
+  pt: { label: 'Portuguese', code: 'pt', supported: true },
   lg: { label: 'Luganda', code: null, supported: false },
   xog: { label: 'Lusoga', code: null, supported: false },
 };

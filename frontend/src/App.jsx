@@ -41,6 +41,9 @@ import DocumentCenter from './pages/buyer/DocumentCenter';
 import VerifyDocument from './pages/VerifyDocument';
 import KycWizard from './pages/kyc/KycWizard';
 import MyQuoteRequests from './pages/buyer/MyQuoteRequests';
+import JedidaWanted from './pages/buyer/JedidaWanted';
+import SupplierTradeProfile from './pages/buyer/SupplierTradeProfile';
+import LogisticsHub from './pages/buyer/LogisticsHub';
 import MyAgreements from './pages/buyer/MyAgreements';
 import MyProfile from './pages/MyProfile';
 import AccountSecurity from './pages/AccountSecurity';
@@ -133,6 +136,9 @@ export default function App() {
         <Route path="/verify/:code" element={<VerifyDocument />} />
         <Route path="/verify-identity" element={<ProtectedRoute><KycWizard /></ProtectedRoute>} />
         <Route path="/my-quotes" element={<ProtectedRoute><MyQuoteRequests /></ProtectedRoute>} />
+        <Route path="/wanted" element={<ProtectedRoute><JedidaWanted /></ProtectedRoute>} />
+        <Route path="/suppliers/:businessProfileId" element={<ProtectedRoute><SupplierTradeProfile /></ProtectedRoute>} />
+        <Route path="/logistics" element={<ProtectedRoute><LogisticsHub /></ProtectedRoute>} />
         <Route path="/my-agreements" element={<ProtectedRoute><MyAgreements /></ProtectedRoute>} />
         <Route path="/my-supply-contracts" element={<ProtectedRoute><MySupplyContracts /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><MyProfile /></ProtectedRoute>} />

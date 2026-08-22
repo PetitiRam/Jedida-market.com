@@ -20,6 +20,32 @@ export function isEmailConfigured() {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
 
+// Generic send, used by the omnichannel comms center (agent replies to a
+// customer email thread) — the templated functions below stay untouched
+// for their existing callers.
+export async function sendGenericEmail(toEmail, subject, textBody, { inReplyTo } = {}) {
+  const transport = getTransporter();
+
+  if (!transport) {
+    console.log(`[JEDIDA][SANDBOX EMAIL] to ${toEmail} — ${subject}: ${textBody}`);
+    return { sent: true, sandbox: true, messageId: null };
+  }
+
+  try {
+    const info = await transport.sendMail({
+      from: process.env.EMAIL_FROM || 'no-reply@jedidamarketplace.com',
+      to: toEmail,
+      subject,
+      text: textBody,
+      ...(inReplyTo ? { inReplyTo, references: inReplyTo } : {})
+    });
+    return { sent: true, sandbox: false, messageId: info.messageId };
+  } catch (err) {
+    console.error('Generic email send error:', err.message);
+    return { sent: false, sandbox: false, messageId: null };
+  }
+}
+
 export async function sendPasswordResetEmail(toEmail, resetLink) {
   const transport = getTransporter();
 

@@ -23,7 +23,7 @@ export default function PromoCardsRow() {
       <div className="jd-promo-card">
         <div className="jd-promo-card-icon">📈</div>
         <div className="jd-promo-card-title">Sell on Jedida</div>
-        <div className="jd-promo-card-sub">Reach thousands of buyers across Uganda and beyond.</div>
+        <div className="jd-promo-card-sub">Reach thousands of buyers across Africa and beyond.</div>
         <Link to="/seller/upgrade" className="jd-promo-card-btn">Start Selling Now</Link>
       </div>
 
