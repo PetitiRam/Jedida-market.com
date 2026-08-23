@@ -1,0 +1,196 @@
+/* =========================================================
+   JEDIDA MARKET — SHARED DESIGN SYSTEM
+   One source of truth for all 5 role dashboards.
+   Import this once (e.g. in main.jsx) before role-specific CSS.
+   ========================================================= */
+
+:root {
+  /* Brand core */
+  --jd-green: #0F9D58;
+  --jd-green-dark: #0A6E3D;
+  --jd-green-50: #E8F7EE;
+  --jd-white: #FFFFFF;
+  --jd-charcoal: #14181B;
+  --jd-gray-900: #1F2937;
+  --jd-gray-700: #4B5563;
+  --jd-gray-500: #6B7280;
+  --jd-gray-300: #D1D5DB;
+  --jd-gray-200: #E5E7EB;
+  --jd-gray-100: #F3F4F6;
+  --jd-gray-50: #F9FAFB;
+
+  /* Role accents — used sparingly: active nav, KPI accents, charts, badges */
+  --jd-role-seller: var(--jd-green);
+  --jd-role-seller-soft: #E8F7EE;
+  --jd-role-manufacturer: #2563EB;
+  --jd-role-manufacturer-soft: #EAF1FE;
+  --jd-role-supplier: #7C3AED;
+  --jd-role-supplier-soft: #F1EAFE;
+  --jd-role-dropshipper: #EA7C1C;
+  --jd-role-dropshipper-soft: #FDF0E4;
+  --jd-role-delivery: #0D9488;
+  --jd-role-delivery-soft: #E4F5F3;
+
+  /* Status colors */
+  --jd-success: #0F9D58;
+  --jd-warning: #D97706;
+  --jd-danger: #DC2626;
+  --jd-info: #2563EB;
+
+  /* Typography */
+  --jd-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --jd-fs-title: 1.5rem;      /* Dashboard title */
+  --jd-fs-subtitle: 0.9375rem; /* Page subtitle */
+  --jd-fs-section: 1rem;      /* Section headings */
+  --jd-fs-kpi: 1.75rem;       /* KPI numbers */
+  --jd-fs-body: 0.875rem;     /* Body text */
+  --jd-fs-table: 0.8125rem;   /* Table text */
+  --jd-fs-meta: 0.75rem;      /* Metadata / status labels */
+
+  /* Layout */
+  --jd-sidebar-w: 240px;
+  --jd-sidebar-w-collapsed: 72px;
+  --jd-topbar-h: 64px;
+  --jd-bottomnav-h: 60px;
+  --jd-radius-sm: 6px;
+  --jd-radius-md: 10px;
+  --jd-radius-lg: 14px;
+  --jd-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --jd-shadow-md: 0 4px 12px rgba(16, 24, 40, 0.08);
+}
+
+/* Per-role accent binding: set data-role on <body> or a top-level wrapper */
+[data-role="seller"]        { --jd-accent: var(--jd-role-seller); --jd-accent-soft: var(--jd-role-seller-soft); }
+[data-role="manufacturer"]  { --jd-accent: var(--jd-role-manufacturer); --jd-accent-soft: var(--jd-role-manufacturer-soft); }
+[data-role="supplier"]      { --jd-accent: var(--jd-role-supplier); --jd-accent-soft: var(--jd-role-supplier-soft); }
+[data-role="dropshipper"]   { --jd-accent: var(--jd-role-dropshipper); --jd-accent-soft: var(--jd-role-dropshipper-soft); }
+[data-role="delivery"]      { --jd-accent: var(--jd-role-delivery); --jd-accent-soft: var(--jd-role-delivery-soft); }
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: var(--jd-font);
+  color: var(--jd-gray-900);
+  background: var(--jd-gray-50);
+  margin: 0;
+}
+
+/* ---- Shared primitives every panel can reuse ---- */
+
+.jd-card {
+  background: var(--jd-white);
+  border: 1px solid var(--jd-gray-200);
+  border-radius: var(--jd-radius-lg);
+  box-shadow: var(--jd-shadow-sm);
+}
+
+.jd-kpi-card {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.jd-kpi-label {
+  font-size: var(--jd-fs-meta);
+  color: var(--jd-gray-500);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.jd-kpi-value {
+  font-size: var(--jd-fs-kpi);
+  font-weight: 700;
+  color: var(--jd-gray-900);
+  line-height: 1.2;
+}
+.jd-kpi-delta {
+  font-size: var(--jd-fs-meta);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.jd-kpi-delta.up { color: var(--jd-success); }
+.jd-kpi-delta.down { color: var(--jd-danger); }
+
+.jd-btn {
+  font-family: var(--jd-font);
+  font-size: var(--jd-fs-body);
+  font-weight: 600;
+  border-radius: var(--jd-radius-sm);
+  padding: 9px 16px;
+  border: 1px solid var(--jd-gray-300);
+  background: var(--jd-white);
+  color: var(--jd-gray-900);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.jd-btn:hover { background: var(--jd-gray-50); }
+.jd-btn-primary {
+  background: var(--jd-accent, var(--jd-green));
+  border-color: var(--jd-accent, var(--jd-green));
+  color: var(--jd-white);
+}
+.jd-btn-primary:hover { filter: brightness(0.93); }
+
+.jd-badge {
+  font-size: var(--jd-fs-meta);
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  display: inline-block;
+  line-height: 1.5;
+}
+.jd-badge-success { background: #E8F7EE; color: #0A6E3D; }
+.jd-badge-warning { background: #FEF3E2; color: #92400E; }
+.jd-badge-danger  { background: #FDE8E8; color: #991B1B; }
+.jd-badge-info    { background: #EAF1FE; color: #1E40AF; }
+.jd-badge-neutral { background: var(--jd-gray-100); color: var(--jd-gray-700); }
+
+.jd-table { width: 100%; border-collapse: collapse; font-size: var(--jd-fs-table); }
+.jd-table th {
+  text-align: left;
+  font-size: var(--jd-fs-meta);
+  font-weight: 600;
+  color: var(--jd-gray-500);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--jd-gray-200);
+}
+.jd-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--jd-gray-100);
+  color: var(--jd-gray-900);
+}
+.jd-table tr:last-child td { border-bottom: none; }
+
+/* Empty / error states */
+.jd-empty-state, .jd-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--jd-gray-500);
+}
+.jd-empty-state h4, .jd-error-state h4 {
+  font-size: var(--jd-fs-section);
+  color: var(--jd-gray-900);
+  margin: 12px 0 4px;
+}
+.jd-empty-state p, .jd-error-state p { font-size: var(--jd-fs-body); margin: 0 0 16px; }
+
+/* Skeleton loaders */
+.jd-skeleton {
+  background: linear-gradient(90deg, var(--jd-gray-100) 25%, var(--jd-gray-200) 37%, var(--jd-gray-100) 63%);
+  background-size: 400% 100%;
+  animation: jd-skeleton-shimmer 1.4s ease infinite;
+  border-radius: var(--jd-radius-sm);
+}
+@keyframes jd-skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
