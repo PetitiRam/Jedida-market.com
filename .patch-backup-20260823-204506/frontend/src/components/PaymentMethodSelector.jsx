@@ -112,23 +112,8 @@ function MethodCard({ method, selected, available, onSelect, delay }) {
   );
 }
 
-// Maps each listed payment method to the provider_registry `code` used by
-// the seller's Payments-page connect/disconnect toggle (schema_phase83).
-// mtn_mobile_money and airtel_money both live under the single
-// 'mobile_money' registry row, mirroring AVAILABILITY_KEY's existing
-// collapse of both onto enableMobileMoney below.
-const PROVIDER_CODE = {
-  pesajet: 'pesajet',
-  cash_on_delivery: 'cash_on_delivery',
-  mtn_mobile_money: 'mobile_money',
-  airtel_money: 'mobile_money',
-  bank: 'bank_transfer',
-  card: 'card_payments',
-};
-
-export default function PaymentMethodPicker({ value, onChange, shopId }) {
+export default function PaymentMethodPicker({ value, onChange }) {
   const [settings, setSettings] = useState(null);
-  const [connectedCodes, setConnectedCodes] = useState(null);
   const loaded = useRef(false);
 
   useEffect(() => {
@@ -138,32 +123,14 @@ export default function PaymentMethodPicker({ value, onChange, shopId }) {
       .finally(() => { loaded.current = true; });
   }, []);
 
-  // Shop-scoped gate (checkout only): a method must also be one this
-  // specific shop actually connected on their Payments page. Without a
-  // shopId (e.g. the seller's own withdrawal-method picker in
-  // WalletKycPanel), this step is skipped entirely — that picker was never
-  // about a shop's buyer-facing methods to begin with.
-  useEffect(() => {
-    if (!shopId) { setConnectedCodes(null); return; }
-    client.get(`/provider-registry/shop/${shopId}`)
-      .then(({ data }) => setConnectedCodes(data.connectedCodes))
-      .catch(() => setConnectedCodes([])); // fail closed
-  }, [shopId]);
-
   const isAvailable = (method) => {
     const key = AVAILABILITY_KEY[method.id];
     if (!key) return false; // no admin control for this one yet — never claim it's live
     if (!settings) return false; // still loading — don't flash a false "available" state
-    if (!settings[key]) return false;
-    if (shopId) {
-      if (connectedCodes === null) return false; // still loading the shop's connections
-      const code = PROVIDER_CODE[method.id];
-      if (!code || !connectedCodes.includes(code)) return false;
-    }
-    return true;
+    return !!settings[key];
   };
 
-  if (!settings || (shopId && connectedCodes === null)) {
+  if (!settings) {
     return (
       <div className="jp-scope jp-method-grid">
         {[0, 1, 2].map((i) => (

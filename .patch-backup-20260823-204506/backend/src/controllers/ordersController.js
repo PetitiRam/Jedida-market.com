@@ -64,59 +64,6 @@ async function insertCodPayment(queryFn, { orderId, amount, currency }) {
   );
 }
 
-// Server-side mirror of the frontend's AVAILABILITY_KEY / PROVIDER_CODE maps
-// (PaymentMethodSelector.jsx). Kept here rather than imported from the
-// frontend because this is the actual enforcement point — the frontend map
-// only decides what a button looks like; hiding a button is not
-// authorization (spec section 32/24). Every raw payment_method value the
-// order endpoints accept must resolve to both a settings flag (Level 1) and
-// a provider_registry code (Level 3), or it can't be charged at all.
-const METHOD_SETTINGS_FLAG = {
-  pesajet: 'enablePesajet',
-  cash_on_delivery: 'enableCash',
-  mtn_mobile_money: 'enableMobileMoney',
-  airtel_money: 'enableMobileMoney',
-  stripe: 'enableCardPayments',
-  dpo: 'enableCardPayments',
-};
-const METHOD_PROVIDER_CODE = {
-  pesajet: 'pesajet',
-  cash_on_delivery: 'cash_on_delivery',
-  mtn_mobile_money: 'mobile_money',
-  airtel_money: 'mobile_money',
-  stripe: 'card_payments',
-  dpo: 'card_payments',
-};
-
-// Enforces the remaining feature-control levels for a payment method server
-// side (Level 1: re-checked here too so this helper is a complete gate on
-// its own, not just relying on each caller remembering to check settings
-// first; Level 3: every shop in this order/cart actually connected the
-// method on their Payments page — schema_phase83_provider_registry.sql).
-// shopIds is an array since a cart checkout can span multiple shops; the
-// method must be connected by every one of them.
-async function assertPaymentMethodAllowed(method, shopIds, paymentSettings) {
-  const flagKey = METHOD_SETTINGS_FLAG[method];
-  if (flagKey && !paymentSettings?.[flagKey]) {
-    return { ok: false, error: 'This payment method is not currently enabled.' };
-  }
-  const providerCode = METHOD_PROVIDER_CODE[method];
-  if (!providerCode) return { ok: true }; // methods with no registry mapping yet (flutterwave/coinbase) aren't gated by this layer
-  const ids = [...new Set(shopIds.filter(Boolean))];
-  if (ids.length === 0) return { ok: true };
-  const result = await query(
-    `SELECT COUNT(DISTINCT spc.shop_id) AS connected_count
-     FROM seller_provider_connections spc JOIN provider_registry pr ON pr.id = spc.provider_id
-     WHERE spc.shop_id = ANY($1::uuid[]) AND spc.status = 'connected' AND pr.code = $2 AND pr.category = 'payment' AND pr.status = 'active'`,
-    [ids, providerCode]
-  );
-  if (Number(result.rows[0].connected_count) < ids.length) {
-    return { ok: false, error: 'This payment method is not available for one of the shops in your order.' };
-  }
-  return { ok: true };
-}
-
-
 // Admin-only. Calls PesaJet's real GET /payments/:id and surfaces the raw
 // status into the SAME admin payment-review queue that manual mtn/airtel
 // proof submissions already go through (getPendingPayments/approvePayment
@@ -166,20 +113,12 @@ export async function createOrder(req, res) {
 
   try {
     const cod = isCashOnDelivery(method);
-    const settings = await getSettings();
-    // Cheap upfront shop_id lookup so the payment-method gate can run
-    // before any charge or DB write, for COD as well as real methods
-    // (the non-COD preview query below already needs this same row, so
-    // this doesn't add a second query on that path — it just moves the
-    // existing one earlier).
-    const shopLookup = await query(
-      `SELECT s.id AS shop_id FROM products p JOIN shops s ON s.id = p.shop_id WHERE p.id = $1 AND p.status = 'active'`,
-      [productId]
-    );
-    if (!shopLookup.rows[0]) return res.status(404).json({ error: 'Product not available.' });
-    const methodCheck = await assertPaymentMethodAllowed(method, [shopLookup.rows[0].shop_id], settings.payment_settings);
-    if (!methodCheck.ok) return res.status(400).json({ error: methodCheck.error });
-
+    if (cod) {
+      const settings = await getSettings();
+      if (!settings.payment_settings?.enableCash) {
+        return res.status(400).json({ error: 'Cash on Delivery is not currently enabled.' });
+      }
+    }
     // A double-tapped "Buy now" (or a retried request) within the same
     // couple of seconds gets the just-created order handed back instead of
     // a second one — prevents duplicate pending orders (and, if the buyer
@@ -931,17 +870,12 @@ export async function checkoutCart(req, res) {
   if (!cod && !adapter) return res.status(400).json({ error: 'Unsupported payment method.' });
 
   try {
-    const settings = await query('SELECT * FROM platform_settings WHERE id = 1');
-    // Cheap upfront distinct-shop_id lookup across the whole cart so the
-    // payment-method gate can run before any charge or order write, for
-    // COD as well as real methods.
-    const cartShops = await query(
-      `SELECT DISTINCT p.shop_id FROM cart_items ci JOIN products p ON p.id = ci.product_id WHERE ci.user_id = $1 AND p.status = 'active'`,
-      [req.user.id]
-    );
-    if (cartShops.rows.length === 0) return res.status(400).json({ error: 'Your cart is empty.' });
-    const methodCheck = await assertPaymentMethodAllowed(method, cartShops.rows.map((r) => r.shop_id), settings.rows[0].payment_settings);
-    if (!methodCheck.ok) return res.status(400).json({ error: methodCheck.error });
+    if (cod) {
+      const settingsCheck = await query('SELECT payment_settings FROM platform_settings WHERE id = 1');
+      if (!settingsCheck.rows[0]?.payment_settings?.enableCash) {
+        return res.status(400).json({ error: 'Cash on Delivery is not currently enabled.' });
+      }
+    }
     // A buyer that's already mid-checkout (an unpaid group created in the
     // last 2 minutes) gets that group handed back instead of a fresh one —
     // guards against a double-tapped "Checkout" button creating two sets of
@@ -965,6 +899,7 @@ export async function checkoutCart(req, res) {
       });
     }
 
+    const settings = await query('SELECT * FROM platform_settings WHERE id = 1');
     const feePercent = Number(settings.rows[0].platform_fee_percent);
     const checkoutGroupId = crypto.randomUUID();
 

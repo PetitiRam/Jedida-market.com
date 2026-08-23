@@ -18,8 +18,6 @@ import notificationRoutes from './routes/notifications.js';
 import shareLinkPreviewRoutes from './routes/shareLinkPreview.js';
 import orderRoutes from './routes/orders.js';
 import walletRoutes from './routes/wallets.js';
-import providerRegistryRoutes from './routes/providerRegistry.js';
-import featureEngineRoutes from './routes/featureEngine.js';
 import payoutMethodRoutes from './routes/payoutMethods.js';
 import adminRoutes from './routes/admin.js';
 import adsRoutes from './routes/ads.js';
@@ -315,8 +313,6 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/wallets/withdraw', withdrawalLimiter);
 app.use('/api/wallets', walletRoutes);
-app.use('/api/provider-registry', providerRegistryRoutes);
-app.use('/api/feature-engine', featureEngineRoutes);
 app.use('/api/payout-method', payoutMethodLimiter, payoutMethodRoutes);
 // Real running version, read from the actual package.json via npm's env var
 // (falls back to the package.json value itself when not started through

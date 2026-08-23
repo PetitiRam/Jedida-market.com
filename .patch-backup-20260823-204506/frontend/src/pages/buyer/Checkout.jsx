@@ -478,7 +478,7 @@ export default function Checkout() {
                 <span className="jpco-section-num">{product.shop_name ? 4 : 3}</span> Payment Method
               </div>
 
-              <PaymentMethodSelector value={method} onChange={setMethod} shopId={product.shop_id} />
+              <PaymentMethodSelector value={method} onChange={setMethod} />
 
               {method === "pesajet" && (
                 <div className="jpco-pesajet-form" style={{ marginTop: 12, display: "grid", gap: 10 }}>

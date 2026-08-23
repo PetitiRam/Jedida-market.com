@@ -4,13 +4,6 @@ import client from './client';
 export const listProviders = (params) => client.get('/logistics-hub/providers', { params });
 export const adminCreateProvider = (payload) => client.post('/logistics-hub/admin/providers', payload);
 export const adminUpdateProvider = (id, payload) => client.patch(`/logistics-hub/admin/providers/${id}`, payload);
-export const adminListAllProviders = () => client.get('/logistics-hub/admin/providers/all');
-export const adminUpdateProviderStatus = (id, payload) => client.patch(`/logistics-hub/admin/providers/${id}/status`, payload);
-
-// ---- Seller — connect/disconnect approved shipping providers ----
-export const listMyShippingConnections = () => client.get('/logistics-hub/providers/mine');
-export const connectShippingProvider = (providerId) => client.post(`/logistics-hub/providers/${providerId}/connect`);
-export const disconnectShippingProvider = (providerId) => client.post(`/logistics-hub/providers/${providerId}/disconnect`);
 
 // ---- Quotes ----
 export const requestShippingQuote = (payload) => client.post('/logistics-hub/quotes', payload);

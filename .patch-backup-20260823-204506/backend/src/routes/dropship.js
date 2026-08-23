@@ -11,26 +11,20 @@ import {
   DROPSHIPPER_ROLES, BUSINESS_ROLES
 } from '../controllers/dropshipController.js';
 import { requireAuth, requireRole, requirePermission } from '../middleware/auth.js';
-import { requireFeatureEnabled } from '../middleware/featureGate.js';
 
 const router = express.Router();
 
 // ---- Partnerships ----
 // Either side may request/respond in some paths, so only requireAuth at the
 // route level; ownership + who-can-set-what is enforced in the controller.
-// requireFeatureEnabled sits on the dropshipper-initiated actions — the
-// real "is dropshipping switched on for this shop" gate (feature engine,
-// schema_phase85) — not on every read/response endpoint, since a partner
-// still needs to be able to respond to an existing partnership even if
-// their own toggle state changes mid-flow.
-router.get('/businesses', requireAuth, requireRole(...DROPSHIPPER_ROLES), requireFeatureEnabled('dropshipping'), listDropshipBusinesses);
-router.post('/partnerships', requireAuth, requireRole(...DROPSHIPPER_ROLES), requireFeatureEnabled('dropshipping'), requestPartnership);
+router.get('/businesses', requireAuth, requireRole(...DROPSHIPPER_ROLES), listDropshipBusinesses);
+router.post('/partnerships', requireAuth, requireRole(...DROPSHIPPER_ROLES), requestPartnership);
 router.get('/partnerships', requireAuth, myPartnerships);
 router.patch('/partnerships/:id', requireAuth, respondPartnership);
 
 // ---- Catalog + product access ----
-router.get('/catalog', requireAuth, requireRole(...DROPSHIPPER_ROLES), requireFeatureEnabled('dropshipping'), browseDropshipCatalog);
-router.post('/product-access', requireAuth, requireRole(...DROPSHIPPER_ROLES), requireFeatureEnabled('dropshipping'), requestProductAccess);
+router.get('/catalog', requireAuth, requireRole(...DROPSHIPPER_ROLES), browseDropshipCatalog);
+router.post('/product-access', requireAuth, requireRole(...DROPSHIPPER_ROLES), requestProductAccess);
 router.get('/product-access/mine', requireAuth, requireRole(...DROPSHIPPER_ROLES), myProductAccess);
 router.get('/product-access/incoming', requireAuth, requireRole(...BUSINESS_ROLES), incomingProductAccess);
 router.patch('/product-access/:id', requireAuth, requireRole(...BUSINESS_ROLES), respondProductAccess);

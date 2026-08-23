@@ -24,8 +24,6 @@ import AnalyticsDashboard from './AnalyticsDashboard';
 import AdminQuestionsPanel from './AdminQuestionsPanel';
 import AdminQuotesPanel from './AdminQuotesPanel';
 import AdminPayments from './AdminPayments';
-import AdminProviderRegistryPanel from './AdminProviderRegistryPanel';
-import AdminFeatureEnginePanel from './AdminFeatureEnginePanel';
 import AdminDeliveryPanel from './AdminDeliveryPanel';
 import AdminRolesPanel from './AdminRolesPanel';
 import AdminPartnersPanel from './AdminPartnersPanel';
@@ -66,8 +64,6 @@ const TABS = [
   { key: 'quotes', label: 'Quote Requests', area: 'products' },
   { key: 'categoryAttributes', label: '🏷️ Category Attributes', area: 'products' },
   { key: 'payments', label: '💳 Payments', area: 'withdrawals' },
-  { key: 'providerRegistry', label: '🏦 Provider Registry', area: 'withdrawals' },
-  { key: 'featureEngine', label: '⚙️ Feature Control Center', area: 'upgrades' },
   { key: 'partners', label: '🤝 Partner Management', area: 'partners' },
   { key: 'affiliates', label: '🔗 Affiliate Program', area: 'affiliates' },
   { key: 'disputes', label: '⚖️ Disputes', area: 'disputes' },
@@ -131,8 +127,6 @@ export default function AdminPanel() {
           {active === 'delivery' && <AdminDeliveryPanel />}
           {active === 'withdrawals' && <AdminWithdrawalsPanel />}
           {active === 'payments' && <AdminPayments />}
-          {active === 'providerRegistry' && <AdminProviderRegistryPanel />}
-          {active === 'featureEngine' && <AdminFeatureEnginePanel />}
           {active === 'ads' && <AdminAdsPanel />}
           {active === 'marketplaceBuilder' && <AdminMarketplaceBuilder />}
           {active === 'securityOps' && <SecurityOperationsDashboard />}

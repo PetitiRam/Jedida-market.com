@@ -3,14 +3,6 @@ import * as logisticsApi from '../../api/logisticsHubApi';
 
 const PROVIDER_TYPES = ['local_courier', 'last_mile', 'trucking', 'freight_forwarding', 'air_freight', 'sea_freight', 'warehouse', 'customs_broker'];
 const STATUS_OPTIONS = ['booked', 'pickup_scheduled', 'picked_up', 'in_transit', 'customs', 'delivered', 'cancelled'];
-const SHIPPING_NEXT_ACTIONS = {
-  pending: [{ status: 'under_review', label: 'Move to Review' }, { status: 'approved', label: 'Approve' }, { status: 'rejected', label: 'Reject' }],
-  under_review: [{ status: 'approved', label: 'Approve' }, { status: 'rejected', label: 'Reject' }],
-  approved: [{ status: 'active', label: 'Activate' }, { status: 'suspended', label: 'Suspend' }],
-  active: [{ status: 'suspended', label: 'Suspend' }],
-  suspended: [{ status: 'active', label: 'Reactivate' }, { status: 'rejected', label: 'Reject' }],
-  rejected: [{ status: 'pending', label: 'Reopen' }]
-};
 
 function AddProviderForm({ onAdded }) {
   const [name, setName] = useState('');
@@ -160,28 +152,12 @@ function BookingsQueue() {
 
 export default function AdminLogisticsHubPanel() {
   const [providers, setProviders] = useState([]);
-  const [busyId, setBusyId] = useState(null);
 
   const loadProviders = async () => {
-    const { data } = await logisticsApi.adminListAllProviders();
+    const { data } = await logisticsApi.listProviders();
     setProviders(data.providers || []);
   };
   useEffect(() => { loadProviders(); }, []);
-
-  const act = async (provider, newStatus) => {
-    const reason = (newStatus === 'rejected' || newStatus === 'suspended')
-      ? window.prompt(`Reason for moving ${provider.name} to ${newStatus}:`) || ''
-      : '';
-    setBusyId(provider.id);
-    try {
-      await logisticsApi.adminUpdateProviderStatus(provider.id, { newStatus, reason });
-      await loadProviders();
-    } catch (err) {
-      alert(err.response?.data?.error || 'Could not update provider status.');
-    } finally {
-      setBusyId(null);
-    }
-  };
 
   return (
     <div>
@@ -190,18 +166,8 @@ export default function AdminLogisticsHubPanel() {
       <h3>Providers</h3>
       {providers.map((p) => (
         <div key={p.id} className="card-surface" style={{ marginBottom: 8 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-            <div>
-              <strong>{p.name}</strong> · {p.provider_type.replace('_', ' ')} · {p.integration_type}
-              <span className={`status-chip status-${p.approval_status === 'active' ? 'active' : p.approval_status === 'rejected' ? 'rejected' : 'pending_review'}`} style={{ marginLeft: 8 }}>{p.approval_status}</span>
-              <div className="product-card-meta">ID: {p.id} · Serves: {p.countries_served.join(', ') || '—'} · {p.connected_seller_count} seller{p.connected_seller_count !== '1' ? 's' : ''} connected</div>
-            </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {(SHIPPING_NEXT_ACTIONS[p.approval_status] || []).map((a) => (
-                <button key={a.status} className="btn-secondary" disabled={busyId === p.id} onClick={() => act(p, a.status)}>{a.label}</button>
-              ))}
-            </div>
-          </div>
+          <strong>{p.name}</strong> · {p.provider_type.replace('_', ' ')} · {p.integration_type}
+          <div className="product-card-meta">ID: {p.id} · Serves: {p.countries_served.join(', ') || '—'}</div>
         </div>
       ))}
 

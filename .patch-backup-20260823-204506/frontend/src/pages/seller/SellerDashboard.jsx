@@ -12,9 +12,6 @@ import NotificationsPanel from './NotificationsPanel';
 import OrdersPanel from './OrdersPanel';
 import InvoicesPanel from './InvoicesPanel';
 import WalletPanel from './WalletPanel';
-import SellerPaymentsPanel from './SellerPaymentsPanel';
-import SellerShippingPanel from './SellerShippingPanel';
-import SellerFeaturesPanel from './SellerFeaturesPanel';
 import ShopSettingsPanel from './ShopSettingsPanel';
 import ShopBuilderDashboard from './ShopBuilderDashboard';
 import SourcingCatalogPanel from './SourcingCatalogPanel';
@@ -47,14 +44,11 @@ const BASE_TABS = [
   { key: 'aiAssistant', label: 'AI Assistant' },
   { key: 'orders', label: 'Orders' },
   { key: 'invoices', label: 'Invoices & Receipts' },
-  { key: 'shipping', label: 'Shipping' },
-  { key: 'payments', label: 'Payments' },
   { key: 'wallet', label: 'Wallet' },
   { key: 'notifications', label: 'Notifications' },
   { key: 'verification', label: 'Verification' },
   { key: 'shopFeed', label: 'Shop Feed' },
   { key: 'growthHub', label: 'Growth' },
-  { key: 'features', label: 'Features' },
   { key: 'chat', label: 'Chat with Admin' },
   { key: 'shopSettings', label: 'Shop Settings' }
 ];
@@ -87,9 +81,6 @@ const TAB_ICONS = {
   orders: 'orders',
   invoices: 'orders',
   wallet: 'wallet',
-  shipping: 'shipments',
-  payments: 'wallet',
-  features: 'settings',
   notifications: 'bell',
   verification: 'quality',
   shopFeed: 'marketing',
@@ -237,14 +228,11 @@ export default function SellerDashboard() {
       {tab === 'dropshipSales' && <DropshipSalesPanel />}
       {tab === 'orders' && <OrdersPanel />}
       {tab === 'invoices' && <InvoicesPanel />}
-      {tab === 'shipping' && <SellerShippingPanel />}
-      {tab === 'payments' && <SellerPaymentsPanel />}
       {tab === 'wallet' && <WalletPanel />}
       {tab === 'notifications' && <NotificationsPanel />}
       {tab === 'verification' && <SellerVerificationStatus />}
       {tab === 'shopFeed' && <SellerFeedComposer />}
       {tab === 'growthHub' && <GrowthHubPanel />}
-      {tab === 'features' && <SellerFeaturesPanel />}
       {tab === 'chat' && <EmbeddedSupportChat />}
       {tab === 'shopSettings' && <ShopSettingsPanel />}
     </JdDashboardShell>

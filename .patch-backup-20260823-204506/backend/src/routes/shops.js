@@ -4,7 +4,7 @@ import {
 } from '../controllers/shopsController.js';
 import { requireAuth, requireMfaEnabled } from '../middleware/auth.js';
 import { requireFaceVerification } from '../middleware/faceVerification.js';
-import { updateShopSettings, setFeaturedProducts, getPublicShopBySlugV2, listFeaturedShops, getSellerPaymentsOverview } from '../controllers/shopsController.js';
+import { updateShopSettings, setFeaturedProducts, getPublicShopBySlugV2, listFeaturedShops } from '../controllers/shopsController.js';
 import { getMyVerificationStatus } from '../controllers/verifiedShopController.js';
 
 const router = express.Router();
@@ -22,9 +22,5 @@ router.get('/public-v2/:slug', getPublicShopBySlugV2); // richer payload; old /p
 // Verified Shop trust engine (schema_phase59) — seller's own live status,
 // requirements met/missing, and current thresholds.
 router.get('/me/verification', requireAuth, getMyVerificationStatus);
-// Seller-facing Payments overview — buyer-facing payment methods + this
-// shop's real recent payment activity (distinct from /wallets/mine, which
-// covers the seller's own payout balance/withdrawals).
-router.get('/me/payments-overview', requireAuth, getSellerPaymentsOverview);
 
 export default router;

@@ -1,6 +1,5 @@
 import { query } from '../config/db.js';
 import { logSecurityEvent } from '../services/securityLogService.js';
-import * as settingsService from '../services/settingsService.js';
 
 const slugify = (text) =>
   text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -51,33 +50,6 @@ export async function createShop(req, res) {
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9)
        RETURNING *`,
       [ownerId, name, slug, description || null, primaryCategory || 'other', currency || 'USD', shareLink, lat ?? null, lng ?? null]
-    );
-
-    // Default-connect every active payment provider so a brand-new seller's
-    // checkout works immediately without them first having to visit the
-    // Payments page — matches the same "connected by default" behavior
-    // existing pre-migration shops got backfilled with in
-    // schema_phase83_provider_registry.sql. A seller can still disconnect
-    // any of these later from their own Payments page.
-    await query(
-      `INSERT INTO seller_provider_connections (shop_id, provider_id, status, connected_at)
-       SELECT $1, pr.id, 'connected', now() FROM provider_registry pr
-       WHERE pr.category = 'payment' AND pr.status = 'active'
-       ON CONFLICT (shop_id, provider_id) DO NOTHING`,
-      [result.rows[0].id]
-    );
-
-    // Same auto-activation for role-eligible features (schema_phase85) —
-    // a new dropshipper/manufacturer/supplier shop gets dropshipping/b2b/
-    // wholesale switched on immediately rather than silently missing
-    // functionality that role has always had.
-    await query(
-      `INSERT INTO seller_feature_activations (shop_id, feature_key, enabled)
-       SELECT $1, ff.key, TRUE FROM feature_flags ff
-       WHERE ff.global_status = 'available'
-         AND (ff.eligible_roles = '{}' OR $2 = ANY(ff.eligible_roles))
-       ON CONFLICT (shop_id, feature_key) DO NOTHING`,
-      [result.rows[0].id, req.user.role || null]
     );
 
     return res.status(201).json({
@@ -319,7 +291,7 @@ export async function getPublicShopBySlugV2(req, res) {
       businessProfile = bpResult.rows[0] || null;
     }
 
-    const [ratingResult, soldResult, followerResult, trendingResult, responseResult, collectionsResult] = await Promise.all([
+    const [ratingResult, soldResult, followerResult] = await Promise.all([
 query(
   `SELECT COALESCE(AVG(r.rating), 0) AS average, COUNT(r.id) AS count
    FROM product_reviews r JOIN products p ON p.id = r.product_id
@@ -330,57 +302,8 @@ query(
         `SELECT COALESCE(SUM(o.quantity), 0) AS total FROM orders o WHERE o.shop_id = $1 AND o.status = 'completed'`,
         [shop.id]
       ),
-      query('SELECT COUNT(*) AS count FROM shop_follows WHERE shop_id = $1', [shop.id]),
-      // "Trending Now" for the World layer — real ranking off actual
-      // orders/views, never a fabricated count. Empty array (not fake
-      // rows) when a shop has no sales/view signal yet.
-      query(
-        `SELECT id, title, price, currency, images, specs, quantity_available, minimum_order_quantity
-         FROM products WHERE shop_id = $1 AND status = 'active' AND (orders_count > 0 OR views_count > 0)
-         ORDER BY orders_count DESC, views_count DESC LIMIT 6`,
-        [shop.id]
-      ),
-      // Real average time-to-answer on product questions (same signal
-      // trustEngineService uses for response_score) — null, not a
-      // guess, when the seller has never answered a question yet.
-      query(
-        `SELECT AVG(EXTRACT(EPOCH FROM (q.answered_at - q.created_at)) / 60.0) AS avg_minutes, COUNT(*) AS count
-         FROM product_questions q JOIN products p ON p.id = q.product_id
-         WHERE p.shop_id = $1 AND q.answered_at IS NOT NULL`,
-        [shop.id]
-      ),
-      query(
-        `SELECT * FROM product_collections WHERE shop_id = $1 ORDER BY sort_order, created_at LIMIT 8`,
-        [shop.id]
-      )
+      query('SELECT COUNT(*) AS count FROM shop_follows WHERE shop_id = $1', [shop.id])
     ]);
-
-    let collections = collectionsResult.rows;
-    if (collections.length > 0) {
-      const collectionProducts = await query(
-        `SELECT cp.collection_id, p.id, p.title, p.images
-         FROM collection_products cp JOIN products p ON p.id = cp.product_id
-         WHERE cp.collection_id = ANY($1) AND p.status = 'active'
-         ORDER BY cp.sort_order`,
-        [collections.map((c) => c.id)]
-      );
-      const countByCollection = {};
-      for (const row of collectionProducts.rows) {
-        countByCollection[row.collection_id] = (countByCollection[row.collection_id] || 0) + 1;
-      }
-      const coverByCollection = {};
-      for (const row of collectionProducts.rows) {
-        if (!coverByCollection[row.collection_id] && row.images?.[0]) coverByCollection[row.collection_id] = row.images[0];
-      }
-      collections = collections.map((c) => ({
-        ...c,
-        productCount: countByCollection[c.id] || 0,
-        coverImage: coverByCollection[c.id] || null
-      }));
-    }
-
-    const avgResponseMinutes = responseResult.rows[0].avg_minutes == null ? null : Number(responseResult.rows[0].avg_minutes);
-    const questionsAnswered = Number(responseResult.rows[0].count);
 
     const conditions = ['shop_id = $1', `status = 'active'`];
     const values = [shop.id];
@@ -411,77 +334,14 @@ query(
         reviewCount: Number(ratingResult.rows[0].count),
         productsSold: Number(soldResult.rows[0].total),
         followerCount: Number(followerResult.rows[0].count),
-        avgResponseMinutes,
-        questionsAnswered,
         businessProfile
       },
       products: productsResult.rows,
-      trendingProducts: trendingResult.rows,
-      collections,
       pagination: { page: Number(page), limit: Number(limit), total: Number(countResult.rows[0].count) },
       view
     });
   } catch (err) {
     console.error('Get public shop v2 error:', err);
     return res.status(500).json({ error: 'Could not load shop.' });
-  }
-}
-
-// Seller-facing "Payments" page (distinct from the existing Wallet/Payouts
-// panel, which already handles the seller's own withdrawal destination and
-// balance). This covers the buyer-facing side: which payment methods are
-// actually enabled for buyers to pay this shop with, and the shop's real
-// recent payment activity. Payment methods are still platform-wide
-// (admin-approved via settingsCenter "payment" section) — there is no
-// per-seller provider-connection layer yet, so this reports real enabled/
-// not-enabled state rather than fake "Connect" buttons that would do
-// nothing. See NOTE in the seller Payments panel for the follow-up needed
-// to make provider connection genuinely per-seller.
-export async function getSellerPaymentsOverview(req, res) {
-  try {
-    const shopResult = await query('SELECT id, currency FROM shops WHERE owner_id = $1', [req.user.id]);
-    const shop = shopResult.rows[0];
-    if (!shop) return res.status(404).json({ error: 'Open your shop before viewing Payments.' });
-
-    const paymentSection = await settingsService.getSection('payment');
-    const methods = {
-      enableMobileMoney: !!paymentSection.enableMobileMoney,
-      enablePesajet: !!paymentSection.enablePesajet,
-      enableCardPayments: !!paymentSection.enableCardPayments,
-      enableBankTransfer: !!paymentSection.enableBankTransfer,
-      enableCash: !!paymentSection.enableCash
-    };
-
-    const [todayResult, pendingResult, recentResult] = await Promise.all([
-      query(
-        `SELECT COALESCE(SUM(p.amount), 0) AS total
-         FROM payments p JOIN orders o ON o.id = p.order_id
-         WHERE o.shop_id = $1 AND p.status = 'succeeded' AND p.created_at::date = CURRENT_DATE`,
-        [shop.id]
-      ),
-      query(
-        `SELECT COALESCE(SUM(p.amount), 0) AS total
-         FROM payments p JOIN orders o ON o.id = p.order_id
-         WHERE o.shop_id = $1 AND p.status = 'initiated'`,
-        [shop.id]
-      ),
-      query(
-        `SELECT p.id, p.order_id, p.method, p.amount, p.currency, p.status, p.created_at
-         FROM payments p JOIN orders o ON o.id = p.order_id
-         WHERE o.shop_id = $1 ORDER BY p.created_at DESC LIMIT 10`,
-        [shop.id]
-      )
-    ]);
-
-    return res.json({
-      currency: shop.currency,
-      methods,
-      todaysPayments: Number(todayResult.rows[0].total),
-      pendingPayments: Number(pendingResult.rows[0].total),
-      recentTransactions: recentResult.rows
-    });
-  } catch (err) {
-    console.error('Get seller payments overview error:', err);
-    return res.status(500).json({ error: 'Could not load payments overview.' });
   }
 }

@@ -1,8 +1,6 @@
 import express from 'express';
 import {
   adminCreateProvider, listProviders, adminUpdateProvider,
-  adminUpdateProviderStatus, adminListAllProviders,
-  listMyShippingConnections, connectShippingProvider, disconnectShippingProvider,
   requestShippingQuote, myShippingQuotes, getShippingQuoteOptions, adminSubmitQuoteOption,
   createBooking, myBookings, getBookingTracking, adminAddTrackingEvent, adminListBookings
 } from '../controllers/logisticsHubController.js';
@@ -14,13 +12,6 @@ const router = express.Router();
 router.get('/providers', requireAuth, listProviders);
 router.post('/admin/providers', requireAuth, requirePermission('upgrades'), adminCreateProvider);
 router.patch('/admin/providers/:id', requireAuth, requirePermission('upgrades'), adminUpdateProvider);
-router.get('/admin/providers/all', requireAuth, requirePermission('upgrades'), adminListAllProviders);
-router.patch('/admin/providers/:id/status', requireAuth, requirePermission('upgrades'), adminUpdateProviderStatus);
-
-// ---- Seller — connect/disconnect approved shipping providers ----
-router.get('/providers/mine', requireAuth, listMyShippingConnections);
-router.post('/providers/:providerId/connect', requireAuth, connectShippingProvider);
-router.post('/providers/:providerId/disconnect', requireAuth, disconnectShippingProvider);
 
 // ---- Quotes / rate comparison ----
 router.post('/quotes', requireAuth, requestShippingQuote);
