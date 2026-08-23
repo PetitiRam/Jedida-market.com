@@ -11,3 +11,4 @@ backend/public/downloads/*
 !backend/public/downloads/README.txt
 mobile-shell/android/
 mobile-shell/ios/
+.patch-backup-*/
