@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import client from '../../api/client';
-import Logo from '../../components/Logo';
-import TabBar from '../../components/TabBar';
+import JdDashboardShell from '../../components/layout/JdDashboardShell';
 // change this import:
 import EmbeddedSupportChat from '../../components/chat/EmbeddedSupportChat';
 import ShopSetupPanel from './ShopSetupPanel';
@@ -36,7 +35,6 @@ import SellerVerificationStatus from './SellerVerificationStatus';
 import SellerFeedComposer from './SellerFeedComposer';
 import GrowthHubPanel from './GrowthHubPanel';
 
-
 const BASE_TABS = [
   { key: 'shop', label: 'My Shop' },
   { key: 'shopBuilder', label: 'Shop Builder' },
@@ -48,12 +46,48 @@ const BASE_TABS = [
   { key: 'invoices', label: 'Invoices & Receipts' },
   { key: 'wallet', label: 'Wallet' },
   { key: 'notifications', label: 'Notifications' },
-  { key: 'verification', label: '✅ Verification' },
-  { key: 'shopFeed', label: '📣 Shop Feed' },
-  { key: 'growthHub', label: '🚀 Growth' },
+  { key: 'verification', label: 'Verification' },
+  { key: 'shopFeed', label: 'Shop Feed' },
+  { key: 'growthHub', label: 'Growth' },
   { key: 'chat', label: 'Chat with Admin' },
   { key: 'shopSettings', label: 'Shop Settings' }
 ];
+
+// Icon per tab key — every key in BASE_TABS and every key tabsForRole() can
+// ever insert must have an entry (or it falls back to 'dashboard' below).
+const TAB_ICONS = {
+  shop: 'dashboard',
+  shopBuilder: 'wholesale',
+  products: 'products',
+  add: 'plus',
+  templates: 'inventory',
+  aiAssistant: 'analytics',
+  sourcing: 'imports',
+  myImports: 'imports',
+  businessProfile: 'profile',
+  wholesaleCatalog: 'wholesale',
+  quoteRequests: 'purchase',
+  wantedInbox: 'messages',
+  tradeCapabilities: 'shipments',
+  businessAnalytics: 'analytics',
+  agriculture: 'production',
+  dropshipNetwork: 'customers',
+  collections: 'inventory',
+  purchaseAgreements: 'purchase',
+  bulkInvoices: 'orders',
+  dropshipPartners: 'customers',
+  dropshipProducts: 'imports',
+  dropshipSales: 'earnings',
+  orders: 'orders',
+  invoices: 'orders',
+  wallet: 'wallet',
+  notifications: 'bell',
+  verification: 'quality',
+  shopFeed: 'marketing',
+  growthHub: 'marketing',
+  chat: 'messages',
+  shopSettings: 'settings',
+};
 
 // Only seller/supplier accounts source products from someone else's catalog
 // and turn it into a listing they own (see SOURCING_ROLES in
@@ -124,6 +158,12 @@ function tabsForRole(role) {
   return tabs;
 }
 
+// tabsForRole() gives {key,label} — the sidebar/bottom-nav also want an
+// icon per item, so this maps over the same list and looks up TAB_ICONS.
+function navItemsForRole(role) {
+  return tabsForRole(role).map((t) => ({ ...t, icon: TAB_ICONS[t.key] || 'dashboard' }));
+}
+
 // Business roles built on the same shop/product/order/wallet foundation as
 // seller (see schema_phase37) — they share this dashboard shell until their
 // own role-specific modules (sourcing, inventory sync, etc.) ship.
@@ -134,6 +174,7 @@ export default function SellerDashboard() {
   const [user, setUser] = useState(null);
   const [unread, setUnread] = useState(0);
   const [checked, setChecked] = useState(false);
+  const [tab, setTab] = useState('shop');
 
   useEffect(() => {
     client.get('/auth/me').then(({ data }) => setUser(data.user)).finally(() => setChecked(true));
@@ -146,62 +187,54 @@ export default function SellerDashboard() {
     return <Navigate to="/seller/upgrade" replace />;
   }
 
-  const roleLabel = ROLE_LABELS[user?.primary_role] || 'Seller';
+  const role = user?.primary_role || 'seller';
+  const roleLabel = ROLE_LABELS[role] || 'Seller';
 
   return (
-    <div>
-      <header className="dash-header">
-        <Logo size={32} />
-        <div className="dash-header-right">
-          <Link to="/marketplace" className="btn-link">Main Marketplace →</Link>
-          <span className="icon-btn">
-            🔔{unread > 0 && <span className="badge-dot" />}
-          </span>
-        </div>
-      </header>
-
-      <div className="dash-body">
-        <h2 style={{ marginBottom: 4 }}>{roleLabel} Dashboard</h2>
-        <p style={{ color: '#5B6760', marginBottom: 8 }}>Manage your shop, listings and orders.</p>
-
-        <TabBar tabs={tabsForRole(user?.primary_role)} initial="shop">
-          {(active) => (
-            <>
-              {active === 'shop' && <ShopSetupPanel />}
-              {active === 'shopBuilder' && <ShopBuilderDashboard />}
-              {active === 'products' && <MyProductsPanel />}
-              {active === 'add' && <AddProductPanel />}
-              {active === 'templates' && <TemplatesPanel />}
-              {active === 'aiAssistant' && <AIAssistantHubPanel />}
-              {active === 'sourcing' && <SourcingCatalogPanel />}
-              {active === 'myImports' && <MyImportsPanel />}
-              {active === 'businessProfile' && <BusinessProfilePanel role={user?.primary_role} />}
-              {active === 'wholesaleCatalog' && <WholesaleCatalogPanel />}
-              {active === 'quoteRequests' && <QuoteRequestsPanel />}
-              {active === 'wantedInbox' && <WantedInboxPanel />}
-              {active === 'tradeCapabilities' && <TradeCapabilitiesPanel />}
-              {active === 'businessAnalytics' && <BusinessAnalyticsPanel />}
-              {active === 'agriculture' && <AgriculturePanel />}
-              {active === 'dropshipNetwork' && <DropshipManagementPanel />}
-              {active === 'collections' && <CollectionsPanel />}
-              {active === 'purchaseAgreements' && <PurchaseAgreementsPanel />}
-              {active === 'bulkInvoices' && <BulkInvoicesPanel />}
-              {active === 'dropshipPartners' && <DropshipPartnersPanel />}
-              {active === 'dropshipProducts' && <MyDropshipProductsPanel />}
-              {active === 'dropshipSales' && <DropshipSalesPanel />}
-              {active === 'orders' && <OrdersPanel />}
-              {active === 'invoices' && <InvoicesPanel />}
-              {active === 'wallet' && <WalletPanel />}
-              {active === 'notifications' && <NotificationsPanel />}
-              {active === 'verification' && <SellerVerificationStatus />}
-              {active === 'shopFeed' && <SellerFeedComposer />}
-              {active === 'growthHub' && <GrowthHubPanel />}
-              {active === 'chat' && <EmbeddedSupportChat />}
-              {active === 'shopSettings' && <ShopSettingsPanel />}
-            </>
-          )}
-        </TabBar>
-      </div>
-    </div>
+    <JdDashboardShell
+      role={role}
+      items={navItemsForRole(role)}
+      activeTab={tab}
+      onSelect={setTab}
+      shopName={user?.shop_name}
+      title={`${roleLabel} Dashboard`}
+      subtitle="Manage your shop, listings and orders."
+      userName={user?.name}
+      userRoleLabel={roleLabel}
+      notificationCount={unread}
+      primaryAction={role !== 'delivery' ? { label: 'Add Product', icon: 'plus', onClick: () => setTab('add') } : undefined}
+    >
+      {tab === 'shop' && <ShopSetupPanel />}
+      {tab === 'shopBuilder' && <ShopBuilderDashboard />}
+      {tab === 'products' && <MyProductsPanel />}
+      {tab === 'add' && <AddProductPanel />}
+      {tab === 'templates' && <TemplatesPanel />}
+      {tab === 'aiAssistant' && <AIAssistantHubPanel />}
+      {tab === 'sourcing' && <SourcingCatalogPanel />}
+      {tab === 'myImports' && <MyImportsPanel />}
+      {tab === 'businessProfile' && <BusinessProfilePanel role={role} />}
+      {tab === 'wholesaleCatalog' && <WholesaleCatalogPanel />}
+      {tab === 'quoteRequests' && <QuoteRequestsPanel />}
+      {tab === 'wantedInbox' && <WantedInboxPanel />}
+      {tab === 'tradeCapabilities' && <TradeCapabilitiesPanel />}
+      {tab === 'businessAnalytics' && <BusinessAnalyticsPanel />}
+      {tab === 'agriculture' && <AgriculturePanel />}
+      {tab === 'dropshipNetwork' && <DropshipManagementPanel />}
+      {tab === 'collections' && <CollectionsPanel />}
+      {tab === 'purchaseAgreements' && <PurchaseAgreementsPanel />}
+      {tab === 'bulkInvoices' && <BulkInvoicesPanel />}
+      {tab === 'dropshipPartners' && <DropshipPartnersPanel />}
+      {tab === 'dropshipProducts' && <MyDropshipProductsPanel />}
+      {tab === 'dropshipSales' && <DropshipSalesPanel />}
+      {tab === 'orders' && <OrdersPanel />}
+      {tab === 'invoices' && <InvoicesPanel />}
+      {tab === 'wallet' && <WalletPanel />}
+      {tab === 'notifications' && <NotificationsPanel />}
+      {tab === 'verification' && <SellerVerificationStatus />}
+      {tab === 'shopFeed' && <SellerFeedComposer />}
+      {tab === 'growthHub' && <GrowthHubPanel />}
+      {tab === 'chat' && <EmbeddedSupportChat />}
+      {tab === 'shopSettings' && <ShopSettingsPanel />}
+    </JdDashboardShell>
   );
 }

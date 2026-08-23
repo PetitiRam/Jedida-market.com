@@ -1,6 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import './styles/jedida-design-system.css';
+import './styles/jedida-design-system.css';
 import './styles/theme.css';
 import './styles/native-shell.css';
 
