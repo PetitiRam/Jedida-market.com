@@ -11,6 +11,8 @@ import AdminWithdrawalsPanel from './AdminWithdrawalsPanel';
 import AdminAdsPanel from './AdminAdsPanel';
 import AdminSettingsPanel from './AdminSettingsPanel';
 import JedidaCommandCenter from './JedidaCommandCenter';
+import MobileAgentConsole from './MobileAgentConsole';
+import useIsMobile from '../../hooks/useIsMobile';
 import AICommandCenter from './AICommandCenter';
 import AdminSettingsCenter from './settings/AdminSettingsCenter';
 import AdminChatBridgePanel from './AdminChatBridgePanel';
@@ -28,6 +30,7 @@ import AdminProviderRegistryPanel from './AdminProviderRegistryPanel';
 import AdminFeatureEnginePanel from './AdminFeatureEnginePanel';
 import AdminDeliveryPanel from './AdminDeliveryPanel';
 import AdminRolesPanel from './AdminRolesPanel';
+import AgentGroupsPanel from './AgentGroupsPanel';
 import AdminPartnersPanel from './AdminPartnersPanel';
 import AdminAffiliatePanel from './AdminAffiliatePanel';
 import AdminAiTrainingCenter from './AdminAiTrainingCenter';
@@ -57,6 +60,7 @@ const TABS = [
   { key: 'settings', label: 'Settings', area: null }, // super admin only
   { key: 'roles', label: 'Roles & Permissions', area: null }, // super admin only
   { key: 'chat', label: '🛰️ Command Center', area: 'chat' },
+  { key: 'agentGroups', label: '🧭 Agent Groups & Sectors', area: 'chat' },
   { key: 'ai', label: '🤖 AI Command Center', area: 'ai' },
   { key: 'aiTraining', label: '🎓 AI Training Center', area: 'ai' },
   { key: 'settingsCenter', label: '⚙️ Settings Center', area: null }, // super admin only
@@ -107,6 +111,7 @@ function visibleTabs(adminRole) {
 export default function AdminPanel() {
   const [user, setUser] = useState(null);
   const [checked, setChecked] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     client.get('/auth/me').then(({ data }) => setUser(data.user)).finally(() => setChecked(true));
@@ -138,7 +143,8 @@ export default function AdminPanel() {
           {active === 'securityOps' && <SecurityOperationsDashboard />}
           {active === 'settings' && <AdminSettingsPanel />}
           {active === 'roles' && <AdminRolesPanel />}
-          {active === 'chat' && <JedidaCommandCenter />}
+          {active === 'chat' && (isMobile ? <MobileAgentConsole /> : <JedidaCommandCenter />)}
+          {active === 'agentGroups' && <AgentGroupsPanel />}
           {active === 'ai' && <AICommandCenter />}
           {active === 'aiTraining' && <AdminAiTrainingCenter />}
           {active === 'settingsCenter' && <AdminSettingsCenter />}

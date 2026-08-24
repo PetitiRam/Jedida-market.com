@@ -32,6 +32,7 @@ const TAB_META = {
   affiliates: { icon: 'share', group: 'Finance' },
   ads: { icon: 'sparkle', group: 'Marketing' },
   chat: { icon: 'message', group: 'AI & Support' },
+  agentGroups: { icon: 'grid', group: 'AI & Support' },
   chatBridge: { icon: 'message', group: 'AI & Support' },
   ai: { icon: 'sparkle', group: 'AI & Support' },
   aiTraining: { icon: 'sparkle', group: 'AI & Support' },
