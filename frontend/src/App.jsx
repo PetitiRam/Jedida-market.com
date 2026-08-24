@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import PetitiStyleInjector from './components/PetitiStyleInjector';
+import AutoScrollRails from './components/AutoScrollRails';
 import FloatingChatButton from './components/FloatingChatButton';
 import JedidaAiWidget from './components/ai-assistant/JedidaAiWidget';
 import Footer from './components/Footer';
@@ -102,6 +103,7 @@ export default function App() {
       <SessionGuard />
       <OfflineGate />                                                {/* ← added */}
       <PetitiStyleInjector />
+      <AutoScrollRails />
       <RoutedContent>
       <PageTransition>
       <Routes>
