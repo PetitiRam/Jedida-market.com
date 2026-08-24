@@ -484,10 +484,11 @@ export default function JedidaAiWidget() {
         type="button"
         className="jai-launcher"
         onClick={() => setOpen(true)}
-        aria-label="Open Jedida AI"
+        aria-label="Open Jedida AI Assistant"
       >
         <span className="jai-orb jai-orb-sm" />
-        <span>Ask Jedida AI anything</span>
+        <span className="jai-launcher-label-full">Ask Jedida AI anything</span>
+        <span className="jai-launcher-label-short">AI</span>
       </button>
     );
   }

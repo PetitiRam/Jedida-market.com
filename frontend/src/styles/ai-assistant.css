@@ -29,11 +29,18 @@
   50% { transform: scale(1.12); opacity: 1; }
 }
 
-/* ---------- Launcher (collapsed pill) ---------- */
+/* ---------- Launcher (collapsed pill on desktop, circular "AI" button
+   on mobile — spec requires a plainly-labeled "AI" entry point on phones,
+   not a decorative icon, positioned so it clears the bottom nav and never
+   overlaps the separate chat launcher (FloatingChatButton, pinned right).
+   `--chat-button-bottom` is the shared offset var other floating chrome
+   already uses (see native-shell.css / jd-shell.css) so this automatically
+   lifts above the native tab bar or a dashboard's mobile bottom nav
+   whenever either is present. ---------- */
 .jai-launcher {
   position: fixed;
   left: 20px;
-  bottom: 24px;
+  bottom: var(--chat-button-bottom, 24px);
   z-index: 850;
   display: flex;
   align-items: center;
@@ -48,9 +55,10 @@
   font-size: 0.88rem;
   color: var(--text-primary, var(--ink));
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, bottom 0.2s ease;
 }
 .jai-launcher:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(16, 36, 26, 0.24); }
+.jai-launcher-label-short { display: none; }
 
 /* ---------- Panel ---------- */
 .jai-panel {
@@ -82,7 +90,28 @@
     width: 100vw; height: 100dvh;
     border-radius: 0;
   }
-  .jai-launcher { left: 12px; right: 12px; width: calc(100vw - 24px); justify-content: center; bottom: 16px; }
+  /* Circular, centered, one-hand reachable — deliberately not pinned to a
+     corner so it can't sit under either thumb's natural resting edge, and
+     never collides with the separate chat launcher (right-pinned). */
+  .jai-launcher {
+    left: 50%; right: auto;
+    transform: translateX(-50%);
+    bottom: var(--chat-button-bottom, 20px);
+    width: 60px; height: 60px;
+    padding: 0;
+    border-radius: 50%;
+    justify-content: center;
+    box-shadow: 0 10px 28px rgba(16, 36, 26, 0.32);
+  }
+  .jai-launcher:hover { transform: translateX(-50%) translateY(-2px); }
+  .jai-launcher .jai-orb,
+  .jai-launcher-label-full { display: none; }
+  .jai-launcher-label-short {
+    display: block;
+    font-weight: 800;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+  }
   .jai-hide-mobile { display: none !important; }
 }
 

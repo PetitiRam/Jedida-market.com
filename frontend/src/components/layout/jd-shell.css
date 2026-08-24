@@ -172,4 +172,12 @@
   .jd-topbar-search { display: none; }
   .jd-topbar-title { font-size: 1.1rem; }
   .jd-dashboard-content { padding-bottom: calc(var(--jd-bottomnav-h) + 16px) !important; }
+
+  /* Lift the global floating chat/AI launchers (mounted at the app root,
+     outside this shell) above the dashboard's own mobile bottom nav so
+     they don't sit underneath it. Mirrors the same --chat-button-bottom
+     convention native-shell.css uses for the native app's tab bar. */
+  body:has(.jd-bottomnav) {
+    --chat-button-bottom: calc(var(--jd-bottomnav-h) + 16px);
+  }
 }
