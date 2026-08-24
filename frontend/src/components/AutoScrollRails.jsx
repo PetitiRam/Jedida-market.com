@@ -1,29 +1,46 @@
 import { useEffect } from 'react';
 
 // Makes every horizontally-scrollable rail on the platform auto-advance on
-// its own, instead of relying purely on the user to swipe/drag — covers
-// the ad/promo strips (.jd-promo-row, .jd-bottom-banners) as well as every
-// product/shop card rail (.product-grid-v2.is-rail, .shop-grid-v2.is-rail,
-// .jd-flash-row, .trending-row). Mounted once near the app root (see
-// App.jsx, next to PetitiStyleInjector) so it applies platform-wide without
-// every page/component needing its own timer.
+// its own, instead of relying purely on the user to swipe/drag. Mounted
+// once near the app root (see App.jsx, next to PetitiStyleInjector) so it
+// applies platform-wide without every page/component needing its own timer.
 //
 // Deliberately generic: it targets the existing rail *classes* rather than
-// specific pages, so any new section built with the established
-// ResponsiveProductRail-style pattern gets this for free. On breakpoints
-// where a rail renders as a non-scrolling grid (e.g. desktop), scrollWidth
-// equals clientWidth and each tick is a harmless no-op.
-const RAIL_SELECTOR = [
-  '.product-grid-v2.is-rail',
-  '.shop-grid-v2.is-rail',
-  '.jd-promo-row',
-  '.jd-flash-row',
-  '.jd-bottom-banners',
-  '.trending-row',
-].join(', ');
+// specific pages, so any new section built with the established rail
+// pattern gets this for free. On breakpoints where a rail renders as a
+// non-scrolling grid (e.g. desktop product/shop grids), scrollWidth equals
+// clientWidth and each tick is a harmless no-op.
+//
+// Rails are grouped with their own pace: ad/promo strips carry marketing
+// copy people need a beat to read, so they move slower than plain card
+// rails. Adjust GROUPS below to add a section or retune speed — nothing
+// else in the app needs to change.
+const GROUPS = [
+  {
+    // Ad / promo strips — slower, more reading time.
+    selector: '.jd-promo-row, .jd-bottom-banners',
+    stepIntervalMs: 5000,
+  },
+  {
+    // Product & shop card rails.
+    selector: [
+      '.product-grid-v2.is-rail',
+      '.shop-grid-v2.is-rail',
+      '.jd-flash-row',
+      '.trending-row',
+      '.related-products-row',
+    ].join(', '),
+    stepIntervalMs: 3200,
+  },
+  {
+    // Lighter browse rails (category tiles etc.) — quick, icon-sized steps.
+    selector: '.category-scroll',
+    stepIntervalMs: 3800,
+  },
+];
 
-const STEP_INTERVAL_MS = 3200;
-const RESUME_DELAY_MS = 4500;
+const RESUME_DELAY_MS = 4500; // after touch/drag/keyboard interaction
+const HOVER_RESUME_DELAY_MS = 1200; // after the mouse simply leaves (desktop)
 const RESCAN_DEBOUNCE_MS = 400;
 const EDGE_EPSILON = 3;
 
@@ -38,7 +55,7 @@ function stepFor(el) {
   return el.clientWidth * 0.85;
 }
 
-function attach(el, observer) {
+function attach(el, stepIntervalMs, trackedNodes) {
   if (el.dataset.jdAutoScroll) return;
   el.dataset.jdAutoScroll = '1';
 
@@ -47,11 +64,12 @@ function attach(el, observer) {
   let resumeTimer = null;
   let tickTimer = null;
 
-  const pause = () => {
+  const pauseFor = (delayMs) => {
     paused = true;
     if (resumeTimer) clearTimeout(resumeTimer);
-    resumeTimer = setTimeout(() => { paused = false; }, RESUME_DELAY_MS);
+    resumeTimer = setTimeout(() => { paused = false; }, delayMs);
   };
+  const pause = () => pauseFor(RESUME_DELAY_MS);
 
   const tick = () => {
     if (paused || !visible) return;
@@ -66,11 +84,19 @@ function attach(el, observer) {
   };
 
   // Any sign of the user taking manual control pauses autoplay for a while
-  // rather than fighting them mid-swipe.
+  // rather than fighting them mid-swipe/mid-read.
   ['pointerdown', 'touchstart', 'wheel'].forEach((evt) => {
     el.addEventListener(evt, pause, { passive: true });
   });
   el.addEventListener('focusin', pause);
+
+  // Desktop: pause the instant the cursor is over the rail (mouse users
+  // don't "let go" the way touch users do), resume shortly after it leaves.
+  el.addEventListener('mouseenter', () => {
+    paused = true;
+    if (resumeTimer) clearTimeout(resumeTimer);
+  });
+  el.addEventListener('mouseleave', () => pauseFor(HOVER_RESUME_DELAY_MS));
 
   const io = new IntersectionObserver(
     ([entry]) => { visible = entry.isIntersecting; },
@@ -78,7 +104,7 @@ function attach(el, observer) {
   );
   io.observe(el);
 
-  tickTimer = setInterval(tick, STEP_INTERVAL_MS);
+  tickTimer = setInterval(tick, stepIntervalMs);
 
   el._jdAutoScrollCleanup = () => {
     clearInterval(tickTimer);
@@ -86,7 +112,7 @@ function attach(el, observer) {
     io.disconnect();
   };
 
-  if (observer) observer.trackedNodes?.add(el);
+  trackedNodes.add(el);
 }
 
 export default function AutoScrollRails() {
@@ -95,10 +121,11 @@ export default function AutoScrollRails() {
     if (reduceMotion) return undefined;
 
     const trackedNodes = new Set();
-    const pseudoObserver = { trackedNodes };
 
     const scan = () => {
-      document.querySelectorAll(RAIL_SELECTOR).forEach((el) => attach(el, pseudoObserver));
+      GROUPS.forEach(({ selector, stepIntervalMs }) => {
+        document.querySelectorAll(selector).forEach((el) => attach(el, stepIntervalMs, trackedNodes));
+      });
     };
 
     scan();

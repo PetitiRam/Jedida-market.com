@@ -34,6 +34,7 @@ export default function RelatedProductsCarousel({ category, currentProductId }) 
     <div style={{ marginTop: 32 }}>
       <h3 style={{ marginBottom: 16 }}>Related Products</h3>
       <div
+        className="related-products-row"
         style={{
           display: 'flex',
           gap: 14,
