@@ -27,6 +27,7 @@ const TAB_META = {
   quotes: { icon: 'document', group: 'Orders & Fulfilment' },
   disputes: { icon: 'alertCircle', group: 'Trust & Safety' },
   fraud: { icon: 'shield', group: 'Trust & Safety' },
+  wanted: { icon: 'message', group: 'Trust & Safety' },
   withdrawals: { icon: 'bank', group: 'Finance' },
   payments: { icon: 'card', group: 'Finance' },
   affiliates: { icon: 'share', group: 'Finance' },

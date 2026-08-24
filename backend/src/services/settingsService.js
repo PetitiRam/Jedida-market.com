@@ -135,6 +135,19 @@ const SECTION_COLUMNS = {
       'orderVelocityMultiplier', 'fastCompletionMinutes', 'qualityDeclineTrustDrop',
       'qualityDeclineFraudRiskThreshold', 'signalCooldownDays'
     ]
+  },
+  // Jedida Wanted (schema_phase92, brief §43/§44) — per-capability kill
+  // switches, checked live in wantedController.js. Only flags for
+  // capabilities that are actually built are listed here — see the
+  // phase92 migration header for which brief-§43 items were left out
+  // and why.
+  wanted: {
+    column: 'wanted_settings',
+    fields: [
+      'wantedPostsEnabled', 'publicFeedEnabled', 'likesEnabled', 'repliesEnabled',
+      'offersEnabled', 'negotiationEnabled', 'privateRequestsEnabled',
+      'notificationsEnabled', 'contactProtectionEnabled'
+    ]
   }
 };
 

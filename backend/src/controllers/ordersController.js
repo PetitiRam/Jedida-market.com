@@ -214,10 +214,15 @@ export async function createOrder(req, res) {
     let candidateOrderId = null;
     let charge = null;
     if (!cod) {
+      // Wanted-bridge products (products.wanted_quote_id — see phase87) stay
+      // 'draft' so they never surface in browse/home/search, but they ARE
+      // orderable: they only exist because a buyer already accepted a
+      // locked, server-computed quote through Jedida Wanted. Nothing else
+      // with status='draft' qualifies.
       const preview = await query(
         `SELECT p.price, p.currency, p.quantity_available, p.minimum_order_quantity, s.id AS shop_id, u.primary_role AS shop_owner_role
          FROM products p JOIN shops s ON s.id = p.shop_id JOIN users u ON u.id = s.owner_id
-         WHERE p.id = $1 AND p.status = 'active'`,
+         WHERE p.id = $1 AND (p.status = 'active' OR p.wanted_quote_id IS NOT NULL)`,
         [productId]
       );
       const previewProduct = preview.rows[0];
@@ -277,10 +282,12 @@ export async function createOrder(req, res) {
       order = await withTransaction(async (client) => {
         // Row lock held for the stock check + order insert so two concurrent
         // purchases of the last unit of the same product can't both pass.
+        // See the wanted-bridge note above the preview query — same
+        // narrow allowance applies here.
         const productResult = await client.query(
           `SELECT p.*, s.id AS shop_id, u.primary_role AS shop_owner_role
            FROM products p JOIN shops s ON s.id = p.shop_id JOIN users u ON u.id = s.owner_id
-           WHERE p.id = $1 AND p.status = 'active' FOR UPDATE OF p`,
+           WHERE p.id = $1 AND (p.status = 'active' OR p.wanted_quote_id IS NOT NULL) FOR UPDATE OF p`,
           [productId]
         );
         const product = productResult.rows[0];

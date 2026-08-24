@@ -40,7 +40,7 @@ export function optionalAuth(req, res, next) {
 export const ADMIN_ROLE_PERMISSIONS = {
   super_admin: ['*'],
   staff: ['orders', 'delivery', 'products'],
-  moderator: ['products', 'shops', 'users'],
+  moderator: ['products', 'shops', 'users', 'wanted'],
   support: ['chat', 'users'],
   finance: ['wallets', 'withdrawals', 'payments', 'orders', 'affiliates', 'disputes', 'ai_handler'],
   marketing: ['ads', 'campaigns', 'marketplace'],
@@ -54,7 +54,7 @@ export const ADMIN_ROLE_PERMISSIONS = {
   // Admin Security Agent — handles fraud/account-abuse/policy-violation
   // escalations, alongside PETITI's automated moderation. Stage 3 adds the
   // formal disputes/fraud-flags/security-log areas to this same role.
-  security_agent: ['chat', 'users', 'products', 'disputes', 'fraud', 'security'],
+  security_agent: ['chat', 'users', 'products', 'disputes', 'fraud', 'security', 'wanted'],
 };
 
 // Every functional area a given admin sub-role's permissions cover.

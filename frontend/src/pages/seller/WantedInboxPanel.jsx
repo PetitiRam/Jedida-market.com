@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import * as wantedApi from '../../api/wantedApi';
+import WantedNegotiationThread from '../../components/WantedNegotiationThread';
 
 const MATCH_STATUS_LABELS = {
   invited: 'New — respond or quote',
@@ -66,6 +67,7 @@ export default function WantedInboxPanel() {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [quotingId, setQuotingId] = useState(null);
+  const [negotiatingQuoteId, setNegotiatingQuoteId] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -130,6 +132,16 @@ export default function WantedInboxPanel() {
           )}
 
           {quotingId === m.id && <QuoteForm match={m} onDone={() => { setQuotingId(null); load(); }} />}
+
+          {/* Once quoted, negotiate on that Offer instead of re-quoting (brief §28) */}
+          {m.quote_id && m.quote_status === 'submitted' && (
+            <div style={{ marginTop: 8 }}>
+              <button className="btn-link" onClick={() => setNegotiatingQuoteId(negotiatingQuoteId === m.quote_id ? null : m.quote_id)}>
+                {negotiatingQuoteId === m.quote_id ? 'Hide negotiation' : `Negotiate (current offer: ${m.currency} ${m.quote_unit_price}/unit)`}
+              </button>
+              {negotiatingQuoteId === m.quote_id && <WantedNegotiationThread quoteId={m.quote_id} />}
+            </div>
+          )}
         </div>
       ))}
     </div>

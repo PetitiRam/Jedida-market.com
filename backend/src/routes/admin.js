@@ -22,6 +22,7 @@ import {
 import { adminListPosts, adminRemovePost, adminRestorePost } from '../controllers/shopFeedController.js';
 import { getAdminGrowthOverview } from '../controllers/growthController.js';
 import { listWithdrawals, reviewWithdrawal } from '../controllers/walletsController.js';
+import { adminListWantedPosts, adminRemoveWantedPost, adminRestoreWantedPost, adminListWantedSecurityEvents } from '../controllers/wantedController.js';
 import { requireAuth, requireAdmin, requireSuperAdmin, requirePermission } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -104,6 +105,14 @@ router.patch('/shop-feed/posts/:postId/restore', requirePermission('shops'), adm
 // Growth Benefits (schema_phase62) — Growth Hub usage overview: verified
 // shop count, recent discount campaigns / promo posts, top-trust shops.
 router.get('/growth/overview', requirePermission('shops'), getAdminGrowthOverview);
+
+// Jedida Wanted moderation (schema_phase91, brief §36) — posts +
+// the existing blocked-contact-sharing/off-platform audit trail
+// (phase77/83/84/86's logWantedAction, read here, not duplicated).
+router.get('/wanted/posts', requirePermission('wanted'), adminListWantedPosts);
+router.patch('/wanted/posts/:id/remove', requirePermission('wanted'), adminRemoveWantedPost);
+router.patch('/wanted/posts/:id/restore', requirePermission('wanted'), adminRestoreWantedPost);
+router.get('/wanted/security-events', requirePermission('wanted'), adminListWantedSecurityEvents);
 
 // Shops & products (unrelated to the upgrade lifecycle — separate approval queue)
 router.get('/shops/pending', requirePermission('shops'), listPendingShops);

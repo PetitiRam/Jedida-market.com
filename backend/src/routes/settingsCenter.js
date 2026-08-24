@@ -14,7 +14,7 @@ router.use(requireAuth, requireAdmin);
 // here (security, maintenance, user, sellerUpgrade, commission, delivery,
 // shop, product) are platform-wide/sensitive enough to stay super-admin-only
 // by default, rather than guessing a broader mapping that isn't ours to decide.
-const SECTION_AREA = { payment: 'withdrawals', ads: 'ads', ai: 'ai' };
+const SECTION_AREA = { payment: 'withdrawals', ads: 'ads', ai: 'ai', wanted: 'wanted' };
 function requireSectionAccess(req, res, next) {
   const area = SECTION_AREA[req.params.section];
   if (area) return requirePermission(area)(req, res, next);

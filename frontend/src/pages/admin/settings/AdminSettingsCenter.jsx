@@ -12,6 +12,7 @@ import SecuritySettingsTab from './SecuritySettingsTab';
 import LegalSettingsTab from './LegalSettingsTab';
 import AboutBackupTab from './AboutBackupTab';
 import MarketplaceRulesTab from './MarketplaceRulesTab';
+import WantedSettingsTab from './WantedSettingsTab';
 
 const TABS = [
   { key: 'identity', label: 'Platform & Branding' },
@@ -19,6 +20,7 @@ const TABS = [
   { key: 'payment', label: 'Payment' },
   { key: 'commission', label: 'Commissions' },
   { key: 'marketplaceRules', label: 'Marketplace Rules' },
+  { key: 'wanted', label: 'Jedida Wanted' },
   { key: 'affiliate', label: 'Affiliate Program' },
   { key: 'shopProduct', label: 'Shop & Product' },
   { key: 'user', label: 'Users' },
@@ -43,6 +45,7 @@ export default function AdminSettingsCenter() {
             case 'payment': return <PaymentSettingsTab />;
             case 'commission': return <CommissionSettingsTab />;
             case 'marketplaceRules': return <MarketplaceRulesTab />;
+            case 'wanted': return <WantedSettingsTab />;
             case 'affiliate': return <AffiliateSettingsTab />;
             case 'shopProduct': return <ShopProductSettingsTab />;
             case 'user': return <UserSettingsTab />;

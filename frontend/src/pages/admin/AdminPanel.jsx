@@ -37,6 +37,7 @@ import AdminAiTrainingCenter from './AdminAiTrainingCenter';
 import AdminDashboard from './AdminDashboard';
 import AdminDisputesPanel from './AdminDisputesPanel';
 import AdminFraudPanel from './AdminFraudPanel';
+import AdminWantedPanel from './AdminWantedPanel';
 import AdminVerificationLevelsPanel from './AdminVerificationLevelsPanel';
 import AdminApiCentrePanel from './AdminApiCentrePanel';
 import AdminKycReviewPanel from './AdminKycReviewPanel';
@@ -76,6 +77,7 @@ const TABS = [
   { key: 'affiliates', label: '🔗 Affiliate Program', area: 'affiliates' },
   { key: 'disputes', label: '⚖️ Disputes', area: 'disputes' },
   { key: 'fraud', label: '🚨 Fraud Signals', area: 'fraud' },
+  { key: 'wanted', label: '📣 Jedida Wanted', area: 'wanted' },
   { key: 'verification', label: '✅ Verification Levels', area: 'upgrades' },
   { key: 'verifiedShops', label: '🛡️ Verified Shops', area: 'shops' },
   { key: 'kycReview', label: '🪪 KYC Verification Center', area: 'upgrades' },
@@ -91,7 +93,7 @@ const TABS = [
 const ROLE_AREAS = {
   super_admin: ['*'],
   staff: ['orders', 'delivery', 'products'],
-  moderator: ['products', 'shops', 'users'],
+  moderator: ['products', 'shops', 'users', 'wanted'],
   support: ['chat', 'users'],
   finance: ['wallets', 'withdrawals', 'payments', 'orders', 'affiliates', 'disputes'],
   marketing: ['ads', 'campaigns', 'marketplace'],
@@ -99,7 +101,7 @@ const ROLE_AREAS = {
   ai_manager: ['ai'],
   chat_assistant: ['chat'],
   business_rep: ['chat', 'partners', 'shops'],
-  security_agent: ['chat', 'users', 'products', 'disputes', 'fraud', 'security'],
+  security_agent: ['chat', 'users', 'products', 'disputes', 'fraud', 'security', 'wanted'],
 };
 
 function visibleTabs(adminRole) {
@@ -157,6 +159,7 @@ export default function AdminPanel() {
           {active === 'affiliates' && <AdminAffiliatePanel />}
           {active === 'disputes' && <AdminDisputesPanel />}
           {active === 'fraud' && <AdminFraudPanel />}
+          {active === 'wanted' && <AdminWantedPanel />}
           {active === 'verification' && <AdminVerificationLevelsPanel />}
           {active === 'verifiedShops' && <AdminVerifiedShopsPanel />}
           {active === 'kycReview' && <AdminKycReviewPanel />}
