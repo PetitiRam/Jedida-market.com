@@ -49,15 +49,16 @@ export const ROLE_NAV = {
     { key: 'analytics', label: 'Analytics', icon: 'analytics' },
     { key: 'shopSettings', label: 'Settings', icon: 'settings' },
   ],
+  // Delivery's web dashboard is intentionally the minimal 3-panel version
+  // today (DeliveryDashboard.jsx) — keep this list matching exactly what
+  // exists so the sidebar/bottom nav never points at an empty panel. The
+  // richer field-ops build (routes, earnings, performance) lives in the
+  // separate native DriverDashboard for now; expand this list if/when that
+  // functionality moves into the shared web dashboard too.
   delivery: [
-    { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { key: 'deliveries', label: 'Deliveries', icon: 'deliveries' },
-    { key: 'routes', label: 'Routes', icon: 'routes' },
-    { key: 'earnings', label: 'Earnings', icon: 'earnings' },
-    { key: 'performance', label: 'Performance', icon: 'performance' },
-    { key: 'chat', label: 'Messages', icon: 'messages' },
-    { key: 'profile', label: 'Profile', icon: 'profile' },
-    { key: 'settings', label: 'Settings', icon: 'settings' },
+    { key: 'orders', label: 'Assigned Deliveries', icon: 'deliveries' },
+    { key: 'wallet', label: 'Wallet', icon: 'wallet' },
+    { key: 'chat', label: 'Chat with Admin', icon: 'messages' },
   ],
 };
 
@@ -68,7 +69,7 @@ export const ROLE_BOTTOM_NAV = {
   manufacturer: ['shop', 'production', 'orders', 'inventory'],
   supplier: ['shop', 'stock', 'purchaseOrders', 'shipments'],
   dropshipper: ['shop', 'dropshipProducts', 'orders', 'dropshipSales'],
-  delivery: ['dashboard', 'deliveries', 'routes', 'earnings'],
+  delivery: ['orders', 'wallet', 'chat'],
 };
 
 export const ROLE_LABEL = {

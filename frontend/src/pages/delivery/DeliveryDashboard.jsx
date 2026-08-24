@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import client from '../../api/client';
-import Logo from '../../components/Logo';
-import TabBar from '../../components/TabBar';
+import JdDashboardShell from '../../components/layout/JdDashboardShell';
 import EmbeddedSupportChat from '../../components/chat/EmbeddedSupportChat';
 import WalletKycPanel from '../../components/WalletKycPanel';
 
@@ -44,26 +43,27 @@ function DeliveryOrdersPanel() {
   );
 }
 
-const TABS = [
-  { key: 'orders', label: 'Assigned Deliveries' },
-  { key: 'wallet', label: 'Wallet' },
-  { key: 'chat', label: 'Chat with Admin' }
-];
-
 export default function DeliveryDashboard() {
+  const [user, setUser] = useState(null);
+  const [tab, setTab] = useState('orders');
+
+  useEffect(() => {
+    client.get('/auth/me').then(({ data }) => setUser(data.user)).catch(() => {});
+  }, []);
+
   return (
-    <div>
-      <header className="dash-header"><Logo size={32} /></header>
-      <div className="dash-body">
-        <h2>Delivery Dashboard</h2>
-        <TabBar tabs={TABS} initial="orders">
-          {(active) => {
-            if (active === 'orders') return <DeliveryOrdersPanel />;
-if (active === 'wallet') return <WalletKycPanel />;
-return <EmbeddedSupportChat />;
-          }}
-        </TabBar>
-      </div>
-    </div>
+    <JdDashboardShell
+      role="delivery"
+      activeTab={tab}
+      onSelect={setTab}
+      title="Delivery Dashboard"
+      subtitle="Your assigned deliveries, wallet and support chat."
+      userName={user?.name}
+      userRoleLabel="Delivery Partner"
+    >
+      {tab === 'orders' && <DeliveryOrdersPanel />}
+      {tab === 'wallet' && <WalletKycPanel />}
+      {tab === 'chat' && <EmbeddedSupportChat />}
+    </JdDashboardShell>
   );
 }

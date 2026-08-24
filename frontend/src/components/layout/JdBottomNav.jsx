@@ -26,17 +26,19 @@ export default function JdBottomNav({ role, activeTab, onSelect }) {
             <span>{item.label}</span>
           </button>
         ))}
-        <button
-          type="button"
-          className={`jd-bottomnav-item ${moreOpen ? 'active' : ''}`}
-          onClick={() => setMoreOpen(true)}
-        >
-          <JdIcon name="more" size={20} />
-          <span>More</span>
-        </button>
+        {overflowItems.length > 0 && (
+          <button
+            type="button"
+            className={`jd-bottomnav-item ${moreOpen ? 'active' : ''}`}
+            onClick={() => setMoreOpen(true)}
+          >
+            <JdIcon name="more" size={20} />
+            <span>More</span>
+          </button>
+        )}
       </nav>
 
-      {moreOpen && (
+      {moreOpen && overflowItems.length > 0 && (
         <div className="jd-more-sheet-backdrop" onClick={() => setMoreOpen(false)}>
           <div className="jd-more-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="jd-more-sheet-handle" />
