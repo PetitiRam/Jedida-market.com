@@ -43,6 +43,7 @@ import fs from 'fs';
 
 import { initChatSocket } from './chat/chatSocket.js';
 import chatV2Routes from './routes/chatV2.js';
+import agentCommsRoutes from './routes/agentComms.js';
 import commerceActionsRoutes from './routes/commerceActions.js';
 import couponsRoutes from './routes/coupons.js';
 import adminPaymentsRoutes from "./routes/adminPaymentsRoutes.js";
@@ -342,6 +343,7 @@ app.use("/api/admin/payments", adminPaymentsRoutes);
 // files left in place, just unreachable now.
 
 app.use('/api/chat-v2', chatV2Routes);
+app.use('/api/agent-comms', agentCommsRoutes);
 app.use('/api', commerceActionsRoutes);
 app.use('/api/coupons', couponsRoutes);
 app.use('/api/home', homeRoutes);

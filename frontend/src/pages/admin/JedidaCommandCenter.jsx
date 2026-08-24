@@ -26,6 +26,18 @@ function roleMeta(role) {
   return ROLE_META[role] || { label: role || 'User', tone: 'slate' };
 }
 
+const PRIORITY_META = {
+  urgent: { label: 'Urgent', tone: 'rose' },
+  high: { label: 'High', tone: 'amber' },
+  normal: { label: 'Normal', tone: 'slate' },
+  low: { label: 'Low', tone: 'sky' },
+};
+function priorityMeta(p) {
+  return PRIORITY_META[p] || PRIORITY_META.normal;
+}
+
+const PRESENCE_COLOR = { online: 'var(--jcc-lime)', away: 'var(--jcc-amber)', busy: 'var(--jcc-rose)', offline: 'var(--jcc-text-faint)' };
+
 function initials(name) {
   if (!name) return '?';
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -75,7 +87,7 @@ export default function JedidaCommandCenter() {
   const [riskUsers, setRiskUsers] = useState([]);
   const [reports, setReports] = useState([]);
 
-  const [nav, setNav] = useState('inbox'); // inbox | escalations | risk | reports
+  const [nav, setNav] = useState('inbox'); // inbox | escalations | risk | reports | unassigned | agents | groups | broadcast
   const [roleFilter, setRoleFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [text, setText] = useState('');
@@ -85,6 +97,30 @@ export default function JedidaCommandCenter() {
   const [escalateReason, setEscalateReason] = useState('');
   const [aiOpen, setAiOpen] = useState(false);
   const [toast, setToast] = useState(null);
+
+  // ---- Agent Communication Center state (additive — see agentCommsService.js) ----
+  const [routing, setRouting] = useState(null); // agent-comms detail for selectedConv: assigned agent/group/sector/priority
+  const [notes, setNotes] = useState([]);
+  const [composerMode, setComposerMode] = useState('reply'); // 'reply' | 'note'
+  const [noteText, setNoteText] = useState('');
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferTo, setTransferTo] = useState({ type: 'group', id: '' });
+  const [transferReason, setTransferReason] = useState('');
+
+  const [sectors, setSectors] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [agents, setAgents] = useState([]);
+  const [unassigned, setUnassigned] = useState([]);
+  const [unassignedLoading, setUnassignedLoading] = useState(false);
+
+  const [internalConversations, setInternalConversations] = useState([]);
+  const [activeInternalId, setActiveInternalId] = useState(null);
+  const [internalMessages, setInternalMessages] = useState([]);
+  const [internalText, setInternalText] = useState('');
+
+  const [broadcastForm, setBroadcastForm] = useState({ audienceType: 'group', audienceGroupId: '', audienceSectorId: '', message: '' });
+  const [broadcasts, setBroadcasts] = useState([]);
+  const [broadcastSending, setBroadcastSending] = useState(false);
 
   const scrollRef = useRef(null);
   const toastTimer = useRef(null);
@@ -103,7 +139,30 @@ export default function JedidaCommandCenter() {
     loadEscalations();
     loadRiskUsers();
     loadReports();
+    loadAgentCommsMeta();
+    loadUnassigned();
+    loadInternalConversations();
+    loadBroadcasts();
   }, []);
+
+  function loadAgentCommsMeta() {
+    client.get('/agent-comms/sectors').then(({ data }) => setSectors(data.sectors || [])).catch(() => {});
+    client.get('/agent-comms/groups').then(({ data }) => setGroups(data.groups || [])).catch(() => {});
+    client.get('/agent-comms/agents').then(({ data }) => setAgents(data.agents || [])).catch(() => {});
+  }
+  function loadUnassigned() {
+    setUnassignedLoading(true);
+    client.get('/agent-comms/inbox', { params: { unassigned: true } })
+      .then(({ data }) => setUnassigned(data.conversations || []))
+      .catch(() => {})
+      .finally(() => setUnassignedLoading(false));
+  }
+  function loadInternalConversations() {
+    client.get('/agent-comms/internal/conversations').then(({ data }) => setInternalConversations(data.conversations || [])).catch(() => {});
+  }
+  function loadBroadcasts() {
+    client.get('/agent-comms/broadcasts').then(({ data }) => setBroadcasts(data.broadcasts || [])).catch(() => {});
+  }
 
   function loadConversations() {
     setConvLoading(true);
@@ -132,6 +191,9 @@ export default function JedidaCommandCenter() {
     setMsgLoading(true);
     setParticipant(null);
     setBizSummary(null);
+    setRouting(null);
+    setNotes([]);
+    setComposerMode('reply');
     Promise.all([
       client.get(`/chat-v2/${selectedId}/messages`),
       client.get(`/chat-v2/${selectedId}/participant`),
@@ -144,7 +206,22 @@ export default function JedidaCommandCenter() {
       })
       .catch(showError)
       .finally(() => setMsgLoading(false));
+
+    // Routing/notes are additive — a conversation with no agent-comms
+    // history yet (e.g. never assigned) is a normal, expected state, so
+    // failures here are swallowed rather than surfaced as an error toast.
+    client.get(`/agent-comms/conversations/${selectedId}`).then(({ data }) => setRouting(data.conversation)).catch(() => {});
+    client.get(`/agent-comms/conversations/${selectedId}/notes`).then(({ data }) => setNotes(data.notes || [])).catch(() => {});
   }, [selectedId]);
+
+  /* ---- internal chat thread load ---- */
+  useEffect(() => {
+    if (!activeInternalId) return;
+    client.get(`/agent-comms/internal/conversations/${activeInternalId}/messages`)
+      .then(({ data }) => setInternalMessages(data.messages || []))
+      .catch(showError);
+    client.post(`/agent-comms/internal/conversations/${activeInternalId}/read`).catch(() => {});
+  }, [activeInternalId]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -234,9 +311,96 @@ export default function JedidaCommandCenter() {
     } catch (err) { showError(err); }
   }
 
+  /* ---- agent comms actions ---- */
+  async function claimConversation(conversationId) {
+    try {
+      const { data } = await client.post(`/agent-comms/conversations/${conversationId}/claim`);
+      showToast('Chat claimed — it\u2019s yours now');
+      setUnassigned((prev) => prev.filter((c) => c.id !== conversationId));
+      if (conversationId === selectedId) setRouting(data.conversation);
+      loadConversations();
+    } catch (err) { showError(err); }
+  }
+
+  async function submitTransfer() {
+    if (!selectedId || !transferTo.id) return;
+    try {
+      const payload = {
+        transferType: transferTo.type === 'agent' ? 'agent' : 'group',
+        reason: transferReason || undefined,
+        ...(transferTo.type === 'agent' ? { toAgentId: transferTo.id } : { toGroupId: transferTo.id }),
+      };
+      const { data } = await client.post(`/agent-comms/conversations/${selectedId}/transfer`, payload);
+      setRouting(data.conversation);
+      showToast('Conversation transferred');
+      setTransferOpen(false);
+      setTransferReason('');
+    } catch (err) { showError(err); }
+  }
+
+  async function changePriority(priority) {
+    if (!selectedId) return;
+    try {
+      const { data } = await client.post(`/agent-comms/conversations/${selectedId}/priority`, { priority });
+      setRouting(data.conversation);
+    } catch (err) { showError(err); }
+  }
+
+  async function submitInternalNote() {
+    if (!noteText.trim() || !selectedId) return;
+    try {
+      const { data } = await client.post(`/agent-comms/conversations/${selectedId}/notes`, { body: noteText.trim() });
+      setNotes((prev) => [...prev, data.note]);
+      setNoteText('');
+    } catch (err) { showError(err); }
+  }
+
+  async function openInternalDm(agentId) {
+    try {
+      const { data } = await client.post(`/agent-comms/internal/dm/${agentId}`);
+      setActiveInternalId(data.conversation.id);
+      loadInternalConversations();
+    } catch (err) { showError(err); }
+  }
+
+  async function openInternalGroup(groupId) {
+    try {
+      const { data } = await client.post(`/agent-comms/internal/group/${groupId}`);
+      setActiveInternalId(data.conversation.id);
+      loadInternalConversations();
+    } catch (err) { showError(err); }
+  }
+
+  async function sendInternalMessage() {
+    if (!internalText.trim() || !activeInternalId) return;
+    try {
+      const { data } = await client.post(`/agent-comms/internal/conversations/${activeInternalId}/messages`, { body: internalText.trim() });
+      setInternalMessages((prev) => [...prev, data.message]);
+      setInternalText('');
+      loadInternalConversations();
+    } catch (err) { showError(err); }
+  }
+
+  async function sendBroadcast() {
+    if (!broadcastForm.message.trim()) return;
+    setBroadcastSending(true);
+    try {
+      const { data } = await client.post('/agent-comms/broadcasts', {
+        audienceType: broadcastForm.audienceType,
+        audienceGroupId: broadcastForm.audienceType === 'group' ? broadcastForm.audienceGroupId : undefined,
+        audienceSectorId: broadcastForm.audienceType === 'sector' ? broadcastForm.audienceSectorId : undefined,
+        message: broadcastForm.message.trim(),
+      });
+      showToast(`Broadcast sent to ${data.delivered} of ${data.total} recipients`);
+      setBroadcastForm({ ...broadcastForm, message: '' });
+      loadBroadcasts();
+    } catch (err) { showError(err); } finally { setBroadcastSending(false); }
+  }
+
   /* ---- derived stats (all real) ---- */
   const stats = [
     { icon: '💬', label: 'Open Conversations', value: conversations.length, tone: 'lime' },
+    { icon: '📥', label: 'Unassigned', value: unassigned.length, tone: 'amber' },
     { icon: '🤖', label: 'AI Handling', value: conversations.filter((c) => c.ai_enabled).length, tone: 'sky' },
     { icon: '🚨', label: 'Open Escalations', value: escalations.length, tone: 'rose' },
     { icon: '⚠️', label: 'High-Risk Users', value: riskUsers.length, tone: 'amber' },
@@ -300,6 +464,20 @@ export default function JedidaCommandCenter() {
           </button>
           <button className={`jcc-nav-item ${nav === 'reports' ? 'active' : ''}`} onClick={() => setNav('reports')}>
             🚩 <span>Reports</span> <span className="jcc-nav-badge">{reports.length}</span>
+          </button>
+
+          <div className="jcc-sidebar-label">Agent Center</div>
+          <button className={`jcc-nav-item ${nav === 'unassigned' ? 'active' : ''}`} onClick={() => setNav('unassigned')}>
+            📥 <span>Unassigned</span> <span className="jcc-nav-badge">{unassigned.length}</span>
+          </button>
+          <button className={`jcc-nav-item ${nav === 'groups' ? 'active' : ''}`} onClick={() => setNav('groups')}>
+            🧭 <span>Groups &amp; Sectors</span> <span className="jcc-nav-badge" style={{ background: 'rgba(139,197,63,0.25)', color: 'var(--jcc-lime)' }}>{groups.length}</span>
+          </button>
+          <button className={`jcc-nav-item ${nav === 'agents' ? 'active' : ''}`} onClick={() => setNav('agents')}>
+            👥 <span>Agents</span> <span className="jcc-nav-badge" style={{ background: 'rgba(139,197,63,0.25)', color: 'var(--jcc-lime)' }}>{agents.length}</span>
+          </button>
+          <button className={`jcc-nav-item ${nav === 'broadcast' ? 'active' : ''}`} onClick={() => setNav('broadcast')}>
+            📣 <span>Broadcast</span>
           </button>
 
           {roleOptions.length > 0 && (
@@ -368,14 +546,29 @@ export default function JedidaCommandCenter() {
                       <div className="jcc-avatar">{initials(selectedConv.full_name)}</div>
                       <div>
                         <div style={{ fontWeight: 700, color: '#fff', fontSize: 13.5 }}>{selectedConv.full_name}</div>
-                        <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
                           <Pill tone={roleMeta(selectedConv.primary_role).tone}>{roleMeta(selectedConv.primary_role).label}</Pill>
+                          {routing?.priority && <Pill tone={priorityMeta(routing.priority).tone}>{priorityMeta(routing.priority).label}</Pill>}
+                          {routing?.group_name && <Pill tone="sky">{routing.group_name}</Pill>}
+                          {routing?.assigned_agent_name && <span style={{ fontSize: 11, color: 'var(--jcc-text-dim)' }}>→ {routing.assigned_agent_name}</span>}
                           {participant && <span style={{ fontSize: 11, color: 'var(--jcc-text-dim)' }}>Trust {participant.trustScore}%</span>}
                           {participant?.isOnline && <span style={{ fontSize: 11, color: 'var(--jcc-lime)' }}>● online</span>}
                         </div>
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
+                      {routing && !routing.assigned_agent_id && (
+                        <button className="jcc-ghost-btn on" onClick={() => claimConversation(selectedConv.id)}>✋ Take Chat</button>
+                      )}
+                      <button className="jcc-ghost-btn" onClick={() => setTransferOpen(true)}>⇄ Transfer</button>
+                      <select
+                        className="jcc-ghost-btn"
+                        style={{ appearance: 'none' }}
+                        value={routing?.priority || 'normal'}
+                        onChange={(e) => changePriority(e.target.value)}
+                      >
+                        {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.label} priority</option>)}
+                      </select>
                       <button className={`jcc-ghost-btn ${selectedConv.ai_enabled ? 'on' : ''}`} onClick={toggleAi}>🤖 AI {selectedConv.ai_enabled ? 'On' : 'Off'}</button>
                       <button className={`jcc-ghost-btn ${selectedConv.pinned ? 'on' : ''}`} onClick={togglePin}>📌 {selectedConv.pinned ? 'Pinned' : 'Pin'}</button>
                       <button className="jcc-ghost-btn" onClick={toggleArchive}>{selectedConv.archived ? '📤 Restore' : '🗄 Archive'}</button>
@@ -404,20 +597,51 @@ export default function JedidaCommandCenter() {
                     })}
                   </div>
 
+                  {notes.length > 0 && (
+                    <div style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 90, overflowY: 'auto' }} className="jcc-scroll">
+                      {notes.map((n) => (
+                        <div key={n.id} className="jcc-bubble" style={{ background: 'var(--jcc-amber-dim)', border: '1px solid rgba(224,169,62,0.3)', maxWidth: '100%', fontSize: 12 }}>
+                          <div style={{ fontSize: 10, opacity: 0.75, marginBottom: 2 }}>📝 INTERNAL NOTE · {n.author_name}</div>
+                          {n.body}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="jcc-composer">
-                    <div className="jcc-composer-box">
-                      <textarea
-                        rows={2}
-                        placeholder="Reply as Jedida admin…"
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                      />
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                      <button className={`jcc-chip ${composerMode === 'reply' ? 'active' : ''}`} onClick={() => setComposerMode('reply')}>💬 Reply</button>
+                      <button className={`jcc-chip ${composerMode === 'note' ? 'active' : ''}`} onClick={() => setComposerMode('note')}>📝 Internal Note</button>
+                    </div>
+                    <div className="jcc-composer-box" style={composerMode === 'note' ? { background: 'var(--jcc-amber-dim)', borderColor: 'rgba(224,169,62,0.3)' } : undefined}>
+                      {composerMode === 'reply' ? (
+                        <textarea
+                          rows={2}
+                          placeholder="Reply as Jedida admin…"
+                          value={text}
+                          onChange={(e) => setText(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                        />
+                      ) : (
+                        <textarea
+                          rows={2}
+                          placeholder="Internal note — never visible to the customer…"
+                          value={noteText}
+                          onChange={(e) => setNoteText(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitInternalNote(); } }}
+                        />
+                      )}
                       <div className="jcc-composer-row">
-                        <button className="jcc-ghost-btn" onClick={() => setEscalateOpen(true)}>⤴ Escalate</button>
-                        <button className="jcc-send-btn" disabled={sending || !text.trim()} onClick={sendMessage}>
-                          {sending ? 'Sending…' : '➤ Send'}
-                        </button>
+                        {composerMode === 'reply' && <button className="jcc-ghost-btn" onClick={() => setEscalateOpen(true)}>⤴ Escalate</button>}
+                        {composerMode === 'reply' ? (
+                          <button className="jcc-send-btn" disabled={sending || !text.trim()} onClick={sendMessage}>
+                            {sending ? 'Sending…' : '➤ Send'}
+                          </button>
+                        ) : (
+                          <button className="jcc-send-btn" style={{ background: 'var(--jcc-amber)' }} disabled={!noteText.trim()} onClick={submitInternalNote}>
+                            📝 Add Note
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -586,6 +810,211 @@ export default function JedidaCommandCenter() {
           </div>
         )}
 
+        {/* ---------- unassigned queue ---------- */}
+        {nav === 'unassigned' && (
+          <div className="jcc-list-view jcc-scroll">
+            <div className="jcc-list-head">
+              <div>
+                <div className="jcc-list-title">Unassigned Conversations</div>
+                <div className="jcc-list-sub">Waiting for an agent — claim one to start responding.</div>
+              </div>
+              <button className="jcc-ghost-btn" onClick={loadUnassigned}>↻ Refresh</button>
+            </div>
+            {unassignedLoading && <div className="jcc-empty-hint">Loading…</div>}
+            {!unassignedLoading && unassigned.length === 0 && <div className="jcc-empty-hint">Nothing waiting right now — inbox is clear.</div>}
+            {unassigned.map((c) => (
+              <div className="jcc-list-item" key={c.id}>
+                <div className="jcc-avatar">{initials(c.customer_name)}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, color: '#fff', fontSize: 13 }}>{c.customer_name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--jcc-text-dim)' }}>{c.last_message || 'No messages yet'}</div>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                    <Pill tone={priorityMeta(c.priority).tone}>{priorityMeta(c.priority).label}</Pill>
+                    {c.sector_name && <Pill tone="sky">{c.sector_name}</Pill>}
+                  </div>
+                </div>
+                <button className="jcc-ghost-btn on" onClick={() => claimConversation(c.id)}>✋ Take Chat</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ---------- groups & sectors ---------- */}
+        {nav === 'groups' && (
+          <div className="jcc-list-view jcc-scroll">
+            <div className="jcc-list-head">
+              <div>
+                <div className="jcc-list-title">Groups &amp; Sectors</div>
+                <div className="jcc-list-sub">Admin-configurable teams routed conversations land in.</div>
+              </div>
+            </div>
+            {groups.length === 0 && <div className="jcc-empty-hint">No agent groups created yet.</div>}
+            {groups.map((g) => (
+              <div className="jcc-list-item" key={g.id} style={{ alignItems: 'flex-start' }}>
+                <div className="jcc-list-item-icon" style={{ background: 'var(--jcc-lime-dim)' }}>🧭</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, color: '#fff', fontSize: 13 }}>{g.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--jcc-text-dim)' }}>{g.sector_name || 'No sector'} · {g.member_count} agent{g.member_count === '1' ? '' : 's'}</div>
+                  {g.description && <div style={{ fontSize: 11.5, color: 'var(--jcc-text-faint)', marginTop: 3 }}>{g.description}</div>}
+                </div>
+                <button className="jcc-ghost-btn" onClick={() => openInternalGroup(g.id)}>💬 Team Chat</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ---------- agents directory + internal chat ---------- */}
+        {nav === 'agents' && (
+          <>
+            <div className="jcc-inbox">
+              <div className="jcc-inbox-head">
+                <div className="jcc-inbox-title">Agents</div>
+              </div>
+              <div className="jcc-inbox-list jcc-scroll">
+                {agents.length === 0 && <div className="jcc-empty">No agents found.</div>}
+                {agents.map((a) => (
+                  <button key={a.id} className="jcc-conv" onClick={() => openInternalDm(a.id)}>
+                    <div className="jcc-avatar">
+                      {initials(a.full_name)}
+                      <span className="jcc-avatar-dot" style={{ background: PRESENCE_COLOR[a.presence] || PRESENCE_COLOR.offline }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="jcc-conv-name">{a.full_name}</div>
+                      <div className="jcc-conv-meta"><Pill tone="slate">{a.title || (a.admin_role || 'agent').replace('_', ' ')}</Pill></div>
+                      <div className="jcc-conv-msg">{(a.groups || []).map((g) => g.name).join(', ') || 'No groups'}</div>
+                    </div>
+                  </button>
+                ))}
+                {internalConversations.filter((c) => c.is_group).length > 0 && (
+                  <>
+                    <div className="jcc-sidebar-label" style={{ padding: '10px 14px 4px' }}>Team Rooms</div>
+                    {internalConversations.filter((c) => c.is_group).map((c) => (
+                      <button key={c.id} className={`jcc-conv ${activeInternalId === c.id ? 'active' : ''}`} onClick={() => setActiveInternalId(c.id)}>
+                        <div className="jcc-avatar">🧭</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="jcc-conv-name">{c.display_name}</div>
+                          <div className="jcc-conv-msg">{c.last_message || 'No messages yet'}</div>
+                        </div>
+                        {c.unread_count > 0 && <span className="jcc-nav-badge">{c.unread_count}</span>}
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="jcc-chat">
+              {!activeInternalId && <div className="jcc-chat-empty">Select an agent or team room to start an internal chat — customers never see this.</div>}
+              {activeInternalId && (
+                <>
+                  <div className="jcc-chat-head">
+                    <div style={{ fontWeight: 700, color: '#fff', fontSize: 13.5 }}>🔒 Internal Chat</div>
+                  </div>
+                  <div className="jcc-messages jcc-scroll">
+                    {internalMessages.length === 0 && <div className="jcc-empty">No messages yet.</div>}
+                    {internalMessages.map((m) => (
+                      <div key={m.id} className={`jcc-msg-row ${m.sender_id === admin?.id ? 'mine' : ''}`}>
+                        <div>
+                          <div className={`jcc-bubble ${m.sender_id === admin?.id ? 'mine' : 'theirs'}`}>
+                            {m.sender_id !== admin?.id && <div style={{ fontSize: 10, opacity: 0.75, marginBottom: 3 }}>{m.sender_name}</div>}
+                            {m.body}
+                          </div>
+                          <div className="jcc-msg-time" style={{ textAlign: m.sender_id === admin?.id ? 'right' : 'left' }}>{fmtTime(m.created_at)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="jcc-composer">
+                    <div className="jcc-composer-box">
+                      <textarea
+                        rows={2}
+                        placeholder="Message this agent or team…"
+                        value={internalText}
+                        onChange={(e) => setInternalText(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendInternalMessage(); } }}
+                      />
+                      <div className="jcc-composer-row">
+                        <button className="jcc-send-btn" disabled={!internalText.trim()} onClick={sendInternalMessage}>➤ Send</button>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* ---------- broadcast ---------- */}
+        {nav === 'broadcast' && (
+          <div className="jcc-list-view jcc-scroll">
+            <div className="jcc-list-head">
+              <div>
+                <div className="jcc-list-title">Group Broadcast</div>
+                <div className="jcc-list-sub">Delivered to each customer as an individual, private message — no one sees who else received it.</div>
+              </div>
+            </div>
+            <div className="jcc-card jcc-card-glow" style={{ maxWidth: 480, marginBottom: 20 }}>
+              <div className="jcc-section-label">📣 New Broadcast</div>
+              <label style={{ fontSize: 11.5, color: 'var(--jcc-text-dim)' }}>Send to</label>
+              <select
+                value={broadcastForm.audienceType}
+                onChange={(e) => setBroadcastForm({ ...broadcastForm, audienceType: e.target.value })}
+                style={{ width: '100%', marginTop: 4, marginBottom: 10, padding: 8, borderRadius: 8, background: 'var(--jcc-surface)', border: '1px solid var(--jcc-border)', color: 'var(--jcc-text)' }}
+              >
+                <option value="group">Group</option>
+                <option value="sector">Sector</option>
+                <option value="all">All Customers</option>
+              </select>
+              {broadcastForm.audienceType === 'group' && (
+                <select
+                  value={broadcastForm.audienceGroupId}
+                  onChange={(e) => setBroadcastForm({ ...broadcastForm, audienceGroupId: e.target.value })}
+                  style={{ width: '100%', marginBottom: 10, padding: 8, borderRadius: 8, background: 'var(--jcc-surface)', border: '1px solid var(--jcc-border)', color: 'var(--jcc-text)' }}
+                >
+                  <option value="">Select a group…</option>
+                  {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+              )}
+              {broadcastForm.audienceType === 'sector' && (
+                <select
+                  value={broadcastForm.audienceSectorId}
+                  onChange={(e) => setBroadcastForm({ ...broadcastForm, audienceSectorId: e.target.value })}
+                  style={{ width: '100%', marginBottom: 10, padding: 8, borderRadius: 8, background: 'var(--jcc-surface)', border: '1px solid var(--jcc-border)', color: 'var(--jcc-text)' }}
+                >
+                  <option value="">Select a sector…</option>
+                  {sectors.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              )}
+              <label style={{ fontSize: 11.5, color: 'var(--jcc-text-dim)' }}>Message</label>
+              <textarea
+                rows={4}
+                value={broadcastForm.message}
+                onChange={(e) => setBroadcastForm({ ...broadcastForm, message: e.target.value })}
+                placeholder="Dear customer, …"
+                style={{ width: '100%', marginTop: 4, marginBottom: 10, padding: 8, borderRadius: 8, background: 'var(--jcc-surface)', border: '1px solid var(--jcc-border)', color: 'var(--jcc-text)', resize: 'none' }}
+              />
+              <div className="jcc-empty-hint" style={{ marginBottom: 10 }}>Each recipient will receive this as an individual, private message.</div>
+              <button className="jcc-send-btn" disabled={broadcastSending || !broadcastForm.message.trim()} onClick={sendBroadcast}>
+                {broadcastSending ? 'Sending…' : '📣 Send Broadcast'}
+              </button>
+            </div>
+
+            <div className="jcc-section-label">Recent Broadcasts</div>
+            {broadcasts.length === 0 && <div className="jcc-empty-hint">No broadcasts sent yet.</div>}
+            {broadcasts.map((b) => (
+              <div className="jcc-list-item" key={b.id}>
+                <div className="jcc-list-item-icon" style={{ background: 'var(--jcc-sky-dim)' }}>📣</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, color: '#fff', fontSize: 13 }}>{b.group_name || b.sector_name || 'All Customers'}</div>
+                  <div style={{ fontSize: 12, color: 'var(--jcc-text-dim)' }}>{b.message_body}</div>
+                  <div style={{ fontSize: 10.5, color: 'var(--jcc-text-faint)', marginTop: 2 }}>{b.audience_count} recipients · {new Date(b.created_at).toLocaleString()}</div>
+                </div>
+                <Pill tone={b.status === 'sent' ? 'lime' : b.status === 'failed' ? 'rose' : 'amber'}>{b.status}</Pill>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* ---------- floating AI insight panel ---------- */}
         <button className="jcc-fab" onClick={() => setAiOpen(!aiOpen)}>{aiOpen ? '✕' : '✨'}</button>
         {aiOpen && (
@@ -624,6 +1053,38 @@ export default function JedidaCommandCenter() {
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button className="jcc-ghost-btn" onClick={() => setEscalateOpen(false)}>Cancel</button>
                 <button className="jcc-send-btn" onClick={submitEscalate}>Escalate</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ---------- transfer modal ---------- */}
+        {transferOpen && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 40 }}>
+            <div className="jcc-card jcc-card-glow" style={{ width: 320 }}>
+              <div className="jcc-section-label">⇄ Transfer Conversation</div>
+              <label style={{ fontSize: 11.5, color: 'var(--jcc-text-dim)' }}>Transfer to</label>
+              <select
+                value={transferTo.type}
+                onChange={(e) => setTransferTo({ type: e.target.value, id: '' })}
+                style={{ width: '100%', marginTop: 4, marginBottom: 10, padding: 8, borderRadius: 8, background: 'var(--jcc-surface)', border: '1px solid var(--jcc-border)', color: 'var(--jcc-text)' }}
+              >
+                <option value="group">Group</option>
+                <option value="agent">Agent</option>
+              </select>
+              <select
+                value={transferTo.id}
+                onChange={(e) => setTransferTo({ ...transferTo, id: e.target.value })}
+                style={{ width: '100%', marginBottom: 10, padding: 8, borderRadius: 8, background: 'var(--jcc-surface)', border: '1px solid var(--jcc-border)', color: 'var(--jcc-text)' }}
+              >
+                <option value="">Select {transferTo.type === 'group' ? 'a group' : 'an agent'}…</option>
+                {(transferTo.type === 'group' ? groups : agents).map((o) => <option key={o.id} value={o.id}>{o.name || o.full_name}</option>)}
+              </select>
+              <label style={{ fontSize: 11.5, color: 'var(--jcc-text-dim)' }}>Note (optional)</label>
+              <textarea rows={3} value={transferReason} onChange={(e) => setTransferReason(e.target.value)} placeholder="Why is this being transferred?" style={{ width: '100%', marginTop: 4, marginBottom: 10, padding: 8, borderRadius: 8, background: 'var(--jcc-surface)', border: '1px solid var(--jcc-border)', color: 'var(--jcc-text)', resize: 'none' }} />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button className="jcc-ghost-btn" onClick={() => setTransferOpen(false)}>Cancel</button>
+                <button className="jcc-send-btn" disabled={!transferTo.id} onClick={submitTransfer}>Transfer</button>
               </div>
             </div>
           </div>

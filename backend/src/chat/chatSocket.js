@@ -162,6 +162,28 @@ export function initChatSocket(httpServer, frontendUrl) {
       socket.leave(`conversation:${conversationId}`);
     });
 
+    // Internal (agent-to-agent / agent-group) chat rooms — separate
+    // namespace from customer conversation rooms above. Access is
+    // re-checked server-side via agentCommsService's membership query
+    // (not just "you're an admin"), so an agent can't join another
+    // agent's DM or a group room they don't belong to.
+    socket.on('internal:join', async ({ internalConversationId }, callback) => {
+      try {
+        if (!user.isAdmin) throw new Error('Only agents can join internal chat.');
+        const { listMyInternalConversations } = await import('./agentCommsService.js');
+        const mine = await listMyInternalConversations(user.id);
+        if (!mine.some((c) => c.id === internalConversationId)) throw new Error('Not a participant in this internal conversation.');
+        socket.join(`internal:${internalConversationId}`);
+        callback?.({ success: true });
+      } catch (err) {
+        callback?.({ error: err.message });
+      }
+    });
+
+    socket.on('internal:leave', ({ internalConversationId }) => {
+      socket.leave(`internal:${internalConversationId}`);
+    });
+
     // Live delivery tracking — reuses this same authenticated socket
     // connection rather than standing up a second server.
     socket.on('delivery:join', async ({ deliveryId }, callback) => {
