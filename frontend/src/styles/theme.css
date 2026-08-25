@@ -186,6 +186,16 @@ input:focus, select:focus {
 }
 input::placeholder { color: #9AA39C; }
 
+/* Mobile only (spec section 10 — "sufficient height", "no tiny buttons"):
+   iOS Safari auto-zooms the page when a focused input's font-size is under
+   16px, and .btn-secondary's compact desktop sizing (used deliberately in
+   dense contexts like admin tables) falls under the ~44px touch-target
+   minimum. Scoped to mobile only so dense desktop layouts are untouched. */
+@media (max-width: 640px) {
+  input, select, textarea { font-size: 16px; }
+  .btn-secondary { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+}
+
 .btn-primary {
   width: 100%;
   padding: 13px 18px;
