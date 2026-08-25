@@ -18,7 +18,7 @@ import { useEffect } from 'react';
 const GROUPS = [
   {
     // Ad / promo strips — slower, more reading time.
-    selector: '.jd-promo-row, .jd-bottom-banners',
+    selector: '.jd-promo-row, .jd-bottom-banners, .deal-strip',
     stepIntervalMs: 5000,
   },
   {

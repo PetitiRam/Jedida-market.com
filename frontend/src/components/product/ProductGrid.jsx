@@ -9,18 +9,14 @@ export default function ProductGrid({
   loading = false,
   skeletonCount = 8,
   emptyMessage = 'No products found.',
-  minColumnWidth = 200,
   onCardPress,
 }) {
-  const gridStyle = {
-    display: 'grid',
-    gridTemplateColumns: `repeat(auto-fill, minmax(${minColumnWidth}px, 1fr))`,
-    gap: 16,
-  };
-
+  // Reuse the shared .product-grid-v2 pattern (theme.css) instead of an
+  // ad-hoc inline grid: fixed column counts per breakpoint on desktop/
+  // tablet, and the compact two-column mobile treatment below 760px.
   if (loading) {
     return (
-      <div style={gridStyle}>
+      <div className="product-grid-v2">
         {Array.from({ length: skeletonCount }).map((_, i) => (
           <ProductCardSkeleton key={i} />
         ))}
@@ -33,7 +29,7 @@ export default function ProductGrid({
   }
 
   return (
-    <div style={gridStyle}>
+    <div className="product-grid-v2">
       {products.map((product) => (
         <ProductCard
           key={product.id}

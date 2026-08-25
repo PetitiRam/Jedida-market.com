@@ -369,6 +369,19 @@ textarea {
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 18px;
 }
+/* Same rationale as .product-grid-v2 above: keep two compact columns on
+   mobile instead of collapsing to one full-width card per row. */
+@media (max-width: 760px) {
+  .product-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .product-card-body { padding: 10px 10px 12px; gap: 4px; }
+  .product-card-title { font-size: 0.82rem; }
+  .product-card-price { font-size: 0.92rem; }
+  .product-card-meta { font-size: 0.7rem; }
+  .product-card-badge { font-size: 0.62rem; padding: 2px 6px; }
+}
+@media (max-width: 340px) {
+  .product-grid { gap: 8px; }
+}
 .product-card {
   background: #fff;
   border: 1px solid var(--line);
@@ -605,14 +618,34 @@ html, body { background: var(--cream); color: var(--text-primary); transition: b
 }
 @media (max-width: 1400px) { .product-grid-v2 { grid-template-columns: repeat(4, 1fr); } }
 @media (max-width: 1080px) { .product-grid-v2 { grid-template-columns: repeat(3, 1fr); gap: 18px; } }
-@media (max-width: 760px)  { .product-grid-v2 { grid-template-columns: repeat(2, 1fr); gap: 14px; } }
-@media (max-width: 400px)  { .product-grid-v2 { grid-template-columns: repeat(1, 1fr); gap: 14px; } }
+@media (max-width: 760px)  { .product-grid-v2 { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
+@media (max-width: 340px)  { .product-grid-v2 { gap: 8px; } }
 
-/* On phones, curated homepage rails (Featured, Trending, New Arrivals, etc.)
-   scroll horizontally like a carousel instead of stacking cards in a tall
-   vertical column — the full catalogue grid (.product-grid-v2 without
-   .is-rail, e.g. "Browse Everything") is unaffected and keeps paginating
-   normally. */
+/* Any product-v2 card rendered inside .product-grid-v2 on mobile shrinks to
+   match the .is-compact rail-card treatment — regardless of whether the
+   caller passed the `compact` prop, and regardless of whether the grid is
+   a horizontal rail (.is-rail) or a plain paginated grid. Keeps every
+   product listing (catalog/search results, "See all" pages, curated
+   homepage rails) visually consistent and prevents any card from
+   ballooning vertically on a narrow phone. */
+@media (max-width: 760px) {
+  .product-grid-v2 .product-card-v2-body { padding: 12px; }
+  .product-grid-v2 .product-card-v2-title { font-size: 0.86rem; min-height: 36px; margin-bottom: 4px; }
+  .product-grid-v2 .product-card-v2-seller { margin-bottom: 6px; }
+  .product-grid-v2 .product-card-v2-rating { margin-bottom: 6px; font-size: 0.76rem; }
+  .product-grid-v2 .product-card-v2-price { font-size: 1.05rem; }
+  .product-grid-v2 .product-card-v2-price-row { margin-bottom: 8px; }
+  .product-grid-v2 .product-card-v2-meta-row { display: none; }
+  .product-grid-v2 .pc-btn-cart, .product-grid-v2 .pc-btn-view { font-size: 0.8rem; padding: 9px 10px; }
+}
+
+/* On phones, any .is-rail section — curated homepage rails (Featured,
+   Trending, New Arrivals, etc.) as well as product listings (search
+   results/"All Products", "See all" pages, category browsing) — scrolls
+   horizontally like a carousel instead of stacking cards in a tall
+   vertical column. Desktop/tablet keep the normal paginated grid above
+   760px; "Load more"/pagination still works, it just appends further
+   along the same horizontal strip. */
 @media (max-width: 760px) {
   .product-grid-v2.is-rail, .shop-grid-v2.is-rail {
     display: flex; grid-template-columns: none; overflow-x: auto; gap: 14px;
@@ -789,6 +822,17 @@ html, body { background: var(--cream); color: var(--text-primary); transition: b
 
 /* ===== Deal strip ===== */
 .deal-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 16px; }
+/* Rail on mobile — this was a plain grid with no mobile breakpoint at all,
+   so it stacked full-width banner cards in a tall vertical column. */
+@media (max-width: 760px) {
+  .deal-strip {
+    display: flex; grid-template-columns: none; overflow-x: auto; gap: 12px;
+    padding-bottom: 6px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .deal-strip::-webkit-scrollbar { display: none; }
+  .deal-strip-card { flex: 0 0 78vw; max-width: 320px; min-height: 150px; scroll-snap-align: start; }
+}
 .deal-strip-card { position: relative; border-radius: 20px; overflow: hidden; min-height: 140px; display: flex; align-items: flex-end; padding: 18px; color: #fff; background-size: cover; background-position: center; }
 .deal-strip-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .deal-strip-scrim { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.65), rgba(0,0,0,0.05)); }

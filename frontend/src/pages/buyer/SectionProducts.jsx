@@ -49,11 +49,11 @@ function BuiltInSection({ section, coords }) {
       ) : (
         <>
           {loading && page === 1 ? (
-            <div className="product-grid-v2">{Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}</div>
+            <div className="product-grid-v2 is-rail">{Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}</div>
           ) : products.length === 0 ? (
             <div className="empty-state">No products in this section right now.</div>
           ) : (
-            <div className="product-grid-v2">{products.map((p) => <ProductCard key={p.id} product={p} />)}</div>
+            <div className="product-grid-v2 is-rail">{products.map((p) => <ProductCard key={p.id} product={p} />)}</div>
           )}
 
           {hasMore && !loading && (
@@ -62,7 +62,7 @@ function BuiltInSection({ section, coords }) {
             </div>
           )}
           {loading && page > 1 && (
-            <div className="product-grid-v2" style={{ marginTop: 18 }}>
+            <div className="product-grid-v2 is-rail" style={{ marginTop: 18 }}>
               {Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)}
             </div>
           )}
@@ -101,13 +101,13 @@ function CustomSection({ sectionKey }) {
       {data?.subtitle && <p style={{ color: 'var(--text-secondary)', marginTop: 0, marginBottom: 20 }}>{data.subtitle}</p>}
 
       {loading ? (
-        <div className="product-grid-v2">{Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}</div>
+        <div className="product-grid-v2 is-rail">{Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}</div>
       ) : !data?.items || data.items.length === 0 ? (
         <div className="empty-state">No items in this section right now.</div>
       ) : data.kind === 'shops' ? (
         <div className="shop-grid-v2">{data.items.map((s) => <ShopCard key={s.id} shop={s} />)}</div>
       ) : (
-        <div className="product-grid-v2">{data.items.map((p) => <ProductCard key={p.id} product={p} />)}</div>
+        <div className="product-grid-v2 is-rail">{data.items.map((p) => <ProductCard key={p.id} product={p} />)}</div>
       )}
     </>
   );

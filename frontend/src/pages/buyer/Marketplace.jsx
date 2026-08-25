@@ -26,7 +26,7 @@ import { CATEGORIES } from '../../constants/categories';
 function ProductGrid({ products }) {
   if (products.length === 0) return <div className="empty-state">No products found.</div>;
   return (
-    <div className="product-grid-v2">
+    <div className="product-grid-v2 is-rail">
       {products.map((p) => <ProductCard key={p.id} product={p} />)}
     </div>
   );
@@ -143,7 +143,7 @@ function AllProductsTab({ coords }) {
       </div>
 
       {loading ? (
-        <div className="product-grid-v2">{Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}</div>
+        <div className="product-grid-v2 is-rail">{Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}</div>
       ) : <ProductGrid products={products} />}
     </div>
   );
@@ -172,7 +172,7 @@ function AgricultureTab() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => { client.get('/products/agriculture').then(({ data }) => setProducts(data.products || [])).finally(() => setLoading(false)); }, []);
-  if (loading) return <div className="product-grid-v2">{Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)}</div>;
+  if (loading) return <div className="product-grid-v2 is-rail">{Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)}</div>;
   return (
     <div>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>
