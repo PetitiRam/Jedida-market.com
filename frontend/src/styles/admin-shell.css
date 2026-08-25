@@ -172,6 +172,30 @@
 .ash-content { padding: 18px 20px 40px; flex: 1; min-width: 0; }
 .ash-role-note { font-size: 0.82rem; color: var(--mc-text-dim, #5B6760); margin: -6px 0 14px; }
 
+/* ---------- Responsive data table → mobile cards ----------
+   Reusable pattern for any admin panel with a dense table: wrap the
+   existing <table> in .jd-table-scroll (desktop/tablet — horizontal
+   scroll if it still needs it) and render the same rows as
+   .jd-row-cards (mobile — one touch-friendly card per row, matching
+   spec section 9 Option B). Both are always in the DOM; only one is
+   visible at a time via the breakpoint below, so nothing needs
+   JS-side viewport detection. */
+.jd-row-cards { display: none; }
+@media (max-width: 700px) {
+  .jd-table-scroll { display: none; }
+  .jd-row-cards { display: flex; flex-direction: column; gap: 10px; }
+  .jd-row-card {
+    border: 1px solid var(--mc-border, var(--line)); border-radius: 12px; padding: 12px 14px;
+    background: var(--mc-surface-solid, #fff); display: flex; flex-direction: column; gap: 8px;
+  }
+  .jd-row-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .jd-row-card-title { font-weight: 700; font-size: 0.92rem; color: var(--mc-text, inherit); }
+  .jd-row-card-fields { display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; color: var(--mc-text-dim, #5B6760); }
+  .jd-row-card-fields b { color: var(--mc-text, inherit); font-weight: 600; }
+  .jd-row-card-actions { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+  .jd-row-card-actions button { flex: 1; min-height: 38px; }
+}
+
 @media (max-width: 900px) {
   .ash-sidebar { position: fixed; z-index: 50; left: 0; top: 0; box-shadow: 0 0 0 9999px rgba(0,0,0,0); transition: transform 0.24s ease; }
   .ash-sidebar.mobile-hidden { transform: translateX(-100%); }

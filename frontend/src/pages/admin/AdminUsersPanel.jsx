@@ -245,7 +245,7 @@ export default function AdminUsersPanel() {
         </div>
       )}
 
-      <div style={{ overflowX: 'auto', maxHeight: '65vh', overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 10 }}>
+      <div className="jd-table-scroll" style={{ overflowX: 'auto', maxHeight: '65vh', overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 10 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr>
@@ -310,6 +310,47 @@ export default function AdminUsersPanel() {
             </tbody>
           </table>
         </div>
+
+      <div className="jd-row-cards">
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div className="jd-row-card" key={`skeleton-card-${i}`}>
+              <div className="skeleton" style={{ height: 14, width: '60%' }} />
+              <div className="skeleton" style={{ height: 12, width: '80%' }} />
+            </div>
+          ))
+        ) : sortedUsers.length === 0 ? (
+          <div className="empty-state">No users match these filters.</div>
+        ) : sortedUsers.map((u) => (
+          <div className="jd-row-card" key={u.id}>
+            <div className="jd-row-card-head">
+              <input type="checkbox" checked={selected.includes(u.id)} onChange={() => toggleSelect(u.id)} />
+              <div className="jd-row-card-title" style={{ flex: 1, cursor: 'pointer', color: 'var(--forest)' }} onClick={() => setDetailUserId(u.id)}>
+                {u.full_name}
+                {u.is_admin && (
+                  <span className="product-card-badge" style={{ marginLeft: 6, fontSize: '0.7rem' }}>
+                    {u.admin_role ? u.admin_role.replace('_', ' ') : 'admin'}
+                  </span>
+                )}
+              </div>
+              <span className={`status-chip status-${u.status}`}>{u.status}</span>
+            </div>
+            <div className="jd-row-card-fields">
+              <div><b>#{u.user_number}</b> · {u.primary_role} · {u.is_verified ? '✅ Verified' : 'Not verified'}</div>
+              <div>{u.email}</div>
+              <div>{u.phone_number || '—'} · {u.location_country || '—'}</div>
+              <div>KYC: {u.kyc_status} · Registered {new Date(u.created_at).toLocaleDateString()}</div>
+            </div>
+            <div className="jd-row-card-actions">
+              {u.status !== 'suspended' ? (
+                <button className="btn-secondary" onClick={() => setStatus(u.id, 'suspended')}>Suspend</button>
+              ) : (
+                <button className="btn-secondary" onClick={() => setStatus(u.id, 'active')}>Reactivate</button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
         <span className="product-card-meta">{total} users total</span>
