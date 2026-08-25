@@ -446,7 +446,7 @@ export default function AdminPartnersPanel({ adminRole }) {
       ) : applications.length === 0 ? (
         <div className="empty-state">No partner applications match these filters.</div>
       ) : (
-        <div className="card-surface" style={{ padding: 0, overflowX: 'auto' }}>
+        <div className="card-surface jd-table-scroll" style={{ padding: 0, overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr>
@@ -484,6 +484,29 @@ export default function AdminPartnersPanel({ adminRole }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {applications !== null && applications.length > 0 && (
+        <div className="jd-row-cards">
+          {applications.map((a) => (
+            <div className="jd-row-card" key={a.id}>
+              <div className="jd-row-card-head">
+                <input type="checkbox" checked={selected.has(a.id)} onChange={() => toggleSelect(a.id)} onClick={(e) => e.stopPropagation()} />
+                <div className="jd-row-card-title" style={{ flex: 1, cursor: 'pointer', color: 'var(--forest)' }} onClick={() => setOpenId(a.id)}>
+                  {a.company_name}
+                  <div className="product-card-meta">{a.reference_code}</div>
+                </div>
+                <StatusBadge status={a.status} />
+              </div>
+              <div className="jd-row-card-fields">
+                <div><b>{PARTNER_TYPE_LABELS[a.partner_type] || a.partner_type}</b> · {a.country}</div>
+                <div>{a.contact_full_name}</div>
+                <div>{a.business_email}</div>
+                <div>Submitted {new Date(a.created_at).toLocaleDateString()} · Reviewer: {a.assigned_reviewer_name || '—'}</div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

@@ -309,14 +309,32 @@ export default function SecurityOperationsDashboard() {
           {overview.highRiskUsers.length === 0 ? (
             <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No users currently have open fraud flags.</p>
           ) : (
-            <table className="jd-sec-risk-table">
-              <thead><tr><th>User</th><th>Email</th><th>Open flags</th><th>Max severity</th></tr></thead>
-              <tbody>
+            <>
+              <div className="jd-table-scroll">
+                <table className="jd-sec-risk-table">
+                  <thead><tr><th>User</th><th>Email</th><th>Open flags</th><th>Max severity</th></tr></thead>
+                  <tbody>
+                    {overview.highRiskUsers.map((u) => (
+                      <tr key={u.user_id}><td>{u.name}</td><td>{u.email}</td><td>{u.flag_count}</td><td>{u.max_severity}/5</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="jd-row-cards">
                 {overview.highRiskUsers.map((u) => (
-                  <tr key={u.user_id}><td>{u.name}</td><td>{u.email}</td><td>{u.flag_count}</td><td>{u.max_severity}/5</td></tr>
+                  <div className="jd-row-card" key={u.user_id}>
+                    <div className="jd-row-card-head">
+                      <div className="jd-row-card-title">{u.name}</div>
+                      <span className="status-chip">{u.max_severity}/5 severity</span>
+                    </div>
+                    <div className="jd-row-card-fields">
+                      <div>{u.email}</div>
+                      <div>{u.flag_count} open flag{u.flag_count === 1 ? '' : 's'}</div>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           )}
         </>
       )}
