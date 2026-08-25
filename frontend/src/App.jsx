@@ -125,12 +125,7 @@ export default function App() {
         <Route path="/marketplace/section/:key" element={<SectionProducts />} />
         <Route path="/trending" element={<TrendingProducts />} />
         <Route path="/feed" element={<ProtectedRoute><ForYouFeed /></ProtectedRoute>} />
-
-<Route path="/product/:id" element={<ProductDetail />} />
-
-<Route path="/s/:slug" element={<PublicShop />} />
-
-<Route path="/p/:slug" element={<DynamicPage />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/checkout/:productId" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
         <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />

@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import MarketplaceHeader from '../../components/MarketplaceHeader';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import * as wantedApi from '../../api/wantedApi';
 import { getUser } from '../../utils/auth';
 import WantedNegotiationThread from '../../components/WantedNegotiationThread';
+import WantedSidebar from '../../components/wanted/WantedSidebar';
+import JdIcon from '../../components/layout/JdIcons';
+import './jedida-wanted.css';
 
 const REQUEST_STATUS_LABELS = {
   submitted: 'Matching you with businesses…',
@@ -13,6 +15,8 @@ const REQUEST_STATUS_LABELS = {
   closed: 'Closed',
   cancelled: 'Cancelled'
 };
+
+const B2B_ROLES = ['manufacturer', 'supplier', 'farmer'];
 
 function timeAgo(dateStr) {
   const diffMs = Date.now() - new Date(dateStr).getTime();
@@ -24,7 +28,26 @@ function timeAgo(dateStr) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-function PostForm({ onPosted }) {
+function initials(name) {
+  return (name || '?')
+    .trim()
+    .split(/\s+/)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
+function money(currency, amount) {
+  if (amount == null) return null;
+  return `${currency || ''} ${Number(amount).toLocaleString()}`.trim();
+}
+
+/* ---------------------------------------------------------------------- */
+/* Post a new Wanted request (modal form)                                  */
+/* ---------------------------------------------------------------------- */
+
+function PostForm({ onPosted, onCancel }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -36,7 +59,7 @@ function PostForm({ onPosted }) {
   const [requiredByDate, setRequiredByDate] = useState('');
   const [sampleRequired, setSampleRequired] = useState(false);
   const [customizationRequired, setCustomizationRequired] = useState(false);
-  const [visibility, setVisibility] = useState('public'); // brief §15
+  const [visibility, setVisibility] = useState('public');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -63,9 +86,6 @@ function PostForm({ onPosted }) {
         customizationRequired,
         visibility
       });
-      setTitle(''); setDescription(''); setQuantity(''); setUnit('');
-      setBudgetMax(''); setDestinationCountry(''); setDestinationCity('');
-      setRequiredByDate(''); setSampleRequired(false); setCustomizationRequired(false);
       onPosted(data.wantedRequest);
     } catch (err) {
       setError(err.response?.data?.error || 'Could not post your request.');
@@ -75,8 +95,11 @@ function PostForm({ onPosted }) {
   };
 
   return (
-    <form onSubmit={submit} className="card-surface" style={{ marginBottom: 16 }}>
-      <h3 style={{ marginTop: 0 }}>Post What I Want</h3>
+    <form onSubmit={submit}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ margin: 0 }}>Post What I Want</h3>
+        <button type="button" className="wt-icon-btn" onClick={onCancel} aria-label="Close">✕</button>
+      </div>
       <p className="product-card-meta" style={{ marginBottom: 12 }}>
         Describe what you need — Jedida will classify it and invite matching suppliers, manufacturers and farmers to quote.
       </p>
@@ -85,7 +108,7 @@ function PostForm({ onPosted }) {
 
       <div className="field-group">
         <label>What do you need?</label>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. 10,000 school uniforms" />
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. 50 school uniforms" />
       </div>
       <div className="field-group">
         <label>Details</label>
@@ -138,7 +161,7 @@ function PostForm({ onPosted }) {
         </label>
       </div>
 
-      <div className="field-group" style={{ maxWidth: 260, marginBottom: 12 }}>
+      <div className="field-group" style={{ maxWidth: 320, marginBottom: 12 }}>
         <label>Who can see this request?</label>
         <select value={visibility} onChange={(e) => setVisibility(e.target.value)}>
           <option value="public">Public — anyone on Jedida can see and reply</option>
@@ -151,7 +174,9 @@ function PostForm({ onPosted }) {
   );
 }
 
-const B2B_ROLES = ['manufacturer', 'supplier', 'farmer'];
+/* ---------------------------------------------------------------------- */
+/* Submit an offer (suppliers/manufacturers/farmers)                       */
+/* ---------------------------------------------------------------------- */
 
 function OfferForm({ requestId, onSubmitted }) {
   const [unitPrice, setUnitPrice] = useState('');
@@ -186,7 +211,6 @@ function OfferForm({ requestId, onSubmitted }) {
       setSpecifications(''); setExpiresAt(''); setMessage('');
       onSubmitted();
     } catch (err) {
-      // Contact-protection block (brief §3/§6/§7) surfaces here verbatim.
       setError(err.response?.data?.error || 'Could not submit your offer.');
     } finally {
       setBusy(false);
@@ -247,131 +271,6 @@ function OfferForm({ requestId, onSubmitted }) {
   );
 }
 
-function OfferComparison({ quotes, isOwner, onAccept, onDecline }) {
-  const [sortBy, setSortBy] = useState('recommended');
-  const [negotiatingId, setNegotiatingId] = useState(null);
-
-  const sorted = [...quotes].sort((a, b) => {
-    if (sortBy === 'price') return Number(a.unit_price) - Number(b.unit_price);
-    if (sortBy === 'delivery') return (a.lead_time_days ?? Infinity) - (b.lead_time_days ?? Infinity);
-    if (sortBy === 'trust') return (b.trust_score ?? -1) - (a.trust_score ?? -1);
-    // 'recommended': recommended offer first, then price.
-    if (a.recommended !== b.recommended) return a.recommended ? -1 : 1;
-    return Number(a.unit_price) - Number(b.unit_price);
-  });
-
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-        <h4 style={{ margin: 0 }}>Offers ({quotes.length})</h4>
-        {quotes.length > 1 && (
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={{ maxWidth: 160 }}>
-            <option value="recommended">Sort: Recommended</option>
-            <option value="price">Sort: Price</option>
-            <option value="delivery">Sort: Delivery time</option>
-            <option value="trust">Sort: Trust score</option>
-          </select>
-        )}
-      </div>
-      {quotes.length === 0 && <div className="empty-state">No offers yet — invited businesses are reviewing your request.</div>}
-      {sorted.map((q) => (
-        <div key={q.id} className="card-surface" style={{ marginBottom: 8 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontWeight: 700 }}>{q.business_name} {q.shop_name ? `— ${q.shop_name}` : ''}</span>
-                {q.business_verified && <span className="product-card-badge" title="Verified business">✓ Verified</span>}
-                {q.recommended && <span className="product-card-badge" style={{ background: '#F0B429', color: '#1a1a1a' }}>★ Jedida Recommended</span>}
-              </div>
-              <div className="product-card-meta">
-                {q.currency} {q.unit_price} / unit
-                {q.moq ? ` · MOQ ${q.moq}` : ''}
-                {q.lead_time_days ? ` · ${q.lead_time_days}d delivery` : ''}
-                {q.availability ? ` · ${q.availability.replace('_', ' ')}` : ''}
-              </div>
-              {q.trust_score != null && (
-                <div className="product-card-meta">
-                  Trust score {Math.round(q.trust_score)}/100
-                  {q.completed_orders_count ? ` · ${q.completed_orders_count} completed orders` : ''}
-                </div>
-              )}
-              {q.warranty && <div className="product-card-meta">Warranty: {q.warranty}</div>}
-              {q.specifications && <p style={{ fontSize: '0.85rem', marginTop: 4 }}>{q.specifications}</p>}
-              {q.expires_at && <div className="product-card-meta">Offer expires {new Date(q.expires_at).toLocaleDateString()}</div>}
-              {q.message && <p style={{ fontSize: '0.85rem', marginTop: 4 }}>"{q.message}"</p>}
-            </div>
-            <span className="product-card-badge">{q.status}</span>
-          </div>
-          {isOwner && q.status === 'submitted' && (
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button className="btn-primary" onClick={() => onAccept(q.id)}>Accept</button>
-              <button className="btn-link" onClick={() => onDecline(q.id)}>Decline</button>
-              <button className="btn-link" onClick={() => setNegotiatingId(negotiatingId === q.id ? null : q.id)}>
-                {negotiatingId === q.id ? 'Hide negotiation' : 'Negotiate'}
-              </button>
-            </div>
-          )}
-          {negotiatingId === q.id && <WantedNegotiationThread quoteId={q.id} />}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ReplyThread({ requestId, replies, onReplyPosted, isPublicView }) {
-  const [body, setBody] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!body.trim()) return;
-    setBusy(true);
-    setError('');
-    try {
-      await wantedApi.postWantedReply(requestId, body.trim());
-      setBody('');
-      onReplyPosted();
-    } catch (err) {
-      // Contact-protection block (brief §3/§6/§7) surfaces here verbatim.
-      setError(err.response?.data?.error || 'Could not post your reply.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div style={{ marginTop: 12 }}>
-      <h4>Replies ({replies.length})</h4>
-      {replies.length === 0 && <div className="empty-state">No replies yet.</div>}
-      {replies.map((r) => (
-        <div key={r.id} className="card-surface" style={{ marginBottom: 8 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-            <div style={{ fontWeight: 700, fontSize: '0.85rem' }}>{r.author_name}</div>
-            <div className="product-card-meta">{timeAgo(r.created_at)}</div>
-          </div>
-          <p style={{ margin: '4px 0 0', fontSize: '0.9rem' }}>{r.body}</p>
-          {r.quote_id && <span className="product-card-badge" style={{ marginTop: 6, display: 'inline-block' }}>Offer submitted</span>}
-        </div>
-      ))}
-
-      <form onSubmit={submit} style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-        <input
-          style={{ flex: 1 }}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder={isPublicView ? 'Write a reply…' : 'Reply to this request…'}
-        />
-        <button className="btn-primary" disabled={busy}>{busy ? '…' : 'Reply'}</button>
-      </form>
-      {error && <div className="alert alert-error" style={{ marginTop: 6 }}>{error}</div>}
-      <p className="product-card-meta" style={{ marginTop: 4 }}>
-        For your protection, phone numbers, WhatsApp/social handles and off-platform payment requests can't be shared here.
-      </p>
-    </div>
-  );
-}
-
 function InviteSupplierPanel({ requestId }) {
   const [search, setSearch] = useState('');
   const [businesses, setBusinesses] = useState([]);
@@ -403,10 +302,6 @@ function InviteSupplierPanel({ requestId }) {
   return (
     <div style={{ marginTop: 12 }}>
       <h4>Invite a supplier</h4>
-      <p className="product-card-meta">
-        Directly invite a verified supplier/manufacturer/farmer to see and quote on this request —
-        useful on top of, or instead of, Jedida's automatic matching.
-      </p>
       {error && <div className="alert alert-error">{error}</div>}
       <div style={{ display: 'flex', gap: 8 }}>
         <input placeholder="Search by company name…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ flex: 1 }} />
@@ -428,28 +323,408 @@ function InviteSupplierPanel({ requestId }) {
   );
 }
 
-function RequestDetail({ id, onClose, currentUserId }) {
-  const [detail, setDetail] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
+/* ---------------------------------------------------------------------- */
+/* Column 1 — Wanted Feed                                                  */
+/* ---------------------------------------------------------------------- */
 
-  const load = async () => {
-    setLoading(true);
+function FeedColumn({ posts, loading, nextCursor, onLoadMore, selectedId, onSelect, onToggleLike, filterTab, onFilterTab }) {
+  return (
+    <div className="wt-panel">
+      <div className="wt-panel-header">
+        <div>
+          <div className="wt-panel-title">Wanted Feed</div>
+          <p className="wt-panel-sub">Latest requests from buyers</p>
+        </div>
+        <button type="button" className="wt-icon-btn" aria-label="Search"><JdIcon name="search" size={16} /></button>
+      </div>
+      <div className="wt-tabs">
+        {['All', 'Following', 'Nearby', 'Categories'].map((t) => (
+          <button key={t} type="button" className={`wt-tab ${filterTab === t ? 'active' : ''}`} onClick={() => onFilterTab(t)}>{t}</button>
+        ))}
+      </div>
+      <div className="wt-panel-body">
+        {loading && posts.length === 0 && <div className="wt-empty">Loading…</div>}
+        {!loading && posts.length === 0 && <div className="wt-empty">No public requests yet — be the first to post what you want.</div>}
+        {posts.map((p) => (
+          <div
+            key={p.id}
+            className={`wt-post-card ${selectedId === p.id ? 'selected' : ''}`}
+            onClick={() => onSelect(p.id)}
+          >
+            <div className="wt-post-top">
+              <div className="wt-post-who">
+                <span className="wt-avatar">{initials(p.buyer_name)}</span>
+                <div>
+                  <div className="wt-post-name">{p.buyer_name}</div>
+                  <div className="wt-post-meta">{[p.destination_city, p.destination_country].filter(Boolean).join(', ')}{p.destination_city || p.destination_country ? ' · ' : ''}{timeAgo(p.created_at)}</div>
+                </div>
+              </div>
+              <span className="wt-badge-wanted">WANTED</span>
+            </div>
+            <div className="wt-post-title">{p.title}</div>
+            <p className="wt-post-desc">{p.description}</p>
+            <div className="wt-chip-row">
+              {p.destination_city && <span className="wt-chip">📍 {p.destination_city}</span>}
+              {p.required_by_date && <span className="wt-chip">📅 Before {new Date(p.required_by_date).toLocaleDateString()}</span>}
+              {p.budget_max ? <span className="wt-chip">💰 {money(p.currency, p.budget_max)} (Est.)</span> : null}
+            </div>
+            <div className="wt-stat-row">
+              <button type="button" className={p.liked_by_me ? 'liked' : ''} onClick={(e) => { e.stopPropagation(); onToggleLike(p.id); }}>
+                {p.liked_by_me ? '♥' : '♡'} {p.like_count || 0}
+              </button>
+              <span>💬 {p.reply_count || 0}</span>
+              <span>{p.quote_count || 0} Offers</span>
+            </div>
+          </div>
+        ))}
+        {nextCursor && (
+          <button className="btn-link" onClick={onLoadMore} disabled={loading}>
+            {loading ? 'Loading…' : 'Load more'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Column 2 — Wanted Post detail + replies                                 */
+/* ---------------------------------------------------------------------- */
+
+function DetailColumn({ post, detail, loading, currentUserId, onToggleLike, onReplyPosted, onFocusOffer }) {
+  const [replyBody, setReplyBody] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  if (!post) {
+    return (
+      <div className="wt-panel">
+        <div className="wt-panel-header"><div className="wt-panel-title">Wanted Post</div></div>
+        <div className="wt-empty">Select a request from the feed to see the full post and replies.</div>
+      </div>
+    );
+  }
+
+  const wantedRequest = detail?.wantedRequest || post;
+  const replies = detail?.replies || [];
+  const isOwner = currentUserId && wantedRequest.buyer_id && currentUserId === wantedRequest.buyer_id;
+
+  const submitReply = async (e) => {
+    e.preventDefault();
+    if (!replyBody.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      await wantedApi.postWantedReply(post.id, replyBody.trim());
+      setReplyBody('');
+      onReplyPosted();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not post your reply.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="wt-panel">
+      <div className="wt-panel-header">
+        <div className="wt-panel-title">Wanted Post</div>
+        <button type="button" className="wt-icon-btn" aria-label="More">⋯</button>
+      </div>
+      <div className="wt-panel-body" style={{ paddingTop: 6 }}>
+        <div className="wt-post-who">
+          <span className="wt-avatar">{initials(wantedRequest.buyer_name)}</span>
+          <div>
+            <div className="wt-post-name">{wantedRequest.buyer_name}</div>
+            <div className="wt-post-meta">@{(wantedRequest.buyer_name || 'buyer').toLowerCase().replace(/\s+/g, '')} · {timeAgo(wantedRequest.created_at)}</div>
+          </div>
+          <span className="wt-badge-wanted" style={{ marginLeft: 'auto' }}>WANTED</span>
+        </div>
+
+        <h3 style={{ margin: '12px 0 4px' }}>{wantedRequest.title}</h3>
+        <p style={{ fontSize: '0.88rem', color: '#4B4F63' }}>{wantedRequest.description}</p>
+
+        <div className="wt-chip-row">
+          {(wantedRequest.destination_city || wantedRequest.destination_country) && (
+            <span className="wt-chip">📍 {[wantedRequest.destination_city, wantedRequest.destination_country].filter(Boolean).join(', ')}</span>
+          )}
+          {wantedRequest.required_by_date && <span className="wt-chip">📅 Before {new Date(wantedRequest.required_by_date).toLocaleDateString()}</span>}
+          {wantedRequest.budget_max ? <span className="wt-chip">💰 Budget: {money(wantedRequest.currency, wantedRequest.budget_max)} (Est.)</span> : null}
+        </div>
+
+        <p className="product-card-meta">{REQUEST_STATUS_LABELS[wantedRequest.status] || wantedRequest.status}</p>
+        {error && <div className="alert alert-error">{error}</div>}
+      </div>
+
+      <div className="wt-detail-actions">
+        <button type="button">↩ Reply<span>{replies.length}</span></button>
+        <button type="button" className={post.liked_by_me ? 'liked' : ''} onClick={() => onToggleLike(post.id)}>
+          {post.liked_by_me ? '♥' : '♡'} Like<span>{post.like_count || 0}</span>
+        </button>
+        <button type="button">⤴ Share</button>
+        <button type="button">⌄ Save</button>
+      </div>
+
+      <div className="wt-panel-body" style={{ paddingTop: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <strong style={{ fontSize: '0.85rem' }}>Replies</strong>
+          <span className="product-card-meta">Most recent</span>
+        </div>
+        {loading && <div className="wt-empty">Loading…</div>}
+        {!loading && replies.length === 0 && <div className="wt-empty">No replies yet.</div>}
+        {replies.map((r) => (
+          <div key={r.id} className="wt-reply">
+            <span className="wt-avatar" style={{ width: 30, height: 30, fontSize: '0.7rem' }}>{initials(r.author_name)}</span>
+            <div style={{ flex: 1 }}>
+              <span className="wt-reply-name">{r.author_name}</span>
+              <span className="wt-reply-verified"> ✓ Verified Supplier</span>
+              <span className="wt-reply-time">{timeAgo(r.created_at)}</span>
+              <p className="wt-reply-body">{r.body}</p>
+              <div className="wt-reply-row">
+                <button type="button" className="btn-link" style={{ padding: 0 }}>Reply</button>
+                {r.quote_id && (
+                  <button type="button" className="wt-view-offer-btn" onClick={() => onFocusOffer(r.quote_id)}>
+                    View Offer
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {isOwner && (
+          <details style={{ marginTop: 14 }}>
+            <summary style={{ cursor: 'pointer', fontSize: '0.82rem', color: '#6C5CE7', fontWeight: 700 }}>
+              Invited businesses & invite a supplier
+            </summary>
+            {detail?.matches?.map((m) => (
+              <div key={m.id} className="product-card-meta" style={{ marginBottom: 4, marginTop: 8 }}>
+                {m.business_name} — {m.status} (match score {Math.round(m.match_score)})
+              </div>
+            ))}
+            <InviteSupplierPanel requestId={post.id} />
+          </details>
+        )}
+
+        {!isOwner && currentUserId && B2B_ROLES.includes(getUser()?.primary_role) && (
+          <OfferForm requestId={post.id} onSubmitted={onReplyPosted} />
+        )}
+      </div>
+
+      <form className="wt-reply-input-row" onSubmit={submitReply}>
+        <input
+          value={replyBody}
+          onChange={(e) => setReplyBody(e.target.value)}
+          placeholder="Write a reply…"
+        />
+        <button type="submit" className="wt-send-btn" disabled={busy} aria-label="Send">➤</button>
+      </form>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Column 3 — Offers                                                       */
+/* ---------------------------------------------------------------------- */
+
+function OffersColumn({ post, quotes, isOwner, likedIds, onToggleLikeOffer, onAccept, onDecline, focusedQuoteId }) {
+  const [tab, setTab] = useState('all');
+  const [chatQuoteId, setChatQuoteId] = useState(null);
+  const [selectedQuoteId, setSelectedQuoteId] = useState(null);
+
+  useEffect(() => {
+    if (focusedQuoteId) setSelectedQuoteId(focusedQuoteId);
+  }, [focusedQuoteId]);
+
+  if (!post) {
+    return (
+      <div className="wt-panel">
+        <div className="wt-panel-header"><div className="wt-panel-title">Offers</div></div>
+        <div className="wt-empty">Offers on the selected request will appear here.</div>
+      </div>
+    );
+  }
+
+  const visible = quotes.filter((q) => {
+    if (tab === 'liked') return likedIds.has(q.id);
+    return true;
+  });
+
+  const chosen = quotes.find((q) => q.id === selectedQuoteId) || null;
+
+  return (
+    <div className="wt-panel">
+      <div className="wt-panel-header">
+        <div>
+          <div className="wt-panel-title">Offers ({quotes.length})</div>
+        </div>
+        <button type="button" className="wt-icon-btn" aria-label="Filter"><JdIcon name="settings" size={16} /></button>
+      </div>
+      <div className="wt-offer-tabs">
+        <button type="button" className={`wt-offer-tab ${tab === 'all' ? 'active' : ''}`} onClick={() => setTab('all')}>All Offers</button>
+        <button type="button" className={`wt-offer-tab ${tab === 'liked' ? 'active' : ''}`} onClick={() => setTab('liked')}>
+          Liked {likedIds.size > 0 ? likedIds.size : ''}
+        </button>
+      </div>
+      <div className="wt-panel-body">
+        {visible.length === 0 && <div className="wt-empty">No offers yet — invited businesses are reviewing this request.</div>}
+        {visible.map((q) => (
+          <div key={q.id} className={`wt-offer-card ${selectedQuoteId === q.id ? 'selected' : ''}`} onClick={() => setSelectedQuoteId(q.id)}>
+            <div className="wt-offer-top">
+              <span className="wt-offer-logo">{initials(q.business_name)}</span>
+              <div>
+                <div className="wt-offer-name">{q.business_name}</div>
+                {q.shop_name && <div className="wt-offer-shop">@{q.shop_name.toLowerCase().replace(/\s+/g, '')}</div>}
+                {q.business_verified && <div className="wt-offer-verified">✓ Verified Supplier</div>}
+              </div>
+              {q.recommended && <span className="wt-top-rated" style={{ marginLeft: 'auto' }}>★ Top Rated</span>}
+            </div>
+
+            <dl className="wt-offer-grid">
+              <dt>Price</dt><dd>{money(q.currency, q.unit_price)}{q.moq ? ` · MOQ ${q.moq}` : ''}</dd>
+              <dt>Delivery</dt><dd>{q.lead_time_days ? `${q.lead_time_days} days` : '—'}</dd>
+              <dt>Status</dt><dd style={{ textTransform: 'capitalize' }}>{q.status}</dd>
+              <dt>Total</dt><dd>{money(q.currency, q.unit_price)}</dd>
+            </dl>
+            {q.warranty && <div className="product-card-meta">Warranty: {q.warranty}</div>}
+            {q.message && <p style={{ fontSize: '0.82rem', margin: '4px 0' }}>"{q.message}"</p>}
+
+            <div className="wt-offer-actions">
+              <button
+                type="button"
+                className="wt-btn-outline"
+                onClick={(e) => { e.stopPropagation(); setChatQuoteId(chatQuoteId === q.id ? null : q.id); }}
+              >
+                Chat
+              </button>
+              <button
+                type="button"
+                className={`wt-btn-solid ${likedIds.has(q.id) ? 'liked' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onToggleLikeOffer(q.id); }}
+              >
+                {likedIds.has(q.id) ? '♥ Liked' : '♡ Like'}
+              </button>
+            </div>
+
+            {chatQuoteId === q.id && (
+              <div onClick={(e) => e.stopPropagation()} style={{ marginTop: 10 }}>
+                <WantedNegotiationThread quoteId={q.id} />
+              </div>
+            )}
+
+            {isOwner && q.status === 'submitted' && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button type="button" className="btn-link" onClick={(e) => { e.stopPropagation(); onDecline(q.id); }}>Decline</button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {isOwner && (
+        <button
+          type="button"
+          className="wt-proceed-btn"
+          disabled={!chosen || chosen.status !== 'submitted'}
+          onClick={() => chosen && onAccept(chosen.id)}
+        >
+          Choose &amp; Proceed to Order ➜
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Bottom feature strip                                                    */
+/* ---------------------------------------------------------------------- */
+
+const FEATURES = [
+  { icon: 'messages', title: 'Real-time Replies', desc: 'Suppliers reply instantly with their best offers.' },
+  { icon: 'quality', title: 'Like & Compare', desc: 'Like your favorite offers and compare easily.' },
+  { icon: 'help', title: 'Chat & Negotiate', desc: 'Discuss details, negotiate and get the best value.' },
+  { icon: 'settings', title: 'Safe & Trusted', desc: 'All suppliers are vetted by Jedida.' },
+  { icon: 'shipments', title: 'Order with Confidence', desc: 'Confirm, pay and get it delivered on time.' }
+];
+
+function FeatureStrip() {
+  return (
+    <div className="wt-feature-strip">
+      {FEATURES.map((f) => (
+        <div className="wt-feature" key={f.title}>
+          <span className="wt-feature-icon"><JdIcon name={f.icon} size={16} /></span>
+          <div>
+            <div className="wt-feature-title">{f.title}</div>
+            <div className="wt-feature-desc">{f.desc}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Top-level page                                                          */
+/* ---------------------------------------------------------------------- */
+
+export default function JedidaWanted() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const currentUserId = getUser()?.id;
+
+  const [posts, setPosts] = useState([]);
+  const [feedLoading, setFeedLoading] = useState(true);
+  const [nextCursor, setNextCursor] = useState(null);
+  const [filterTab, setFilterTab] = useState('All');
+
+  const [selectedId, setSelectedId] = useState(searchParams.get('id') || null);
+  const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const [showPostForm, setShowPostForm] = useState(false);
+  const [likedOfferIds, setLikedOfferIds] = useState(new Set());
+  const [focusedQuoteId, setFocusedQuoteId] = useState(null);
+
+  const loadFeed = async (cursor) => {
+    setFeedLoading(true);
+    try {
+      const { data } = await wantedApi.getWantedFeed(cursor ? { cursor } : {});
+      setPosts((prev) => (cursor ? [...prev, ...data.posts] : data.posts));
+      setNextCursor(data.nextCursor);
+      if (!cursor && !selectedId && data.posts?.length) {
+        setSelectedId(data.posts[0].id);
+      }
+    } finally {
+      setFeedLoading(false);
+    }
+  };
+  useEffect(() => { loadFeed(null); /* eslint-disable-next-line */ }, []);
+
+  const loadDetail = async (id) => {
+    if (!id) return;
+    setDetailLoading(true);
     try {
       const { data } = await wantedApi.getWantedRequest(id);
       setDetail(data);
     } finally {
-      setLoading(false);
+      setDetailLoading(false);
     }
   };
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => { loadDetail(selectedId); }, [selectedId]);
 
-  // Accepting a quote never ends in "coordinate with the business
-  // directly" — it hands back a Jedida checkout product so the order,
-  // payment and escrow all stay on-platform (see wantedController.js).
+  const toggleLike = async (postId) => {
+    const { data } = await wantedApi.toggleWantedLike(postId);
+    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, like_count: data.likeCount, liked_by_me: data.liked } : p)));
+  };
+
+  const toggleLikeOffer = (quoteId) => {
+    setLikedOfferIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(quoteId)) next.delete(quoteId); else next.add(quoteId);
+      return next;
+    });
+  };
+
   const accept = async (quoteId) => {
-    setError('');
     try {
       const { data } = await wantedApi.acceptWantedQuote(quoteId);
       const { productId, quantity } = data.checkout || {};
@@ -457,223 +732,93 @@ function RequestDetail({ id, onClose, currentUserId }) {
         navigate(`/checkout/${productId}?qty=${quantity || 1}`);
         return;
       }
-      load();
+      loadDetail(selectedId);
     } catch (err) {
-      setError(err.response?.data?.error || 'Could not accept this quote.');
+      // Errors here are non-fatal to the layout; the offer card status
+      // still reflects the last successful load.
     }
   };
   const decline = async (quoteId) => {
     await wantedApi.declineWantedQuote(quoteId);
-    load();
+    loadDetail(selectedId);
   };
 
-  if (loading || !detail) return <div className="empty-state">Loading…</div>;
-  const { wantedRequest, matches, quotes, replies } = detail;
-  const isOwner = currentUserId && currentUserId === wantedRequest.buyer_id;
-
-  return (
-    <div className="card-surface" style={{ marginBottom: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-        <h3 style={{ margin: 0 }}>{wantedRequest.title}</h3>
-        <button className="btn-link" onClick={onClose}>Close</button>
-      </div>
-      <p className="product-card-meta">{REQUEST_STATUS_LABELS[wantedRequest.status] || wantedRequest.status} · category: {wantedRequest.category}</p>
-      <p style={{ fontSize: '0.9rem' }}>{wantedRequest.description}</p>
-      {error && <div className="alert alert-error">{error}</div>}
-
-      {isOwner && (
-        <>
-          <OfferComparison quotes={quotes} isOwner={isOwner} onAccept={accept} onDecline={decline} />
-
-          <h4>Invited businesses ({matches.length})</h4>
-          {matches.map((m) => (
-            <div key={m.id} className="product-card-meta" style={{ marginBottom: 4 }}>
-              {m.business_name} — {m.status} (match score {Math.round(m.match_score)})
-              {m.invited_by && ' · invited by you'}
-            </div>
-          ))}
-
-          <InviteSupplierPanel requestId={id} />
-        </>
-      )}
-
-      {!isOwner && currentUserId && B2B_ROLES.includes(getUser()?.primary_role) && (
-        <OfferForm requestId={id} onSubmitted={load} />
-      )}
-
-      <ReplyThread requestId={id} replies={replies || []} onReplyPosted={load} isPublicView={!isOwner} />
-    </div>
+  const selectedPost = useMemo(
+    () => posts.find((p) => p.id === selectedId) || (detail?.wantedRequest ? { ...detail.wantedRequest, liked_by_me: false } : null),
+    [posts, selectedId, detail]
   );
-}
+  const isOwner = currentUserId && selectedPost && currentUserId === (detail?.wantedRequest?.buyer_id || selectedPost.buyer_id);
+  const quotes = detail?.quotes || [];
 
-function WantedPostCard({ post, onOpen, onToggleLike }) {
   return (
-    <div className="card-surface" style={{ marginBottom: 10, cursor: 'pointer' }} onClick={() => onOpen(post.id)}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontWeight: 700 }}>{post.buyer_name}</span>
-            {post.buyer_verified && <span className="product-card-badge" title="Verified buyer">✓ Verified</span>}
+    <div className="wt-shell">
+      <WantedSidebar onPostWanted={() => setShowPostForm(true)} />
+
+      <div className="wt-main">
+        <div className="wt-topbar">
+          <h1 className="wt-title">JEDIDA <span className="accent">WANTED</span></h1>
+          <p className="wt-subtitle">Post what you need. Get replies, likes and choose the best offer.</p>
+          <div className="wt-steps">
+            <span><span className="dot">✓</span> Post</span>
+            <span><span className="dot">✓</span> Get Replies</span>
+            <span><span className="dot">✓</span> Like &amp; Compare</span>
+            <span><span className="dot">✓</span> Chat &amp; Negotiate</span>
+            <span><span className="dot">✓</span> Order with Confidence</span>
           </div>
-          <div className="product-card-meta">{timeAgo(post.created_at)}</div>
-        </div>
-        <span className="product-card-badge">WANTED</span>
-      </div>
-
-      <h4 style={{ margin: '8px 0 4px' }}>{post.title}</h4>
-      <p style={{ fontSize: '0.9rem', margin: '0 0 8px', color: '#5B6760' }}>{post.description}</p>
-
-      <div className="product-card-meta" style={{ marginBottom: 8 }}>
-        {post.destination_city ? `${post.destination_city}, ` : ''}{post.destination_country || ''}
-        {post.required_by_date ? ` · Before ${new Date(post.required_by_date).toLocaleDateString()}` : ''}
-        {post.budget_max ? ` · Budget ${post.currency} ${post.budget_max}` : ''}
-      </div>
-
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-        <button className="btn-link" onClick={(e) => { e.stopPropagation(); onToggleLike(post.id); }}>
-          {post.liked_by_me ? '♥' : '♡'} {post.like_count || 0} Likes
-        </button>
-        <span className="product-card-meta">💬 {post.reply_count || 0} Replies</span>
-        <span className="product-card-meta">🏷 {post.quote_count || 0} Offers</span>
-      </div>
-    </div>
-  );
-}
-
-function WantedFeed({ onOpen }) {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [nextCursor, setNextCursor] = useState(null);
-
-  const load = async (cursor) => {
-    setLoading(true);
-    try {
-      const { data } = await wantedApi.getWantedFeed(cursor ? { cursor } : {});
-      setPosts((prev) => (cursor ? [...prev, ...data.posts] : data.posts));
-      setNextCursor(data.nextCursor);
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => { load(null); }, []);
-
-  const toggleLike = async (postId) => {
-    const { data } = await wantedApi.toggleWantedLike(postId);
-    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, like_count: data.likeCount, liked_by_me: data.liked } : p)));
-  };
-
-  return (
-    <div>
-      {loading && posts.length === 0 && <div className="empty-state">Loading…</div>}
-      {!loading && posts.length === 0 && <div className="empty-state">No public requests yet — be the first to post what you want.</div>}
-      {posts.map((p) => <WantedPostCard key={p.id} post={p} onOpen={onOpen} onToggleLike={toggleLike} />)}
-      {nextCursor && (
-        <button className="btn-link" onClick={() => load(nextCursor)} disabled={loading}>
-          {loading ? 'Loading…' : 'Load more'}
-        </button>
-      )}
-    </div>
-  );
-}
-
-export default function JedidaWanted() {
-  const [tab, setTab] = useState('feed'); // 'feed' | 'mine'
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [openId, setOpenId] = useState(null);
-  const [showPostForm, setShowPostForm] = useState(false);
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const { data } = await wantedApi.myWantedRequests();
-      setRequests(data.wantedRequests || []);
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => { if (tab === 'mine') load(); }, [tab]);
-
-  // Social engagement only — a like never creates an order or reserves
-  // anything (brief §22). Updates the count optimistically from the
-  // server's actual returned total.
-  const toggleLike = async (e, requestId) => {
-    e.stopPropagation();
-    const { data } = await wantedApi.toggleWantedLike(requestId);
-    setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, like_count: data.likeCount, liked_by_me: data.liked } : r)));
-  };
-
-  return (
-    <div>
-      <MarketplaceHeader />
-      <div className="dash-body">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-          <div>
-            <h2 style={{ marginBottom: 4 }}>Jedida Wanted</h2>
-            <p style={{ color: '#5B6760', margin: 0 }}>Post what you need — Jedida finds and invites the right businesses to quote.</p>
-          </div>
-          <button className="btn-primary" onClick={() => setShowPostForm((v) => !v)}>
-            {showPostForm ? 'Cancel' : '+ Post Wanted'}
-          </button>
         </div>
 
-        {showPostForm && (
-          <div style={{ marginTop: 12 }}>
-            <PostForm onPosted={() => { setShowPostForm(false); setTab('mine'); load(); }} />
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: 4, margin: '16px 0', borderBottom: '1px solid #E4E9E6' }}>
-          <button
-            className={tab === 'feed' ? 'btn-primary' : 'btn-link'}
-            style={{ borderRadius: '8px 8px 0 0' }}
-            onClick={() => setTab('feed')}
-          >
-            Wanted Feed
-          </button>
-          <button
-            className={tab === 'mine' ? 'btn-primary' : 'btn-link'}
-            style={{ borderRadius: '8px 8px 0 0' }}
-            onClick={() => setTab('mine')}
-          >
-            My Requests
-          </button>
-        </div>
-
-        {openId && (
-          <RequestDetail
-            id={openId}
-            currentUserId={getUser()?.id}
-            onClose={() => { setOpenId(null); if (tab === 'mine') load(); }}
+        <div className="wt-columns">
+          <FeedColumn
+            posts={posts}
+            loading={feedLoading}
+            nextCursor={nextCursor}
+            onLoadMore={() => loadFeed(nextCursor)}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            onToggleLike={toggleLike}
+            filterTab={filterTab}
+            onFilterTab={setFilterTab}
           />
-        )}
 
-        {tab === 'feed' && <WantedFeed onOpen={setOpenId} />}
+          <DetailColumn
+            post={selectedPost}
+            detail={detail}
+            loading={detailLoading}
+            currentUserId={currentUserId}
+            onToggleLike={toggleLike}
+            onReplyPosted={() => loadDetail(selectedId)}
+            onFocusOffer={setFocusedQuoteId}
+          />
 
-        {tab === 'mine' && (
-          <>
-            {loading && <div className="empty-state">Loading…</div>}
-            {!loading && requests.length === 0 && <div className="empty-state">You haven't posted a request yet.</div>}
-            {requests.map((r) => (
-              <div key={r.id} className="card-surface" style={{ marginBottom: 10, cursor: 'pointer' }} onClick={() => setOpenId(r.id)}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                  <div>
-                    <div style={{ fontWeight: 700 }}>{r.title}</div>
-                    <div className="product-card-meta">
-                      {new Date(r.created_at).toLocaleDateString()} · {r.match_count} matched · {r.live_quote_count} quote(s)
-                      {r.visibility === 'private' ? ' · Private' : ''}
-                    </div>
-                  </div>
-                  <span className="product-card-badge">{REQUEST_STATUS_LABELS[r.status] || r.status}</span>
-                </div>
-                <button className="btn-link" style={{ marginTop: 6 }} onClick={(e) => toggleLike(e, r.id)}>
-                  {r.liked_by_me ? '♥' : '♡'} {r.like_count || 0}
-                </button>
-              </div>
-            ))}
-          </>
-        )}
+          <OffersColumn
+            post={selectedPost}
+            quotes={quotes}
+            isOwner={isOwner}
+            likedIds={likedOfferIds}
+            onToggleLikeOffer={toggleLikeOffer}
+            onAccept={accept}
+            onDecline={decline}
+            focusedQuoteId={focusedQuoteId}
+          />
+        </div>
+
+        <FeatureStrip />
       </div>
+
+      {showPostForm && (
+        <div className="wt-modal-backdrop" onClick={() => setShowPostForm(false)}>
+          <div className="wt-modal" onClick={(e) => e.stopPropagation()}>
+            <PostForm
+              onCancel={() => setShowPostForm(false)}
+              onPosted={(req) => {
+                setShowPostForm(false);
+                loadFeed(null);
+                if (req?.id) setSelectedId(req.id);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
