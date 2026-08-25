@@ -10,10 +10,16 @@ import './jd-shell.css';
  * exactly like the old TabBar's onClick did — so existing `tab === 'x' ? <Panel/> : null`
  * rendering in SellerDashboard.jsx / DeliveryDashboard.jsx keeps working unchanged.
  *
+ * Pass `items` (an array of {key,label,icon}) when a dashboard computes its
+ * own role-specific tab list (e.g. SellerDashboard.jsx's navItemsForRole) —
+ * it takes priority over the static ROLE_NAV[role] fallback in roleNav.js,
+ * which only covers each role's fixed baseline tabs.
+ *
  * Usage (inside e.g. SellerDashboard.jsx):
  *
  *   <JdDashboardShell
  *     role="seller"
+ *     items={navItemsForRole(role)}
  *     activeTab={tab}
  *     onSelect={setTab}
  *     shopName={shop?.name}
@@ -29,6 +35,7 @@ import './jd-shell.css';
  */
 export default function JdDashboardShell({
   role,
+  items,
   activeTab,
   onSelect,
   shopName,
@@ -48,6 +55,7 @@ export default function JdDashboardShell({
     <div className="jd-shell" data-role={role}>
       <JdSidebar
         role={role}
+        items={items}
         activeTab={activeTab}
         onSelect={onSelect}
         shopName={shopName}
@@ -66,7 +74,7 @@ export default function JdDashboardShell({
           primaryAction={primaryAction}
         />
         <main className="jd-dashboard-content">{children}</main>
-        <JdBottomNav role={role} activeTab={activeTab} onSelect={onSelect} />
+        <JdBottomNav role={role} items={items} activeTab={activeTab} onSelect={onSelect} />
       </div>
     </div>
   );

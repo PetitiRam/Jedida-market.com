@@ -8,8 +8,8 @@ import './jd-shell.css';
  * on screens >= 960px. Keeps the same `tab` / `setTab` state your existing
  * dashboards already use — this only changes presentation, not routing.
  */
-export default function JdSidebar({ role, activeTab, onSelect, shopName, collapsed, onToggleCollapse }) {
-  const items = ROLE_NAV[role] || ROLE_NAV.seller;
+export default function JdSidebar({ role, items, activeTab, onSelect, shopName, collapsed, onToggleCollapse }) {
+  const navItems = items || ROLE_NAV[role] || ROLE_NAV.seller;
 
   return (
     <aside className={`jd-sidebar ${collapsed ? 'jd-sidebar-collapsed' : ''}`} data-role={role}>
@@ -24,7 +24,7 @@ export default function JdSidebar({ role, activeTab, onSelect, shopName, collaps
       </div>
 
       <nav className="jd-sidebar-nav">
-        {items.map((item) => (
+        {navItems.map((item) => (
           <button
             key={item.key}
             type="button"

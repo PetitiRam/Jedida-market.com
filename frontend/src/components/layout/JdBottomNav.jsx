@@ -3,9 +3,9 @@ import JdIcon from './JdIcons';
 import { ROLE_NAV, ROLE_BOTTOM_NAV } from './roleNav';
 import './jd-shell.css';
 
-export default function JdBottomNav({ role, activeTab, onSelect }) {
+export default function JdBottomNav({ role, items, activeTab, onSelect }) {
   const [moreOpen, setMoreOpen] = useState(false);
-  const allItems = ROLE_NAV[role] || ROLE_NAV.seller;
+  const allItems = items || ROLE_NAV[role] || ROLE_NAV.seller;
   const primaryKeys = ROLE_BOTTOM_NAV[role] || allItems.slice(0, 4).map((i) => i.key);
   const primaryItems = primaryKeys
     .map((k) => allItems.find((i) => i.key === k))
