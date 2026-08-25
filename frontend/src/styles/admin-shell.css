@@ -196,20 +196,13 @@
   .jd-row-card-actions button { flex: 1; min-height: 38px; }
 }
 
-@media (max-width: 900px) {
-  .ash-sidebar { position: fixed; z-index: 50; left: 0; top: 0; box-shadow: 0 0 0 9999px rgba(0,0,0,0); transition: transform 0.24s ease; }
-  .ash-sidebar.mobile-hidden { transform: translateX(-100%); }
-  .ash-content { padding: 14px; }
-  .ash-topbar { padding: 10px 12px; }
-  .ash-mobile-menu-btn { display: flex; }
-  .ash-mobile-close-btn { display: flex; }
-  .ash-mobile-backdrop { display: block; }
-  .ash-collapse-btn { display: none; } /* collapse-to-icons is a desktop concept; mobile just opens/closes the full drawer */
-}
-
 /* ---------- Mobile drawer chrome (hamburger trigger, close button,
-   backdrop) — all no-ops on desktop via the display:none defaults below,
-   only switched on inside the max-width:900px block above. ---------- */
+   backdrop) — off by default; switched on only inside the
+   max-width:900px block below. Must stay ABOVE that media query in
+   source order: CSS resolves same-specificity ties by source order,
+   so if this default block came after the media query, its
+   unconditional display:none would always win over the override,
+   even on mobile. ---------- */
 .ash-mobile-menu-btn {
   display: none;
   align-items: center; justify-content: center;
@@ -230,4 +223,15 @@
   display: none;
   position: fixed; inset: 0; z-index: 45;
   background: rgba(16, 24, 20, 0.45);
+}
+
+@media (max-width: 900px) {
+  .ash-sidebar { position: fixed; z-index: 50; left: 0; top: 0; box-shadow: 0 0 0 9999px rgba(0,0,0,0); transition: transform 0.24s ease; }
+  .ash-sidebar.mobile-hidden { transform: translateX(-100%); }
+  .ash-content { padding: 14px; }
+  .ash-topbar { padding: 10px 12px; }
+  .ash-mobile-menu-btn { display: flex; }
+  .ash-mobile-close-btn { display: flex; }
+  .ash-mobile-backdrop { display: block; }
+  .ash-collapse-btn { display: none; } /* collapse-to-icons is a desktop concept; mobile just opens/closes the full drawer */
 }
