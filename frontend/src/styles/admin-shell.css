@@ -173,8 +173,37 @@
 .ash-role-note { font-size: 0.82rem; color: var(--mc-text-dim, #5B6760); margin: -6px 0 14px; }
 
 @media (max-width: 900px) {
-  .ash-sidebar { position: fixed; z-index: 50; left: 0; top: 0; box-shadow: 0 0 0 9999px rgba(0,0,0,0); }
+  .ash-sidebar { position: fixed; z-index: 50; left: 0; top: 0; box-shadow: 0 0 0 9999px rgba(0,0,0,0); transition: transform 0.24s ease; }
   .ash-sidebar.mobile-hidden { transform: translateX(-100%); }
   .ash-content { padding: 14px; }
   .ash-topbar { padding: 10px 12px; }
+  .ash-mobile-menu-btn { display: flex; }
+  .ash-mobile-close-btn { display: flex; }
+  .ash-mobile-backdrop { display: block; }
+  .ash-collapse-btn { display: none; } /* collapse-to-icons is a desktop concept; mobile just opens/closes the full drawer */
+}
+
+/* ---------- Mobile drawer chrome (hamburger trigger, close button,
+   backdrop) — all no-ops on desktop via the display:none defaults below,
+   only switched on inside the max-width:900px block above. ---------- */
+.ash-mobile-menu-btn {
+  display: none;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px; flex-shrink: 0;
+  border-radius: 10px; border: 1px solid var(--mc-border);
+  background: var(--mc-bg, #EFF6F1); color: var(--mc-text-dim);
+  font-size: 1.1rem; line-height: 1; cursor: pointer;
+}
+.ash-mobile-menu-btn:hover { color: var(--mc-green); }
+.ash-mobile-close-btn {
+  display: none;
+  align-items: center; justify-content: center;
+  width: 30px; height: 30px; margin-left: auto; flex-shrink: 0;
+  border-radius: 8px; border: 1px solid var(--mc-border);
+  background: transparent; color: var(--mc-text-dim); cursor: pointer;
+}
+.ash-mobile-backdrop {
+  display: none;
+  position: fixed; inset: 0; z-index: 45;
+  background: rgba(16, 24, 20, 0.45);
 }

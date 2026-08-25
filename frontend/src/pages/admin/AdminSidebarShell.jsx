@@ -68,6 +68,7 @@ function initials(name) {
 export default function AdminSidebarShell({ tabs, initial, user, children }) {
   const [active, setActiveState] = useState(initial || tabs[0]?.key);
   const [collapsed, setCollapsed] = useState(() => readLS(LS_KEYS.collapsed, false));
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [favorites, setFavorites] = useState(() => readLS(LS_KEYS.favorites, []));
   const [recent, setRecent] = useState(() => readLS(LS_KEYS.recent, []));
   const [query, setQuery] = useState('');
@@ -86,6 +87,7 @@ export default function AdminSidebarShell({ tabs, initial, user, children }) {
 
   const setActive = (key) => {
     setActiveState(key);
+    setMobileOpen(false); // picking a screen on mobile should close the drawer, not leave it open over the content
     setRecent((prev) => {
       const next = [key, ...prev.filter((k) => k !== key)].slice(0, 6);
       writeLS(LS_KEYS.recent, next);
@@ -249,12 +251,27 @@ export default function AdminSidebarShell({ tabs, initial, user, children }) {
 
   return (
     <div className="ash-root">
-      <aside className={`ash-sidebar ${collapsed ? 'collapsed' : ''}`}>
+      {mobileOpen && (
+        <div
+          className="ash-mobile-backdrop"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+      <aside className={`ash-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? '' : 'mobile-hidden'}`}>
         <div className="ash-brand">
           <Logo size={28} />
           <div className="ash-brand-text"><b>Jedida</b><span>Mission Control</span></div>
           <button type="button" className="ash-collapse-btn" onClick={toggleCollapsed} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
             <Icon name={collapsed ? 'chevronRight' : 'chevronLeft'} size={14} />
+          </button>
+          <button
+            type="button"
+            className="ash-mobile-close-btn"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close menu"
+          >
+            <Icon name="x" size={16} />
           </button>
         </div>
 
@@ -313,6 +330,14 @@ export default function AdminSidebarShell({ tabs, initial, user, children }) {
 
       <div className="ash-main">
         <div className="ash-topbar">
+          <button
+            type="button"
+            className="ash-mobile-menu-btn"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open menu"
+          >
+            ☰
+          </button>
           <div className="ash-search-wrap" ref={searchRef}>
             <span className="ash-search-icon"><Icon name="search" size={15} /></span>
             <input
