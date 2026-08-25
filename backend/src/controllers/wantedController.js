@@ -1098,4 +1098,99 @@ export async function adminListWantedSecurityEvents(req, res) {
   }
 }
 
+// ------------------------------------------------------------
+// INVITED SUPPLIERS (brief §54/§19) — the buyer manually invites a
+// specific eligible business to a request, on top of whatever Jedida's
+// AI matching already invited. Reuses wanted_request_matches as-is
+// (see phase93 migration header) so every downstream capability —
+// viewing, offering, comparing, negotiating — treats an invited
+// supplier exactly like an AI-matched one; only the provenance differs.
+// ------------------------------------------------------------
+export async function searchEligibleSuppliers(req, res) {
+  const { search } = req.query;
+  try {
+    const wrResult = await query('SELECT id, category, buyer_id FROM wanted_requests WHERE id = $1', [req.params.id]);
+    const wantedRequest = wrResult.rows[0];
+    if (!wantedRequest) return res.status(404).json({ error: 'Request not found.' });
+    if (wantedRequest.buyer_id !== req.user.id && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Only the buyer can invite suppliers to this request.' });
+    }
+
+    const values = [B2B_ROLES, req.params.id];
+    const conditions = [`u.primary_role = ANY($1)`, `bp.status = 'active'`, `m.id IS NULL`];
+    if (search) { values.push(`%${search}%`); conditions.push(`bp.company_name ILIKE $${values.length}`); }
+    values.push(wantedRequest.category);
+    const categoryParam = `$${values.length}`;
+
+    const result = await query(
+      `SELECT u.id AS business_id, u.primary_role AS business_type, u.full_name,
+              bp.company_name, bp.company_country, (u.kyc_status = 'approved') AS verified
+       FROM business_profiles bp
+       JOIN users u ON u.id = bp.user_id
+       LEFT JOIN shops s ON s.owner_id = u.id AND s.status = 'active'
+       LEFT JOIN wanted_request_matches m ON m.business_id = u.id AND m.wanted_request_id = $2
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY (s.primary_category = ${categoryParam}) DESC, bp.company_name ASC LIMIT 50`,
+      values
+    );
+    return res.json({ businesses: result.rows });
+  } catch (err) {
+    console.error('Search eligible suppliers error:', err);
+    return res.status(500).json({ error: 'Could not search suppliers.' });
+  }
+}
+
+export async function inviteWantedSupplier(req, res) {
+  const { businessId } = req.body;
+  if (!businessId) return res.status(400).json({ error: 'businessId is required.' });
+
+  try {
+    const wrResult = await query('SELECT * FROM wanted_requests WHERE id = $1', [req.params.id]);
+    const wantedRequest = wrResult.rows[0];
+    if (!wantedRequest) return res.status(404).json({ error: 'Request not found.' });
+    if (wantedRequest.buyer_id !== req.user.id && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Only the buyer can invite suppliers to this request.' });
+    }
+
+    // Eligibility (brief §19): must be a verified B2B business with an
+    // active profile — same bar AI matching already holds businesses to.
+    const eligible = await query(
+      `SELECT u.id, bp.company_name FROM users u
+       JOIN business_profiles bp ON bp.user_id = u.id
+       WHERE u.id = $1 AND u.primary_role = ANY($2) AND bp.status = 'active'`,
+      [businessId, B2B_ROLES]
+    );
+    if (!eligible.rows[0]) return res.status(400).json({ error: 'This business is not eligible to be invited (must be a verified supplier/manufacturer/farmer).' });
+
+    const shopResult = await query(`SELECT id FROM shops WHERE owner_id = $1 ORDER BY created_at ASC LIMIT 1`, [businessId]);
+    const inserted = await query(
+      `INSERT INTO wanted_request_matches (wanted_request_id, business_id, shop_id, match_score, match_reasons, status, invited_by)
+       VALUES ($1,$2,$3,0,$4,'invited',$5)
+       ON CONFLICT (wanted_request_id, business_id) DO NOTHING
+       RETURNING *`,
+      [req.params.id, businessId, shopResult.rows[0]?.id || null,
+        JSON.stringify([{ factor: 'buyer_invited', weight: 0, detail: 'Buyer directly invited this business.' }]), req.user.id]
+    );
+    if (!inserted.rows[0]) return res.status(409).json({ error: 'This business has already been matched or invited.' });
+
+    if (wantedRequest.status === 'submitted') {
+      await query(`UPDATE wanted_requests SET status = 'matched', match_count = match_count + 1 WHERE id = $1`, [req.params.id]);
+    } else {
+      await query(`UPDATE wanted_requests SET match_count = match_count + 1 WHERE id = $1`, [req.params.id]);
+    }
+
+    await notifyWantedUser(query, {
+      userId: businessId, type: 'wanted_request_matched', title: 'A buyer invited you to a sourcing request',
+      body: `${eligible.rows[0].company_name}, you've been personally invited to quote on "${wantedRequest.title}".`,
+      metadata: { wantedRequestId: req.params.id }
+    });
+    await logWantedAction(req.params.id, req.user.id, 'supplier_invited', { businessId });
+
+    return res.status(201).json({ message: 'Supplier invited.', match: inserted.rows[0] });
+  } catch (err) {
+    console.error('Invite wanted supplier error:', err);
+    return res.status(500).json({ error: 'Could not invite this supplier.' });
+  }
+}
+
 export { CATEGORIES as WANTED_CATEGORIES };

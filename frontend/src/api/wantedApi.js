@@ -11,6 +11,8 @@ export const toggleWantedLike = (id) => client.post(`/wanted/${id}/like`);
 export const submitWantedOffer = (id, payload) => client.post(`/wanted/${id}/offers`, payload);
 export const listWantedQuoteMessages = (quoteId) => client.get(`/wanted/quotes/${quoteId}/messages`);
 export const sendWantedQuoteMessage = (quoteId, payload) => client.post(`/wanted/quotes/${quoteId}/messages`, payload);
+export const searchEligibleSuppliers = (id, search) => client.get(`/wanted/${id}/eligible-suppliers`, { params: search ? { search } : {} });
+export const inviteWantedSupplier = (id, businessId) => client.post(`/wanted/${id}/invite-supplier`, { businessId });
 
 // ---- Public feed ----
 export const getWantedFeed = (params) => client.get('/wanted/feed', { params });

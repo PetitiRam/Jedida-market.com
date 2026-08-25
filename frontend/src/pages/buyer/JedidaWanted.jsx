@@ -372,6 +372,62 @@ function ReplyThread({ requestId, replies, onReplyPosted, isPublicView }) {
   );
 }
 
+function InviteSupplierPanel({ requestId }) {
+  const [search, setSearch] = useState('');
+  const [businesses, setBusinesses] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [invited, setInvited] = useState({});
+  const [error, setError] = useState('');
+
+  const runSearch = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const { data } = await wantedApi.searchEligibleSuppliers(requestId, search);
+      setBusinesses(data.businesses || []);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => { runSearch(); }, []);
+
+  const invite = async (businessId) => {
+    try {
+      await wantedApi.inviteWantedSupplier(requestId, businessId);
+      setInvited((prev) => ({ ...prev, [businessId]: true }));
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not invite this supplier.');
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      <h4>Invite a supplier</h4>
+      <p className="product-card-meta">
+        Directly invite a verified supplier/manufacturer/farmer to see and quote on this request —
+        useful on top of, or instead of, Jedida's automatic matching.
+      </p>
+      {error && <div className="alert alert-error">{error}</div>}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input placeholder="Search by company name…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ flex: 1 }} />
+        <button className="btn-secondary" onClick={runSearch} disabled={loading}>{loading ? '…' : 'Search'}</button>
+      </div>
+      {businesses.length === 0 && !loading && <div className="empty-state">No eligible suppliers found.</div>}
+      {businesses.map((b) => (
+        <div key={b.business_id} className="card-surface" style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <div>
+            <div style={{ fontWeight: 700 }}>{b.company_name} {b.verified && <span className="product-card-badge">✓ Verified</span>}</div>
+            <div className="product-card-meta">{b.business_type} · {b.company_country || 'location not set'}</div>
+          </div>
+          <button className="btn-primary" disabled={invited[b.business_id]} onClick={() => invite(b.business_id)}>
+            {invited[b.business_id] ? 'Invited' : 'Invite'}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function RequestDetail({ id, onClose, currentUserId }) {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -433,8 +489,11 @@ function RequestDetail({ id, onClose, currentUserId }) {
           {matches.map((m) => (
             <div key={m.id} className="product-card-meta" style={{ marginBottom: 4 }}>
               {m.business_name} — {m.status} (match score {Math.round(m.match_score)})
+              {m.invited_by && ' · invited by you'}
             </div>
           ))}
+
+          <InviteSupplierPanel requestId={id} />
         </>
       )}
 

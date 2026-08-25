@@ -3,7 +3,8 @@ import {
   createWantedRequest, myWantedRequests, getWantedRequest, cancelWantedRequest,
   incomingWantedMatches, respondToWantedMatch, submitWantedQuote, submitWantedOffer,
   acceptWantedQuote, declineWantedQuote, toggleWantedLike,
-  getWantedFeed, postWantedReply, listWantedQuoteMessages, sendWantedQuoteMessage
+  getWantedFeed, postWantedReply, listWantedQuoteMessages, sendWantedQuoteMessage,
+  searchEligibleSuppliers, inviteWantedSupplier
 } from '../controllers/wantedController.js';
 import { B2B_ROLES } from '../controllers/b2bCatalogController.js';
 import { requireAuth, requireRole, optionalAuth } from '../middleware/auth.js';
@@ -27,6 +28,8 @@ router.post('/quotes/:quoteId/messages', requireAuth, sendWantedQuoteMessage);
 router.post('/:id/like', requireAuth, toggleWantedLike); // social engagement only — never an order (brief §22)
 router.post('/:id/replies', requireAuth, postWantedReply);
 router.post('/:id/offers', requireAuth, requireRole(...B2B_ROLES), submitWantedOffer); // direct Offer on a public post (brief §18)
+router.get('/:id/eligible-suppliers', requireAuth, searchEligibleSuppliers); // buyer-invited suppliers (brief §54)
+router.post('/:id/invite-supplier', requireAuth, inviteWantedSupplier);
 
 // ---- Business side — manufacturer/supplier/farmer accounts Jedida matched ----
 router.get('/matches/incoming', requireAuth, requireRole(...B2B_ROLES), incomingWantedMatches);
