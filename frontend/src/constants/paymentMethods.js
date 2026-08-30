@@ -1,5 +1,12 @@
 export const PAYMENT_METHODS = [
   {
+    id: "wallet",
+    label: "Jedida Wallet",
+    logo: "/payment-logos/mobile-banking.png",
+    available: true
+  },
+
+  {
     id: "pesajet",
     label: "Mobile Money (PesaJet)",
     network: "MTN / Airtel",

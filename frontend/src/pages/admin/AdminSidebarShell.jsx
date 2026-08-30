@@ -278,7 +278,7 @@ export default function AdminSidebarShell({ tabs, initial, user, children }) {
         <div className="ash-sidebar-scroll">
           {grouped.dashboardTab && (
             <ul className="ash-nav" style={{ marginBottom: 6 }}>
-              <NavItem tab={{ ...grouped.dashboardTab, icon: 'grid', label: '📊 Mission Control' }} />
+              <NavItem tab={{ ...grouped.dashboardTab, icon: 'grid', label: 'Mission Control' }} />
             </ul>
           )}
 
@@ -336,7 +336,7 @@ export default function AdminSidebarShell({ tabs, initial, user, children }) {
             onClick={() => setMobileOpen(true)}
             aria-label="Open menu"
           >
-            ☰
+            <Icon name="menu" size={20} />
           </button>
           <div className="ash-search-wrap" ref={searchRef}>
             <span className="ash-search-icon"><Icon name="search" size={15} /></span>

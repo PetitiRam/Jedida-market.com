@@ -10,6 +10,7 @@ router.get('/wishlist/mine', requireAuth, ctrl.listMyWishlist);
 
 router.post('/shops/:shopId/follow/toggle', requireAuth, ctrl.toggleFollow);
 router.get('/shops/:shopId/follow/info', optionalAuth, ctrl.getShopFollowInfo);
+router.get('/shops/following/mine', requireAuth, ctrl.listMyFollowedShops);
 
 router.post('/cart', requireAuth, ctrl.addToCart);
 router.get('/cart', requireAuth, ctrl.getCart);

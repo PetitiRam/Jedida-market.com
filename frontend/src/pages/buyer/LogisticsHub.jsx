@@ -129,7 +129,7 @@ function TrackingView({ bookingId }) {
   );
 }
 
-export default function LogisticsHub() {
+export default function LogisticsHub({ embedded = false } = {}) {
   const [quotes, setQuotes] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [openQuoteId, setOpenQuoteId] = useState(null);
@@ -144,7 +144,7 @@ export default function LogisticsHub() {
 
   return (
     <div>
-      <MarketplaceHeader />
+      {!embedded && <MarketplaceHeader />}
       <div className="dash-body">
         <h2 style={{ marginBottom: 4 }}>Jedida Logistics Hub</h2>
         <p style={{ color: '#5B6760', marginBottom: 16 }}>Compare shipping rates across providers and track your bookings.</p>

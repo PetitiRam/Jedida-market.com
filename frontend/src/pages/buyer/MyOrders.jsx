@@ -52,7 +52,7 @@ function DisputeForm({ orderId, onDone }) {
   );
 }
 
-export default function MyOrders() {
+export default function MyOrders({ embedded = false } = {}) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [disputingId, setDisputingId] = useState(null);
@@ -74,7 +74,7 @@ export default function MyOrders() {
 
   return (
     <div>
-      <MarketplaceHeader />
+      {!embedded && <MarketplaceHeader />}
       <div className="dash-body">
         <h2>My Orders</h2>
         {orders.length === 0 ? <div className="empty-state">You haven't placed any orders yet.</div> : (

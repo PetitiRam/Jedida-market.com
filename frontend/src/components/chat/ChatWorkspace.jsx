@@ -38,7 +38,7 @@ export default function ChatWorkspace({ onClose, initialConversationId = null })
   const bottomRef = useRef(null);
 
   const {
-    connected, messages, setMessages, presence, myUserId,
+    connected, messages, setMessages, presence, myUserId, profileUpdates,
     sendMessage, startTyping, stopTyping, markRead, react, deleteForEveryone,
     pinMessage, unpinMessage, moderationWarning, dismissModerationWarning
   } = useChatSocket(conversationId);
@@ -82,6 +82,11 @@ export default function ChatWorkspace({ onClose, initialConversationId = null })
     ? (conversation.user_id === myUserId ? conversation.seller_id : conversation.user_id)
     : null;
   const isOnline = otherUserId != null && presence[otherUserId] ? presence[otherUserId].isOnline : !!participant?.isOnline;
+  // Live-patch the other participant's photo if they change it while this
+  // conversation is open — see useChatSocket's 'profile:updated' listener.
+  const liveParticipant = (participant && otherUserId != null && profileUpdates[otherUserId])
+    ? { ...participant, avatarUrl: profileUpdates[otherUserId].avatarUrl ?? participant.avatarUrl }
+    : participant;
   const displayBody = (m) => m.display_body ?? m.translations?.[myLanguage] ?? m.body;
   const hasProduct = !!summary?.product;
 
@@ -199,7 +204,7 @@ export default function ChatWorkspace({ onClose, initialConversationId = null })
   return (
     <div className="cw-root">
       <ChatHeader
-        participant={participant}
+        participant={liveParticipant}
         isOnline={isOnline}
         onViewStore={viewStore}
         onReport={reportConversation}

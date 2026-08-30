@@ -16,6 +16,13 @@ export const ROLE_LABELS = {
   chat_assistant: 'Chat Assistant',
   business_rep: 'Business Representative',
   security_agent: 'Security Agent',
+  finance_admin: 'Finance Administrator',
+  payment_operations: 'Payment Operations',
+  settlement_officer: 'Settlement Officer',
+  refund_officer: 'Refund Officer',
+  reconciliation_officer: 'Reconciliation Officer',
+  finance_auditor: 'Finance Auditor',
+  finance_viewer: 'Finance Viewer',
 };
 
 export const ROLE_DESCRIPTIONS = {
@@ -30,6 +37,13 @@ export const ROLE_DESCRIPTIONS = {
   chat_assistant: 'Handles buyer/seller chat only.',
   business_rep: 'Handles manufacturer/supplier/seller escalations routed from the AI assistant.',
   security_agent: 'Handles fraud, account-abuse and policy-violation escalations.',
+  finance_admin: 'Full Financial Control Center access — settings, providers, reconciliation, releases, and the finance team itself.',
+  payment_operations: 'Monitors incoming payments, investigates failures, retries and reconciles provider transactions.',
+  settlement_officer: 'Reviews seller payable balances and approves/releases funds.',
+  refund_officer: 'Reviews and approves refund requests.',
+  reconciliation_officer: 'Compares JEDIDA\'s ledger against provider records and resolves mismatches.',
+  finance_auditor: 'Read-only access to transactions and the immutable audit trail, plus reports.',
+  finance_viewer: 'Read-only access to the transaction ledger.',
 };
 
 // Risk tier is derived from how broad/sensitive a role's areas are — used
@@ -37,6 +51,8 @@ export const ROLE_DESCRIPTIONS = {
 export const ROLE_RISK = {
   super_admin: 'critical',
   finance: 'high',
+  finance_admin: 'critical',
+  settlement_officer: 'high',
   approvals: 'high',
   security_agent: 'high',
   moderator: 'medium',
@@ -44,8 +60,13 @@ export const ROLE_RISK = {
   marketing: 'medium',
   ai_manager: 'medium',
   business_rep: 'medium',
+  payment_operations: 'medium',
+  refund_officer: 'medium',
+  reconciliation_officer: 'medium',
   support: 'low',
   chat_assistant: 'low',
+  finance_auditor: 'low',
+  finance_viewer: 'low',
 };
 
 export const AREA_LABELS = {
@@ -72,4 +93,11 @@ export const AREA_LABELS = {
   ai: 'AI Command Center',
   fraud: 'Fraud Signals',
   security: 'Security',
+  ledger: 'Financial Ledger',
+  providers: 'Payment Providers',
+  reconciliation: 'Reconciliation',
+  finance_team: 'Finance Team',
+  releases: 'Fund Releases',
+  refunds: 'Refunds',
+  audit: 'Audit Trail',
 };

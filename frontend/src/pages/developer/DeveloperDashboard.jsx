@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as developerPlatformApi from '../../api/developerPlatformApi';
+import Icon from '../../components/icons/icon';
 import '../../styles/developer-platform.css';
 
 // Nav items that are fully wired to real data in this phase. Everything
@@ -14,34 +15,34 @@ const LIVE_VIEWS = new Set(['dashboard', 'api-centre', 'organizations', 'api-key
 
 const NAV_GROUPS = [
   { label: 'General', items: [
-    ['dashboard', '📊', 'Dashboard'],
-    ['projects', '🗂️', 'Projects'],
-    ['applications', '🧩', 'Applications'],
-    ['organizations', '🏢', 'Developer Organizations'],
+    ['dashboard', 'grid', 'Dashboard'],
+    ['projects', 'box', 'Projects'],
+    ['applications', 'package', 'Applications'],
+    ['organizations', 'building', 'Developer Organizations'],
   ]},
   { label: 'Developer', items: [
-    ['api-centre', '🔌', 'API Centre'],
-    ['api-keys', '🔑', 'API Keys'],
-    ['oauth-apps', '🔐', 'OAuth Applications'],
-    ['sandbox', '🧪', 'Sandbox'],
-    ['production', '🚀', 'Production'],
-    ['integration-hub', '🔗', 'Integration Hub'],
-    ['partner-apps', '🧱', 'Partner Apps'],
-    ['marketplace-apps', '🛍️', 'Marketplace Apps'],
-    ['sdk-downloads', '📦', 'SDK Downloads'],
-    ['api-explorer', '▶️', 'API Explorer'],
-    ['webhooks', '🪝', 'Webhooks'],
-    ['events', '📡', 'Events'],
-    ['logs', '📜', 'Logs'],
-    ['analytics', '📈', 'Analytics'],
-    ['developer-ai', '✨', 'Developer AI'],
-    ['documentation', '📘', 'Documentation'],
-    ['support', '🆘', 'Support'],
+    ['api-centre', 'plug', 'API Centre'],
+    ['api-keys', 'key', 'API Keys'],
+    ['oauth-apps', 'lock', 'OAuth Applications'],
+    ['sandbox', 'flask', 'Sandbox'],
+    ['production', 'rocket', 'Production'],
+    ['integration-hub', 'link', 'Integration Hub'],
+    ['partner-apps', 'box', 'Partner Apps'],
+    ['marketplace-apps', 'bag', 'Marketplace Apps'],
+    ['sdk-downloads', 'package', 'SDK Downloads'],
+    ['api-explorer', 'play', 'API Explorer'],
+    ['webhooks', 'webhook', 'Webhooks'],
+    ['events', 'radio', 'Events'],
+    ['logs', 'scroll', 'Logs'],
+    ['analytics', 'chart', 'Analytics'],
+    ['developer-ai', 'sparkle', 'Developer AI'],
+    ['documentation', 'book', 'Documentation'],
+    ['support', 'help', 'Support'],
   ]},
   { label: 'Account', items: [
-    ['security', '🛡️', 'Security'],
-    ['finance', '💰', 'Finance'],
-    ['settings', '⚙️', 'Settings'],
+    ['security', 'checkShield', 'Security'],
+    ['finance', 'wallet', 'Finance'],
+    ['settings', 'settings', 'Settings'],
   ]},
 ];
 
@@ -234,7 +235,7 @@ export default function DeveloperDashboard() {
       <div className="jdp">
         <div className="jdp-center">
           <div className="jdp-card jdp-welcome">
-            <div className="jdp-mark">{profile.status === 'pending' ? '⏳' : '⚠️'}</div>
+            <div className="jdp-mark">{profile.status === 'pending' ? <Icon name="clock" size={28} /> : <Icon name="alertTriangle" size={28} />}</div>
             <h1>{profile.status === 'pending' ? 'Application in review' : `Application ${profile.status}`}</h1>
             <p>
               {profile.status === 'pending' && "Your developer application is still being reviewed. You'll get access to the full dashboard once it's approved."}
@@ -251,7 +252,7 @@ export default function DeveloperDashboard() {
   return (
     <div className="jdp jdp-shell">
       <div className="jdp-sidebar">
-        <div className="jdp-brand"><span style={{ fontSize: 18 }}>🧩</span><b>Developer Platform</b></div>
+        <div className="jdp-brand"><span style={{ display: 'inline-flex', fontSize: 18 }}><Icon name="package" size={18} /></span><b>Developer Platform</b></div>
         {NAV_GROUPS.map((group) => (
           <div key={group.label}>
             <div className="jdp-side-label">{group.label}</div>
@@ -261,7 +262,7 @@ export default function DeveloperDashboard() {
                 className={`jdp-nav-item${view === key ? ' active' : ''}`}
                 onClick={() => setView(key)}
               >
-                <span>{icon}</span>
+                <span><Icon name={icon} size={16} /></span>
                 <span>{label}</span>
                 {!LIVE_VIEWS.has(key) && <span className="soon">soon</span>}
               </button>

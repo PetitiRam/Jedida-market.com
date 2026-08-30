@@ -86,6 +86,8 @@ import logisticsHubRoutes from './routes/logisticsHub.js';
 import translationRoutes from './routes/translation.js';
 import categoryAttributesRoutes from './routes/categoryAttributes.js';
 import analyticsRoutes from './routes/analytics.js';
+import ledgerRoutes from "./routes/ledgerRoutes.js";
+import posRoutes from "./routes/posRoutes.js";
 import { runSupplyContractCycleSweep } from './controllers/agricultureController.js';
 import { runFullTrustAndProtectionSweep } from './services/trustEngineService.js';
 import { autoReleaseExpiredEscrow } from './controllers/ordersController.js';
@@ -335,6 +337,8 @@ app.use('/api/admin/kyc-review', adminKycReviewRoutes);
 app.use('/api/admin/settings-center', settingsCenterRoutes);
 app.use('/api/settings', publicSettingsCenterRoutes);
 app.use("/api/admin/payments", adminPaymentsRoutes);
+app.use("/api/admin/ledger", ledgerRoutes);
+app.use("/api/pos", posRoutes);
 // Legacy direct buyer<->seller Q&A endpoint retired (2026-08) — no shipped
 // client called it, and it let a seller answer a buyer directly,
 // bypassing the admin-mediated moderation the newer Q&A flow

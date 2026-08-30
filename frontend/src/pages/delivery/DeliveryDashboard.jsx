@@ -3,6 +3,7 @@ import client from '../../api/client';
 import JdDashboardShell from '../../components/layout/JdDashboardShell';
 import EmbeddedSupportChat from '../../components/chat/EmbeddedSupportChat';
 import WalletKycPanel from '../../components/WalletKycPanel';
+import { subscribeToProfilePhotoUpdates } from '../../utils/profileSync';
 
 function DeliveryOrdersPanel() {
   const [orders, setOrders] = useState([]);
@@ -51,6 +52,17 @@ export default function DeliveryDashboard() {
     client.get('/auth/me').then(({ data }) => setUser(data.user)).catch(() => {});
   }, []);
 
+  // JdDashboardShell didn't receive avatarUrl before — the shell always
+  // fell back to initials. Wiring it up here (plus staying in sync when
+  // the photo changes elsewhere in this tab) is what makes "dashboard
+  // avatar updates without a refresh" actually true for delivery.
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    return subscribeToProfilePhotoUpdates(user.id, (patch) => {
+      setUser((prev) => prev && ({ ...prev, ...patch }));
+    });
+  }, [user?.id]);
+
   return (
     <JdDashboardShell
       role="delivery"
@@ -59,6 +71,7 @@ export default function DeliveryDashboard() {
       title="Delivery Dashboard"
       subtitle="Your assigned deliveries, wallet and support chat."
       userName={user?.name}
+      avatarUrl={user?.avatar_url}
       userRoleLabel="Delivery Partner"
     >
       {tab === 'orders' && <DeliveryOrdersPanel />}

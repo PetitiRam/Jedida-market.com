@@ -14,6 +14,23 @@
 // not the full dynamic set.
 
 export const ROLE_NAV = {
+  // Buyer's own tab list is computed dynamically in BuyerDashboard.jsx
+  // (Affiliate/Upgrades only show when relevant) — this is only the
+  // fallback for a caller that renders <JdSidebar role="buyer" /> without
+  // passing `items` explicitly.
+  buyer: [
+    { key: 'home', label: 'Dashboard', icon: 'dashboard' },
+    { key: 'orders', label: 'Orders', icon: 'orders' },
+    { key: 'cart', label: 'Cart', icon: 'cart' },
+    { key: 'chat', label: 'Messages', icon: 'messages' },
+    { key: 'notifications', label: 'Notifications', icon: 'bell' },
+    { key: 'following', label: 'Following', icon: 'following' },
+    { key: 'wanted', label: 'Jedida Wanted', icon: 'purchase' },
+    { key: 'wallet', label: 'Wallet', icon: 'wallet' },
+    { key: 'upgrades', label: 'Upgrades', icon: 'earnings' },
+    { key: 'profile', label: 'Profile', icon: 'profile' },
+    { key: 'settings', label: 'Settings', icon: 'settings' },
+  ],
   seller: [
     { key: 'shop', label: 'Dashboard', icon: 'dashboard' },
     { key: 'products', label: 'Products', icon: 'products' },
@@ -70,6 +87,10 @@ export const ROLE_NAV = {
 // SellerDashboard.jsx passes in, not the ROLE_NAV fallback above, so these
 // stick to keys that are present in every one of those roles' tab sets.
 export const ROLE_BOTTOM_NAV = {
+  // Home / Shop / Cart / Messages / Profile — matches spec section 11
+  // (mobile nav) exactly; everything else (Orders, Notifications,
+  // Following, Wanted, Wallet, Upgrades, Settings) lives in the "More" sheet.
+  buyer: ['home', 'cart', 'chat', 'profile'],
   seller: ['shop', 'orders', 'products', 'wallet'],
   manufacturer: ['shop', 'orders', 'products', 'wallet'],
   supplier: ['shop', 'orders', 'products', 'wallet'],
@@ -78,6 +99,7 @@ export const ROLE_BOTTOM_NAV = {
 };
 
 export const ROLE_LABEL = {
+  buyer: 'Buyer',
   seller: 'Seller',
   manufacturer: 'Manufacturer',
   supplier: 'Supplier',

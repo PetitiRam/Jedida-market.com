@@ -17,6 +17,7 @@
 
 import { query } from '../config/db.js';
 import { applyPaymentConfirmation } from './ordersController.js';
+import { applyDepositConfirmation } from './walletsController.js';
 import { verifyStripeSignature, verifyFlutterwaveSignature, verifyCoinbaseSignature } from '../services/paymentWebhookSecurity.js';
 
 async function logPaymentEvent({ provider, eventType, orderId, providerReference, signatureValid, actionTaken, detail, payload, req }) {
@@ -41,6 +42,22 @@ async function confirmByProviderReference(provider, providerReference, req, meta
   const paymentRow = await query('SELECT order_id FROM payments WHERE provider_reference = $1', [providerReference]);
   const orderId = paymentRow.rows[0]?.order_id;
   if (!orderId) {
+    // No order payment matched — check whether this reference belongs to
+    // a wallet deposit instead (see walletsController.startDeposit, which
+    // stamps the same provider_reference the adapter returned onto a
+    // wallet_deposits row rather than a payments row). Same providers,
+    // same signature-verified webhook, just a different destination table.
+    const depositRow = await query('SELECT id FROM wallet_deposits WHERE provider_reference = $1', [providerReference]);
+    if (depositRow.rows.length > 0) {
+      try {
+        await applyDepositConfirmation(providerReference, { confirmedVia: `${provider}_webhook` });
+        await logPaymentEvent({ provider, orderId: null, providerReference, signatureValid: true, actionTaken: 'confirmed', detail: 'Wallet deposit', payload: meta.payload, req, eventType: meta.eventType });
+      } catch (err) {
+        const detail = err.code === 'ALREADY_PROCESSED' ? 'Already confirmed (duplicate webhook delivery).' : err.message;
+        await logPaymentEvent({ provider, orderId: null, providerReference, signatureValid: true, actionTaken: err.code === 'ALREADY_PROCESSED' ? 'ignored' : 'error', detail: `Wallet deposit: ${detail}`, payload: meta.payload, req, eventType: meta.eventType });
+      }
+      return;
+    }
     await logPaymentEvent({ provider, orderId: null, providerReference, signatureValid: true, actionTaken: 'ignored', detail: 'No matching payment row for this reference.', payload: meta.payload, req, eventType: meta.eventType });
     return;
   }

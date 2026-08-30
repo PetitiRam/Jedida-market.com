@@ -1,5 +1,6 @@
 import { query } from '../config/db.js';
 import * as settingsService from '../services/settingsService.js';
+import * as providerAbstraction from '../services/providerAbstraction.js';
 
 const VALID_TRANSITIONS = {
   pending: ['under_review', 'approved', 'rejected'],
@@ -201,5 +202,87 @@ export async function disconnectProvider(req, res) {
   } catch (err) {
     console.error('Disconnect provider error:', err);
     return res.status(500).json({ error: 'Could not disconnect this payment method.' });
+  }
+}
+
+// ===== SELLER — per-method activation (phase 95) =====
+
+// GET /api/provider-registry/mine/methods
+// Nested provider -> methods catalog for the seller's own shop, the data
+// source for the redesigned Payment Providers page (spec #45): each
+// connected provider shows its real methods with an individual toggle,
+// instead of one flat "connected/not connected" per provider.
+export async function listMyProviderMethods(req, res) {
+  try {
+    const shopResult = await query('SELECT id FROM shops WHERE owner_id = $1', [req.user.id]);
+    const shop = shopResult.rows[0];
+    if (!shop) return res.status(404).json({ error: 'Open your shop before configuring payment methods.' });
+
+    const paymentSection = await settingsService.getSection('payment');
+    const catalog = await providerAbstraction.listProviderCatalogForShop(shop.id);
+    // Level-1 filter, same rule as listMyProviderConnections: a
+    // registry-active provider still can't show its methods if the
+    // platform master switch for it is off.
+    const settingsFlagByProviderCode = { pesajet: 'enablePesajet', mobile_money: 'enableMobileMoney', card_payments: 'enableCardPayments', bank_transfer: 'enableBankTransfer', cash_on_delivery: 'enableCash' };
+    const filtered = catalog.filter((p) => {
+      const flag = settingsFlagByProviderCode[p.code];
+      return !flag || paymentSection[flag];
+    });
+
+    return res.json({ providers: filtered });
+  } catch (err) {
+    console.error('List my provider methods error:', err);
+    return res.status(500).json({ error: 'Could not load your payment methods.' });
+  }
+}
+
+// POST /api/provider-registry/mine/methods/:methodId/activate
+export async function activateProviderMethod(req, res) {
+  try {
+    const shopResult = await query('SELECT id FROM shops WHERE owner_id = $1', [req.user.id]);
+    const shop = shopResult.rows[0];
+    if (!shop) return res.status(404).json({ error: 'Open your shop before configuring payment methods.' });
+
+    const activation = await providerAbstraction.activateMethodForShop(shop.id, req.params.methodId);
+    return res.json({ activation });
+  } catch (err) {
+    if (err.code === 'METHOD_NOT_FOUND') return res.status(404).json({ error: 'Payment method not found.' });
+    if (err.code === 'PROVIDER_NOT_CONNECTED') return res.status(400).json({ error: err.message });
+    console.error('Activate provider method error:', err);
+    return res.status(500).json({ error: 'Could not enable this payment method.' });
+  }
+}
+
+// POST /api/provider-registry/mine/methods/:methodId/deactivate
+export async function deactivateProviderMethod(req, res) {
+  try {
+    const shopResult = await query('SELECT id FROM shops WHERE owner_id = $1', [req.user.id]);
+    const shop = shopResult.rows[0];
+    if (!shop) return res.status(404).json({ error: 'Shop not found.' });
+
+    const activation = await providerAbstraction.deactivateMethodForShop(shop.id, req.params.methodId);
+    return res.json({ activation });
+  } catch (err) {
+    if (err.code === 'NOT_ACTIVATED') return res.status(404).json({ error: 'This payment method is not currently enabled.' });
+    console.error('Deactivate provider method error:', err);
+    return res.status(500).json({ error: 'Could not disable this payment method.' });
+  }
+}
+
+// GET /api/provider-registry/shop/:shopId/methods — public
+// Real, seller-configured methods a shop currently accepts. This is what
+// checkout/POS should read going forward instead of any hard-coded
+// method list (spec #8, #35) — a follow-up phase wires createOrder() and
+// the new checkout to call this (via providerAbstraction.getSellerEnabledMethods)
+// rather than the current flat ADAPTERS lookup.
+export async function getShopEnabledMethods(req, res) {
+  try {
+    const methods = await providerAbstraction.getSellerEnabledMethods(req.params.shopId);
+    return res.json({
+      methods: methods.map((m) => ({ code: m.code, name: m.name, providerCode: m.provider_code, providerName: m.provider_name, requiresFields: m.requires_fields })),
+    });
+  } catch (err) {
+    console.error('Get shop enabled methods error:', err);
+    return res.status(500).json({ error: 'Could not load this shop\'s payment methods.' });
   }
 }

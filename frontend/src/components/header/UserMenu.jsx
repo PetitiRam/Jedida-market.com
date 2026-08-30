@@ -19,6 +19,7 @@ export default function UserMenu({ user }) {
     if (user?.primary_role === 'dropshipper') return { to: '/seller', label: 'Dropship Dashboard', icon: 'share' };
     if (user?.primary_role === 'delivery') return { to: '/driver', label: 'Driver Dashboard', icon: 'truck' };
     if (user?.primary_role === 'host') return { to: '/host', label: 'Host Dashboard', icon: 'building' };
+    if (user?.primary_role === 'buyer' || !user?.primary_role) return { to: '/buyer', label: 'Buyer Dashboard', icon: 'grid' };
     return { to: '/seller/upgrade', label: 'Become a Seller', icon: 'star' };
   };
   const dash = dashboardLink();
@@ -56,6 +57,10 @@ export default function UserMenu({ user }) {
             <Link to="/profile" className="jd-menu-row" onClick={close}>
               <Icon name="checkShield" size={16} />
               <span className="jd-menu-row-title">My Profile</span>
+            </Link>
+            <Link to="/settings" className="jd-menu-row" onClick={close}>
+              <Icon name="settings" size={16} />
+              <span className="jd-menu-row-title">Settings</span>
             </Link>
             <Link to="/orders" className="jd-menu-row" onClick={close}>
               <Icon name="bag" size={16} />

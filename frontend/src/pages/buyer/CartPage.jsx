@@ -9,7 +9,7 @@ import PremiumButton from "../../components/payment/PremiumButton";
 import PaymentSuccessCard from "../../components/payment/PaymentSuccessCard";
 import "../../styles/payment-forms.css";
 
-export default function CartPage() {
+export default function CartPage({ embedded = false } = {}) {
   const [cart, setCart] = useState(null);
 
   const [method, setMethod] = useState("mtn_mobile_money");
@@ -60,12 +60,14 @@ export default function CartPage() {
 
       setCheckoutResult(data);
 
-      // Cash on Delivery and PesaJet never go through the manual proof-of-
-      // payment form below — COD has nothing to submit (paid at the door)
-      // and PesaJet is an automated charge, not a proof upload. Only the
-      // legacy manual mtn/airtel/bank flow needs the reference+screenshot
-      // step, same split as the single-item Checkout page.
-      if (data.codPending || method === "pesajet") {
+      // Cash on Delivery, PesaJet, and Jedida Wallet never go through the
+      // manual proof-of-payment form below — COD has nothing to submit
+      // (paid at the door), PesaJet is an automated charge, and a wallet
+      // payment is already confirmed (paid_escrow, cart cleared) by the
+      // time this response comes back. Only the legacy manual mtn/airtel/
+      // bank flow needs the reference+screenshot step, same split as the
+      // single-item Checkout page.
+      if (data.codPending || method === "pesajet" || method === "wallet") {
         setSubmitted(true);
       }
 
@@ -165,7 +167,7 @@ export default function CartPage() {
 
     <div>
 
-      <MarketplaceHeader />
+      {!embedded && <MarketplaceHeader />}
 
 
       <div

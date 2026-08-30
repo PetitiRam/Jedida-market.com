@@ -23,6 +23,11 @@ export function useChatSocket(conversationId) {
   const [presence, setPresence] = useState({});
   const [myUserId, setMyUserId] = useState(null);
   const [moderationWarning, setModerationWarning] = useState(null);
+  // userId -> { avatarUrl, coverImageUrl } — the other participant's photo,
+  // updated live if they change it while this conversation is open, no
+  // refetch of the conversation needed. See profileController.js
+  // uploadAvatar/uploadCoverImage, which broadcast this event.
+  const [profileUpdates, setProfileUpdates] = useState({});
 
   useEffect(() => {
     const token = localStorage.getItem('jedida_access_token');
@@ -72,6 +77,9 @@ export function useChatSocket(conversationId) {
     });
     socket.on('moderation:warning', ({ conversationId: convoId, messageId, reminder }) => {
       setModerationWarning({ conversationId: convoId, messageId, reminder, at: Date.now() });
+    });
+    socket.on('profile:updated', ({ userId, avatarUrl, coverImageUrl }) => {
+      setProfileUpdates((prev) => ({ ...prev, [userId]: { avatarUrl, coverImageUrl } }));
     });
 
     return () => socket.disconnect();
@@ -123,7 +131,7 @@ export function useChatSocket(conversationId) {
   const unpinMessage = useCallback((messageId) => socketRef.current?.emit('message:unpin', { messageId, conversationId }), [conversationId]);
 
   return {
-    connected, messages, setMessages, typingUsers, presence, myUserId,
+    connected, messages, setMessages, typingUsers, presence, myUserId, profileUpdates,
     sendMessage, sendBridgedMessage, startTyping, stopTyping, markRead, react, editMessage, deleteForEveryone,
     pinMessage, unpinMessage, forwardMessage,
     moderationWarning, dismissModerationWarning: () => setModerationWarning(null)

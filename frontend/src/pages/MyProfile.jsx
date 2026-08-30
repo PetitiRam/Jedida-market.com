@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import client from '../api/client';
 import MarketplaceHeader from '../components/MarketplaceHeader';
 import Icon from '../components/icons/icon';
+import ProfilePhotoUpload from '../components/ProfilePhotoUpload';
+import { subscribeToProfilePhotoUpdates } from '../utils/profileSync';
 
 const ROLE_LABELS = {
   buyer: 'Buyer', seller: 'Seller', manufacturer: 'Manufacturer', supplier: 'Supplier',
@@ -10,6 +12,7 @@ const ROLE_LABELS = {
 };
 
 const DASHBOARD_LINKS = {
+  buyer: { to: '/buyer', label: 'Go to Buyer Dashboard' },
   seller: { to: '/seller', label: 'Go to Seller Dashboard' },
   manufacturer: { to: '/seller', label: 'Go to Business Dashboard' },
   supplier: { to: '/seller', label: 'Go to Business Dashboard' },
@@ -34,8 +37,6 @@ function StatCard({ label, value }) {
 
 function EditProfileForm({ user, onDone, onCancel }) {
   const [fullName, setFullName] = useState(user.full_name || '');
-  const [avatarUrl, setAvatarUrl] = useState(user.avatar_url || '');
-  const [coverImageUrl, setCoverImageUrl] = useState(user.cover_image_url || '');
   const [bio, setBio] = useState(user.bio || '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -44,7 +45,10 @@ function EditProfileForm({ user, onDone, onCancel }) {
     setBusy(true);
     setError('');
     try {
-      await client.patch('/profile/me', { fullName, avatarUrl, coverImageUrl, bio });
+      // Photos are no longer part of this form — they upload immediately
+      // and independently via ProfilePhotoUpload (tap the avatar/cover
+      // photo directly), so there's no "pending" photo state to save here.
+      await client.patch('/profile/me', { fullName, bio });
       onDone();
     } catch (err) {
       setError(err.response?.data?.error || 'Could not update profile.');
@@ -57,8 +61,6 @@ function EditProfileForm({ user, onDone, onCancel }) {
     <div className="card-surface" style={{ marginBottom: 20 }}>
       {error && <div className="alert alert-error">{error}</div>}
       <div className="field-group"><label>Full name</label><input value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
-      <div className="field-group"><label>Avatar URL</label><input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://…" /></div>
-      <div className="field-group"><label>Cover image URL</label><input value={coverImageUrl} onChange={(e) => setCoverImageUrl(e.target.value)} placeholder="https://…" /></div>
       <div className="field-group">
         <label>Bio ({bio.length}/500)</label>
         <textarea rows={3} value={bio} onChange={(e) => setBio(e.target.value.slice(0, 500))} />
@@ -154,7 +156,7 @@ const UPGRADE_OPTIONS = [
   { to: '/delivery/upgrade', label: 'Become a Delivery Partner', icon: 'truck' }
 ];
 
-export default function MyProfile() {
+export default function MyProfile({ embedded = false } = {}) {
   const [profile, setProfile] = useState(null);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -170,26 +172,30 @@ export default function MyProfile() {
   };
   useEffect(() => { load(); }, []);
 
+  // Own profile page always reflects an upload made right here immediately
+  // (ProfilePhotoUpload's onUploaded below); this subscription additionally
+  // catches the case where the same photo was changed from another mounted
+  // surface in this tab (e.g. re-uploaded from a second open profile tab).
+  useEffect(() => {
+    if (!profile?.user?.id) return undefined;
+    return subscribeToProfilePhotoUpdates(profile.user.id, (patch) => {
+      setProfile((prev) => prev && ({ ...prev, user: { ...prev.user, ...patch } }));
+    });
+  }, [profile?.user?.id]);
+
   if (loading || !profile) return <div className="empty-state">Loading your profile…</div>;
 
   const { user, wallet, shop, roleProfile } = profile;
   const dash = DASHBOARD_LINKS[user.primary_role];
+  const patchUser = (updatedUser) => setProfile((prev) => prev && ({ ...prev, user: { ...prev.user, ...updatedUser } }));
 
   return (
     <div>
-      <MarketplaceHeader />
-      <div style={{
-        height: 160, background: user.cover_image_url ? `url(${user.cover_image_url}) center/cover` : 'linear-gradient(160deg, var(--forest), var(--forest-dark))'
-      }} />
+      {!embedded && <MarketplaceHeader />}
+      <ProfilePhotoUpload variant="cover" currentUrl={user.cover_image_url} fullName={user.full_name} onUploaded={patchUser} />
       <div className="dash-body" style={{ maxWidth: 900, paddingTop: 0 }}>
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', marginTop: -44, marginBottom: 16, flexWrap: 'wrap' }}>
-          <div style={{
-            width: 88, height: 88, borderRadius: '50%', background: '#fff', border: '4px solid #fff',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)', overflow: 'hidden', flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', fontWeight: 700, color: 'var(--forest)'
-          }}>
-            {user.avatar_url ? <img src={user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials(user.full_name)}
-          </div>
+          <ProfilePhotoUpload variant="avatar" currentUrl={user.avatar_url} fullName={user.full_name} onUploaded={patchUser} />
           <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <h1 style={{ fontSize: '1.4rem' }}>{user.full_name}</h1>

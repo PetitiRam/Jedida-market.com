@@ -327,17 +327,7 @@ function InviteSupplierPanel({ requestId }) {
 /* Column 1 — Wanted Feed                                                  */
 /* ---------------------------------------------------------------------- */
 
-function FeedColumn({ posts, loading, nextCursor, onLoadMore, selectedId, onSelect, onToggleLike, categoryFilter, onCategoryFilter }) {
-  // "Following" and "Nearby" aren't backed by anything real yet — the API
-  // only supports filtering the public feed by category — so only real,
-  // working filters are shown here. Categories are derived from whatever
-  // posts are actually loaded, not a hardcoded list.
-  const categories = useMemo(
-    () => Array.from(new Set(posts.map((p) => p.category).filter(Boolean))).sort(),
-    [posts]
-  );
-  const visiblePosts = categoryFilter ? posts.filter((p) => p.category === categoryFilter) : posts;
-
+function FeedColumn({ posts, loading, nextCursor, onLoadMore, selectedId, onSelect, onToggleLike, filterTab, onFilterTab }) {
   return (
     <div className="wt-panel">
       <div className="wt-panel-header">
@@ -348,22 +338,14 @@ function FeedColumn({ posts, loading, nextCursor, onLoadMore, selectedId, onSele
         <button type="button" className="wt-icon-btn" aria-label="Search"><JdIcon name="search" size={16} /></button>
       </div>
       <div className="wt-tabs">
-        <button type="button" className={`wt-tab ${!categoryFilter ? 'active' : ''}`} onClick={() => onCategoryFilter('')}>All</button>
-        <button type="button" className={`wt-tab ${categoryFilter ? 'active' : ''}`} disabled={categories.length === 0} onClick={() => onCategoryFilter(categories[0] || '')}>Categories</button>
+        {['All', 'Following', 'Nearby', 'Categories'].map((t) => (
+          <button key={t} type="button" className={`wt-tab ${filterTab === t ? 'active' : ''}`} onClick={() => onFilterTab(t)}>{t}</button>
+        ))}
       </div>
-      {categories.length > 0 && (
-        <div className="wt-category-filter">
-          <select value={categoryFilter} onChange={(e) => onCategoryFilter(e.target.value)}>
-            <option value="">All categories</option>
-            {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-      )}
       <div className="wt-panel-body">
         {loading && posts.length === 0 && <div className="wt-empty">Loading…</div>}
         {!loading && posts.length === 0 && <div className="wt-empty">No public requests yet — be the first to post what you want.</div>}
-        {!loading && posts.length > 0 && visiblePosts.length === 0 && <div className="wt-empty">No requests in this category yet.</div>}
-        {visiblePosts.map((p) => (
+        {posts.map((p) => (
           <div
             key={p.id}
             className={`wt-post-card ${selectedId === p.id ? 'selected' : ''}`}
@@ -692,7 +674,7 @@ export default function JedidaWanted() {
   const [posts, setPosts] = useState([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [nextCursor, setNextCursor] = useState(null);
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const [filterTab, setFilterTab] = useState('All');
 
   const [selectedId, setSelectedId] = useState(searchParams.get('id') || null);
   const [detail, setDetail] = useState(null);
@@ -794,8 +776,8 @@ export default function JedidaWanted() {
             selectedId={selectedId}
             onSelect={setSelectedId}
             onToggleLike={toggleLike}
-            categoryFilter={categoryFilter}
-            onCategoryFilter={setCategoryFilter}
+            filterTab={filterTab}
+            onFilterTab={setFilterTab}
           />
 
           <DetailColumn
@@ -822,17 +804,6 @@ export default function JedidaWanted() {
 
         <FeatureStrip />
       </div>
-
-      {/* The sidebar (and its Post Wanted button) is hidden on narrow
-          screens — this is the mobile equivalent, always reachable. */}
-      <button
-        type="button"
-        className="wt-mobile-fab"
-        onClick={() => setShowPostForm(true)}
-        aria-label="Post Wanted"
-      >
-        <JdIcon name="plus" size={16} /> Post Wanted
-      </button>
 
       {showPostForm && (
         <div className="wt-modal-backdrop" onClick={() => setShowPostForm(false)}>

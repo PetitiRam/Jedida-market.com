@@ -26,7 +26,7 @@ function formatWhen(iso) {
   return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-export default function NotificationsPage() {
+export default function NotificationsPage({ embedded = false } = {}) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -72,7 +72,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="jp-page">
-      <MarketplaceHeader />
+      {!embedded && <MarketplaceHeader />}
 
       <div className="jp-container" style={{ maxWidth: 720, margin: '0 auto', padding: '20px 16px 60px' }}>
 

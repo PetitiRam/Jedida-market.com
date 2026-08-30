@@ -28,10 +28,8 @@ function Icon({ name, active }) {
 }
 
 // Tabs map only to routes that already exist in App.jsx — the nav is a
-// chrome layer, not a new set of screens or logic. "Account" goes to
-// /orders for a signed-in user (closest existing account-ish view) and to
-// /signin otherwise; adjust this mapping when a dedicated profile page
-// exists.
+// chrome layer, not a new set of screens or logic. "Account" goes to the
+// buyer dashboard for a signed-in user, and to /signin otherwise.
 function useTabs() {
   const isAuthed = !!localStorage.getItem('jedida_access_token');
   return [
@@ -41,8 +39,8 @@ function useTabs() {
     {
       key: 'account',
       label: isAuthed ? 'Account' : 'Sign in',
-      path: isAuthed ? '/orders' : '/signin',
-      match: (p) => p.startsWith('/signin') || p.startsWith('/signup')
+      path: isAuthed ? '/buyer' : '/signin',
+      match: (p) => p.startsWith('/buyer') || p.startsWith('/signin') || p.startsWith('/signup')
     }
   ];
 }
@@ -58,9 +56,10 @@ export default function NativeBottomNav() {
   }, []);
 
   if (!show) return null;
-  // Hide inside admin/seller/delivery dashboards — those have their own
-  // in-page navigation and the tab bar would just compete for space.
-  if (/^\/(admin|seller|delivery|driver)\b/.test(location.pathname)) return null;
+  // Hide inside admin/seller/delivery/buyer dashboards — those have their
+  // own in-page navigation (JdDashboardShell's bottom nav) and this tab
+  // bar would just compete for space.
+  if (/^\/(admin|seller|delivery|driver|buyer)\b/.test(location.pathname)) return null;
 
   return (
     <nav className="native-bottom-nav" role="navigation" aria-label="Primary">

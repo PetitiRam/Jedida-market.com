@@ -337,11 +337,16 @@ function WorldTab({ shop, bp, isB2B, yearsOnJedida, responseLabel, isFastRespond
                 {shop.is_verified && <span className="product-card-badge" style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}>✓ Verified Seller</span>}
                 {isFastResponder && <span className="product-card-badge" style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}>✓ Fast Responder</span>}
               </div>
-              <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap', alignItems: 'center' }}>
                 <button className="btn-primary" onClick={onStartChat} disabled={chatBusy}>
                   <Icon name="message" size={15} /> {chatBusy ? 'Opening…' : 'Chat with Seller'}
                 </button>
                 <button className="btn-secondary" onClick={onGoShop} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none' }}>Visit Shop</button>
+                {shop.owner_id && (
+                  <Link to={`/u/${shop.owner_id}`} style={{ color: '#fff', opacity: 0.85, fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Icon name="user" size={13} /> View seller's profile
+                  </Link>
+                )}
               </div>
             </div>
 

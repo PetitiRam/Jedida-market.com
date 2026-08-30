@@ -151,45 +151,6 @@
   .wt-sidebar { display: none; }
 }
 
-/* Mobile "Post Wanted" entry point — the sidebar (and its Post Wanted
-   button) is hidden below 1100px, so this floating button is the only
-   way to open the post form on phones. Hidden on wider screens where
-   the sidebar button already covers this. */
-.wt-mobile-fab {
-  display: none;
-}
-@media (max-width: 1100px) {
-  .wt-mobile-fab {
-    display: flex;
-    position: fixed;
-    right: 16px;
-    bottom: 20px;
-    z-index: 150;
-    align-items: center;
-    gap: 8px;
-    border: none;
-    border-radius: 999px;
-    padding: 13px 18px;
-    background: var(--wt-indigo, #6C5CE7);
-    color: #fff;
-    font-weight: 700;
-    font-size: 0.85rem;
-    box-shadow: 0 8px 20px rgba(108,92,231,0.35);
-    cursor: pointer;
-  }
-}
-
-.wt-category-filter {
-  padding: 8px 16px 0;
-}
-.wt-category-filter select {
-  width: 100%;
-  border: 1px solid var(--wt-border);
-  border-radius: 8px;
-  padding: 6px 8px;
-  font-size: 0.82rem;
-}
-
 .wt-panel {
   background: var(--wt-card);
   border: 1px solid var(--wt-border);

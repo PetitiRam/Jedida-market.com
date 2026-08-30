@@ -9,7 +9,7 @@ const PAYMENT_METHODS = [
   { value: 'airtel_money', label: 'Airtel Money' }
 ];
 
-export default function MyAgreements() {
+export default function MyAgreements({ embedded = false } = {}) {
   const [agreements, setAgreements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [checkingOutId, setCheckingOutId] = useState(null);
@@ -49,7 +49,7 @@ export default function MyAgreements() {
 
   return (
     <div>
-      <MarketplaceHeader />
+      {!embedded && <MarketplaceHeader />}
       <div className="dash-body">
         <h2>My Purchase Agreements</h2>
         {error && <div className="alert alert-error">{error}</div>}

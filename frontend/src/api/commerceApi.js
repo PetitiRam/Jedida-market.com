@@ -2,9 +2,11 @@ import client from './client';
 
 export const toggleWishlist = (productId) => client.post(`/wishlist/${productId}/toggle`);
 export const getWishlistStatus = (productId) => client.get(`/wishlist/${productId}/status`);
+export const listMyWishlist = () => client.get('/wishlist/mine');
 
 export const toggleFollow = (shopId) => client.post(`/shops/${shopId}/follow/toggle`);
 export const getShopFollowInfo = (shopId) => client.get(`/shops/${shopId}/follow/info`);
+export const listMyFollowedShops = () => client.get('/shops/following/mine');
 
 export const addToCart = (productId, quantity) => client.post('/cart', { productId, quantity });
 export const getCart = () => client.get('/cart');

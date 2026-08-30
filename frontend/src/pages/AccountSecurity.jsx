@@ -199,10 +199,10 @@ function LoginHistorySection() {
   );
 }
 
-export default function AccountSecurity() {
+export default function AccountSecurity({ embedded = false } = {}) {
   return (
     <div>
-      <MarketplaceHeader />
+      {!embedded && <MarketplaceHeader />}
       <div className="dash-body" style={{ maxWidth: 700 }}>
         <h1 style={{ fontSize: '1.4rem', marginBottom: 20 }}>Security Settings</h1>
         <PasswordSection />

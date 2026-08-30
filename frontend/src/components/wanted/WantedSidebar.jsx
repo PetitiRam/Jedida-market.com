@@ -12,8 +12,8 @@ const NAV_ITEMS = [
   { key: 'wanted', label: 'Wanted', icon: 'imports', to: '/wanted' },
   { key: 'messages', label: 'Messages', icon: 'messages', to: '/notifications', badge: 2 },
   { key: 'notifications', label: 'Notifications', icon: 'bell', to: '/notifications', badge: 6 },
-  { key: 'saved', label: 'Saved', icon: 'quality', to: '/profile' },
-  { key: 'wallet', label: 'Wallet', icon: 'wallet', to: '/profile' },
+  { key: 'saved', label: 'Saved', icon: 'quality', to: '/buyer' },
+  { key: 'wallet', label: 'Wallet', icon: 'wallet', to: '/buyer' },
   { key: 'profile', label: 'Profile', icon: 'profile', to: '/profile' },
   { key: 'more', label: 'More', icon: 'more', to: '/legal' }
 ];

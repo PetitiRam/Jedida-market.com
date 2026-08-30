@@ -219,11 +219,13 @@ export default function Checkout() {
             }
           );
 
-      // Cash on Delivery and PesaJet never go through the manual proof-of-
-      // payment screen — COD has nothing to submit, and PesaJet is an
-      // automated charge, not a proof upload. Every other method (manual
+      // Cash on Delivery, PesaJet, and Jedida Wallet never go through the
+      // manual proof-of-payment screen — COD has nothing to submit,
+      // PesaJet is an automated charge, and a wallet payment is already
+      // confirmed (paid_escrow) by the time this response comes back, so
+      // there's nothing left to prove. Every other method (manual
       // mtn/airtel/bank) still goes to the Payment Center as before.
-      if (data.codPending || method === "pesajet") {
+      if (data.codPending || method === "pesajet" || method === "wallet") {
         navigate(`/orders/${data.order.id}`);
       } else {
         navigate(`/payment-center/${data.order.id}`);

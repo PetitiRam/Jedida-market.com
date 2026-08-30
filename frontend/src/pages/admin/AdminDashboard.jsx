@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import client from '../../api/client';
 import MissionControlDashboard from './MissionControlDashboard';
+import Icon from '../../components/icons/icon';
 import '../../styles/admin-dashboard.css';
 
 function money(n) {
@@ -32,7 +33,7 @@ function ChangeBadge({ value }) {
 function StatCard({ icon, label, value, change, tone }) {
   return (
     <div className="card-surface adm-stat-card">
-      <div className={`adm-stat-icon adm-tone-${tone}`}>{icon}</div>
+      <div className={`adm-stat-icon adm-tone-${tone}`}><Icon name={icon} size={18} /></div>
       <div>
         <div className="adm-stat-label">{label}</div>
         <div className="adm-stat-value">{value}</div>
@@ -135,15 +136,15 @@ function roleLayout(role) {
 }
 
 const CARD_DEFS = {
-  users: (d) => ({ icon: '👤', label: 'Total Users', value: d.stats.users.total.toLocaleString(), change: d.stats.users.change, tone: 'green' }),
-  sellers: (d) => ({ icon: '🏪', label: 'Total Sellers', value: d.stats.sellers.total.toLocaleString(), change: d.stats.sellers.change, tone: 'purple' }),
-  orders: (d) => ({ icon: '📦', label: 'Total Orders', value: d.stats.orders.total.toLocaleString(), change: d.stats.orders.change, tone: 'amber' }),
-  revenue: (d) => ({ icon: '💰', label: 'Revenue (30d)', value: money(d.stats.revenue.total), change: d.stats.revenue.change, tone: 'blue' }),
-  pendingProducts: (d) => ({ icon: '📝', label: 'Pending Product Reviews', value: d.pendingApprovals.products.toLocaleString(), change: null, tone: 'amber' }),
-  pendingShops: (d) => ({ icon: '🏬', label: 'Pending Shop Approvals', value: d.pendingApprovals.shops.toLocaleString(), change: null, tone: 'purple' }),
-  pendingWithdrawals: (d) => ({ icon: '💸', label: 'Pending Withdrawals', value: d.pendingApprovals.withdrawals.toLocaleString(), change: null, tone: 'blue' }),
-  lowStock: (d) => ({ icon: '📉', label: 'Low Stock Products', value: d.systemAlerts.lowStock.toLocaleString(), change: null, tone: 'amber' }),
-  disputed: (d) => ({ icon: '⚠️', label: 'Disputed Orders', value: d.systemAlerts.disputedOrders.toLocaleString(), change: null, tone: 'green' }),
+  users: (d) => ({ icon: 'user', label: 'Total Users', value: d.stats.users.total.toLocaleString(), change: d.stats.users.change, tone: 'green' }),
+  sellers: (d) => ({ icon: 'shop', label: 'Total Sellers', value: d.stats.sellers.total.toLocaleString(), change: d.stats.sellers.change, tone: 'purple' }),
+  orders: (d) => ({ icon: 'package', label: 'Total Orders', value: d.stats.orders.total.toLocaleString(), change: d.stats.orders.change, tone: 'amber' }),
+  revenue: (d) => ({ icon: 'wallet', label: 'Revenue (30d)', value: money(d.stats.revenue.total), change: d.stats.revenue.change, tone: 'blue' }),
+  pendingProducts: (d) => ({ icon: 'note', label: 'Pending Product Reviews', value: d.pendingApprovals.products.toLocaleString(), change: null, tone: 'amber' }),
+  pendingShops: (d) => ({ icon: 'building', label: 'Pending Shop Approvals', value: d.pendingApprovals.shops.toLocaleString(), change: null, tone: 'purple' }),
+  pendingWithdrawals: (d) => ({ icon: 'cash', label: 'Pending Withdrawals', value: d.pendingApprovals.withdrawals.toLocaleString(), change: null, tone: 'blue' }),
+  lowStock: (d) => ({ icon: 'trendingDown', label: 'Low Stock Products', value: d.systemAlerts.lowStock.toLocaleString(), change: null, tone: 'amber' }),
+  disputed: (d) => ({ icon: 'alertTriangle', label: 'Disputed Orders', value: d.systemAlerts.disputedOrders.toLocaleString(), change: null, tone: 'green' }),
 };
 
 function ScopedAdminDashboard({ adminRole }) {
@@ -174,7 +175,7 @@ function ScopedAdminDashboard({ adminRole }) {
       <div className="adm-dash-topline">
         <div>
           <h2 className="adm-dash-title">
-            {layout.title} <span className="adm-verified" title="Verified admin session">✔</span>
+            {layout.title} <span className="adm-verified" title="Verified admin session"><Icon name="check" size={14} /></span>
           </h2>
           <p className="adm-dash-subtitle">{layout.subtitle}</p>
         </div>

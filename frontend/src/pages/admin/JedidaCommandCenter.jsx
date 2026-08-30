@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import client, { normalizeError } from '../../api/client';
+import Icon from '../../components/icons/icon';
+import Logo from '../../components/Logo';
 import '../../styles/command-center.css';
 
 /* -------------------------------------------------------------------------
@@ -399,13 +401,13 @@ export default function JedidaCommandCenter() {
 
   /* ---- derived stats (all real) ---- */
   const stats = [
-    { icon: '💬', label: 'Open Conversations', value: conversations.length, tone: 'lime' },
-    { icon: '📥', label: 'Unassigned', value: unassigned.length, tone: 'amber' },
-    { icon: '🤖', label: 'AI Handling', value: conversations.filter((c) => c.ai_enabled).length, tone: 'sky' },
-    { icon: '🚨', label: 'Open Escalations', value: escalations.length, tone: 'rose' },
-    { icon: '⚠️', label: 'High-Risk Users', value: riskUsers.length, tone: 'amber' },
-    { icon: '🚩', label: 'Pending Reports', value: reports.filter((r) => r.status === 'pending').length, tone: 'rose' },
-    { icon: '📌', label: 'Pinned', value: conversations.filter((c) => c.pinned).length, tone: 'lime' },
+    { icon: 'message', label: 'Open Conversations', value: conversations.length, tone: 'lime' },
+    { icon: 'inbox', label: 'Unassigned', value: unassigned.length, tone: 'amber' },
+    { icon: 'bot', label: 'AI Handling', value: conversations.filter((c) => c.ai_enabled).length, tone: 'sky' },
+    { icon: 'alertTriangle', label: 'Open Escalations', value: escalations.length, tone: 'rose' },
+    { icon: 'alertCircle', label: 'High-Risk Users', value: riskUsers.length, tone: 'amber' },
+    { icon: 'flag', label: 'Pending Reports', value: reports.filter((r) => r.status === 'pending').length, tone: 'rose' },
+    { icon: 'pin', label: 'Pinned', value: conversations.filter((c) => c.pinned).length, tone: 'lime' },
   ];
 
   return (
@@ -413,19 +415,19 @@ export default function JedidaCommandCenter() {
       {/* ---------- top bar ---------- */}
       <div className="jcc-topbar">
         <div className="jcc-brand">
-          <div className="jcc-brand-mark">🌿</div>
+          <div className="jcc-brand-mark"><Logo size={28} withWordmark={false} light /></div>
           <div>
             <div className="jcc-brand-title">Jedida</div>
             <div className="jcc-brand-sub">Operations Command Center</div>
           </div>
         </div>
         <div className="jcc-search">
-          🔎
+          <Icon name="search" size={15} />
           <input placeholder="Search conversations by name…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span className="jcc-live-pill"><span className="jcc-live-dot" /> Live</span>
-          <button className="jcc-ghost-btn" onClick={() => { loadConversations(); loadEscalations(); loadRiskUsers(); loadReports(); showToast('Refreshed'); }}>↻ Refresh</button>
+          <button className="jcc-ghost-btn" onClick={() => { loadConversations(); loadEscalations(); loadRiskUsers(); loadReports(); showToast('Refreshed'); }}><Icon name="refresh" size={14} /> Refresh</button>
           <div className="jcc-admin">
             <div className="jcc-admin-avatar">{initials(admin?.full_name)}</div>
             <div>
@@ -440,7 +442,7 @@ export default function JedidaCommandCenter() {
       <div className="jcc-stats jcc-scroll">
         {stats.map((s) => (
           <div className="jcc-stat" key={s.label}>
-            <div className="jcc-stat-icon" style={{ background: `var(--jcc-${s.tone}-dim)` }}>{s.icon}</div>
+            <div className="jcc-stat-icon" style={{ background: `var(--jcc-${s.tone}-dim)` }}><Icon name={s.icon} size={18} /></div>
             <div>
               <div className="jcc-stat-value">{s.value}</div>
               <div className="jcc-stat-label">{s.label}</div>
@@ -454,30 +456,30 @@ export default function JedidaCommandCenter() {
         <div className="jcc-sidebar">
           <div className="jcc-sidebar-label">Operations</div>
           <button className={`jcc-nav-item ${nav === 'inbox' ? 'active' : ''}`} onClick={() => setNav('inbox')}>
-            💬 <span>Conversations</span> <span className="jcc-nav-badge">{conversations.length}</span>
+            <Icon name="message" size={16} /> <span>Conversations</span> <span className="jcc-nav-badge">{conversations.length}</span>
           </button>
           <button className={`jcc-nav-item ${nav === 'escalations' ? 'active' : ''}`} onClick={() => setNav('escalations')}>
-            🚨 <span>Escalations</span> <span className="jcc-nav-badge">{escalations.length}</span>
+            <Icon name="alertTriangle" size={16} /> <span>Escalations</span> <span className="jcc-nav-badge">{escalations.length}</span>
           </button>
           <button className={`jcc-nav-item ${nav === 'risk' ? 'active' : ''}`} onClick={() => setNav('risk')}>
-            ⚠️ <span>Risk Users</span> <span className="jcc-nav-badge">{riskUsers.length}</span>
+            <Icon name="alertCircle" size={16} /> <span>Risk Users</span> <span className="jcc-nav-badge">{riskUsers.length}</span>
           </button>
           <button className={`jcc-nav-item ${nav === 'reports' ? 'active' : ''}`} onClick={() => setNav('reports')}>
-            🚩 <span>Reports</span> <span className="jcc-nav-badge">{reports.length}</span>
+            <Icon name="flag" size={16} /> <span>Reports</span> <span className="jcc-nav-badge">{reports.length}</span>
           </button>
 
           <div className="jcc-sidebar-label">Agent Center</div>
           <button className={`jcc-nav-item ${nav === 'unassigned' ? 'active' : ''}`} onClick={() => setNav('unassigned')}>
-            📥 <span>Unassigned</span> <span className="jcc-nav-badge">{unassigned.length}</span>
+            <Icon name="inbox" size={16} /> <span>Unassigned</span> <span className="jcc-nav-badge">{unassigned.length}</span>
           </button>
           <button className={`jcc-nav-item ${nav === 'groups' ? 'active' : ''}`} onClick={() => setNav('groups')}>
-            🧭 <span>Groups &amp; Sectors</span> <span className="jcc-nav-badge" style={{ background: 'rgba(139,197,63,0.25)', color: 'var(--jcc-lime)' }}>{groups.length}</span>
+            <Icon name="compass" size={16} /> <span>Groups &amp; Sectors</span> <span className="jcc-nav-badge" style={{ background: 'rgba(139,197,63,0.25)', color: 'var(--jcc-lime)' }}>{groups.length}</span>
           </button>
           <button className={`jcc-nav-item ${nav === 'agents' ? 'active' : ''}`} onClick={() => setNav('agents')}>
-            👥 <span>Agents</span> <span className="jcc-nav-badge" style={{ background: 'rgba(139,197,63,0.25)', color: 'var(--jcc-lime)' }}>{agents.length}</span>
+            <Icon name="users" size={16} /> <span>Agents</span> <span className="jcc-nav-badge" style={{ background: 'rgba(139,197,63,0.25)', color: 'var(--jcc-lime)' }}>{agents.length}</span>
           </button>
           <button className={`jcc-nav-item ${nav === 'broadcast' ? 'active' : ''}`} onClick={() => setNav('broadcast')}>
-            📣 <span>Broadcast</span>
+            <Icon name="megaphone" size={16} /> <span>Broadcast</span>
           </button>
 
           {roleOptions.length > 0 && (
@@ -520,7 +522,7 @@ export default function JedidaCommandCenter() {
                       <div className="jcc-avatar">{initials(c.full_name)}{!c.escalated && <span className="jcc-avatar-dot" />}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                          {c.pinned && <span style={{ marginRight: 4 }}>📌</span>}
+                          {c.pinned && <span style={{ marginRight: 4 }}><Icon name="pin" size={12} /></span>}
                           <span className="jcc-conv-name">{c.full_name}</span>
                           <span className="jcc-conv-time">{timeAgo(c.created_at)}</span>
                         </div>
@@ -558,9 +560,9 @@ export default function JedidaCommandCenter() {
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
                       {routing && !routing.assigned_agent_id && (
-                        <button className="jcc-ghost-btn on" onClick={() => claimConversation(selectedConv.id)}>✋ Take Chat</button>
+                        <button className="jcc-ghost-btn on" onClick={() => claimConversation(selectedConv.id)}><Icon name="hand" size={14} /> Take Chat</button>
                       )}
-                      <button className="jcc-ghost-btn" onClick={() => setTransferOpen(true)}>⇄ Transfer</button>
+                      <button className="jcc-ghost-btn" onClick={() => setTransferOpen(true)}><Icon name="swap" size={14} /> Transfer</button>
                       <select
                         className="jcc-ghost-btn"
                         style={{ appearance: 'none' }}
@@ -569,9 +571,9 @@ export default function JedidaCommandCenter() {
                       >
                         {Object.entries(PRIORITY_META).map(([k, v]) => <option key={k} value={k}>{v.label} priority</option>)}
                       </select>
-                      <button className={`jcc-ghost-btn ${selectedConv.ai_enabled ? 'on' : ''}`} onClick={toggleAi}>🤖 AI {selectedConv.ai_enabled ? 'On' : 'Off'}</button>
-                      <button className={`jcc-ghost-btn ${selectedConv.pinned ? 'on' : ''}`} onClick={togglePin}>📌 {selectedConv.pinned ? 'Pinned' : 'Pin'}</button>
-                      <button className="jcc-ghost-btn" onClick={toggleArchive}>{selectedConv.archived ? '📤 Restore' : '🗄 Archive'}</button>
+                      <button className={`jcc-ghost-btn ${selectedConv.ai_enabled ? 'on' : ''}`} onClick={toggleAi}><Icon name="bot" size={14} /> AI {selectedConv.ai_enabled ? 'On' : 'Off'}</button>
+                      <button className={`jcc-ghost-btn ${selectedConv.pinned ? 'on' : ''}`} onClick={togglePin}><Icon name="pin" size={14} /> {selectedConv.pinned ? 'Pinned' : 'Pin'}</button>
+                      <button className="jcc-ghost-btn" onClick={toggleArchive}>{selectedConv.archived ? (<><Icon name="upload" size={14} /> Restore</>) : (<><Icon name="archive" size={14} /> Archive</>)}</button>
                     </div>
                   </div>
 
@@ -586,9 +588,9 @@ export default function JedidaCommandCenter() {
                         <div key={m.id} className={`jcc-msg-row ${mine ? 'mine' : isAi ? 'ai' : ''}`}>
                           <div>
                             <div className={`jcc-bubble ${mine ? 'mine' : isAi ? 'ai-bubble' : 'theirs'} ${blocked ? 'blocked' : ''}`}>
-                              {isAi && <div style={{ fontSize: 10, opacity: 0.75, marginBottom: 3 }}>🤖 AI ASSISTANT</div>}
+                              {isAi && <div style={{ fontSize: 10, opacity: 0.75, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 3 }}><Icon name="bot" size={11} /> AI ASSISTANT</div>}
                               {m.body}
-                              {m.moderation_status === 'masked' && <div style={{ fontSize: 10, marginTop: 4, opacity: 0.7 }}>⚑ contact info masked by moderation</div>}
+                              {m.moderation_status === 'masked' && <div style={{ fontSize: 10, marginTop: 4, opacity: 0.7, display: 'flex', alignItems: 'center', gap: 3 }}><Icon name="flag" size={10} /> contact info masked by moderation</div>}
                             </div>
                             <div className="jcc-msg-time" style={{ textAlign: mine ? 'right' : 'left' }}>{fmtTime(m.created_at)}</div>
                           </div>
@@ -601,7 +603,7 @@ export default function JedidaCommandCenter() {
                     <div style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 90, overflowY: 'auto' }} className="jcc-scroll">
                       {notes.map((n) => (
                         <div key={n.id} className="jcc-bubble" style={{ background: 'var(--jcc-amber-dim)', border: '1px solid rgba(224,169,62,0.3)', maxWidth: '100%', fontSize: 12 }}>
-                          <div style={{ fontSize: 10, opacity: 0.75, marginBottom: 2 }}>📝 INTERNAL NOTE · {n.author_name}</div>
+                          <div style={{ fontSize: 10, opacity: 0.75, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 3 }}><Icon name="note" size={11} /> INTERNAL NOTE · {n.author_name}</div>
                           {n.body}
                         </div>
                       ))}
@@ -610,8 +612,8 @@ export default function JedidaCommandCenter() {
 
                   <div className="jcc-composer">
                     <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                      <button className={`jcc-chip ${composerMode === 'reply' ? 'active' : ''}`} onClick={() => setComposerMode('reply')}>💬 Reply</button>
-                      <button className={`jcc-chip ${composerMode === 'note' ? 'active' : ''}`} onClick={() => setComposerMode('note')}>📝 Internal Note</button>
+                      <button className={`jcc-chip ${composerMode === 'reply' ? 'active' : ''}`} onClick={() => setComposerMode('reply')}><Icon name="message" size={13} /> Reply</button>
+                      <button className={`jcc-chip ${composerMode === 'note' ? 'active' : ''}`} onClick={() => setComposerMode('note')}><Icon name="note" size={13} /> Internal Note</button>
                     </div>
                     <div className="jcc-composer-box" style={composerMode === 'note' ? { background: 'var(--jcc-amber-dim)', borderColor: 'rgba(224,169,62,0.3)' } : undefined}>
                       {composerMode === 'reply' ? (
@@ -635,11 +637,11 @@ export default function JedidaCommandCenter() {
                         {composerMode === 'reply' && <button className="jcc-ghost-btn" onClick={() => setEscalateOpen(true)}>⤴ Escalate</button>}
                         {composerMode === 'reply' ? (
                           <button className="jcc-send-btn" disabled={sending || !text.trim()} onClick={sendMessage}>
-                            {sending ? 'Sending…' : '➤ Send'}
+                            {sending ? 'Sending…' : (<><Icon name="send" size={13} /> Send</>)}
                           </button>
                         ) : (
                           <button className="jcc-send-btn" style={{ background: 'var(--jcc-amber)' }} disabled={!noteText.trim()} onClick={submitInternalNote}>
-                            📝 Add Note
+                            <Icon name="note" size={13} /> Add Note
                           </button>
                         )}
                       </div>
@@ -652,10 +654,10 @@ export default function JedidaCommandCenter() {
             {/* ---------- right panel ---------- */}
             {selectedConv && (
               <div className="jcc-right jcc-scroll">
-                <div className="jcc-right-head">✨ Case Information</div>
+                <div className="jcc-right-head" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="sparkle" size={14} /> Case Information</div>
                 <div className="jcc-right-body">
                   <div className="jcc-card jcc-card-glow">
-                    <div className="jcc-section-label">🧑 Customer Profile</div>
+                    <div className="jcc-section-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="user" size={14} /> Customer Profile</div>
                     {!participant && <div className="jcc-empty-hint">Loading profile…</div>}
                     {participant && (
                       <>
@@ -677,7 +679,7 @@ export default function JedidaCommandCenter() {
 
                   {participant?.isBusiness && (
                     <div className="jcc-card">
-                      <div className="jcc-section-label">🏢 Business</div>
+                      <div className="jcc-section-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="building" size={14} /> Business</div>
                       {participant.shop ? (
                         <>
                           <div className="jcc-row"><span className="jcc-row-label">Shop</span><span className="jcc-row-value">{participant.shop.name}</span></div>
@@ -690,7 +692,7 @@ export default function JedidaCommandCenter() {
                   )}
 
                   <div className="jcc-card">
-                    <div className="jcc-section-label">📦 Orders, Payments &amp; Delivery</div>
+                    <div className="jcc-section-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="package" size={14} /> Orders, Payments &amp; Delivery</div>
                     {!bizSummary && <div className="jcc-empty-hint">Loading…</div>}
                     {bizSummary && bizSummary.orders?.length === 0 && <div className="jcc-empty-hint">No orders between these two parties yet.</div>}
                     {bizSummary && bizSummary.orders?.slice(0, 4).map((o) => (
@@ -716,12 +718,12 @@ export default function JedidaCommandCenter() {
                   </div>
 
                   <div>
-                    <div className="jcc-section-label">⚡ Admin Actions</div>
+                    <div className="jcc-section-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="zap" size={14} /> Admin Actions</div>
                     <div className="jcc-tool-grid">
                       <button className="jcc-tool-btn" onClick={() => setEscalateOpen(true)}>⤴ Escalate Case</button>
-                      <button className="jcc-tool-btn" onClick={toggleAi}>🤖 {selectedConv.ai_enabled ? 'Disable AI' : 'Enable AI'}</button>
-                      <button className="jcc-tool-btn" onClick={togglePin}>📌 {selectedConv.pinned ? 'Unpin' : 'Pin'}</button>
-                      <button className="jcc-tool-btn" onClick={toggleArchive}>🗄 {selectedConv.archived ? 'Restore' : 'Archive'}</button>
+                      <button className="jcc-tool-btn" onClick={toggleAi}><Icon name="bot" size={14} /> {selectedConv.ai_enabled ? 'Disable AI' : 'Enable AI'}</button>
+                      <button className="jcc-tool-btn" onClick={togglePin}><Icon name="pin" size={14} /> {selectedConv.pinned ? 'Unpin' : 'Pin'}</button>
+                      <button className="jcc-tool-btn" onClick={toggleArchive}><Icon name="archive" size={14} /> {selectedConv.archived ? 'Restore' : 'Archive'}</button>
                     </div>
                     <div className="jcc-empty-hint" style={{ marginTop: 8 }}>Account freezes, refunds and verification requests are handled from the Users, Orders and Withdrawals tabs.</div>
                   </div>
@@ -743,13 +745,13 @@ export default function JedidaCommandCenter() {
             {escalations.length === 0 && <div className="jcc-empty-hint">No open escalations right now.</div>}
             {escalations.map((e) => (
               <div className="jcc-list-item" key={e.id}>
-                <div className="jcc-list-item-icon" style={{ background: 'var(--jcc-rose-dim)' }}>🚨</div>
+                <div className="jcc-list-item-icon" style={{ background: 'var(--jcc-rose-dim)' }}><Icon name="alertTriangle" size={16} /></div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, color: '#fff', fontSize: 13 }}>{e.area?.replace('_', ' ')}</div>
                   <div style={{ fontSize: 12, color: 'var(--jcc-text-dim)' }}>{e.reason}</div>
                   <div style={{ fontSize: 10.5, color: 'var(--jcc-text-faint)', marginTop: 2 }}>{new Date(e.created_at).toLocaleString()}</div>
                 </div>
-                <button className="jcc-ghost-btn on" onClick={() => resolveEscalation(e.id)}>✓ Resolve</button>
+                <button className="jcc-ghost-btn on" onClick={() => resolveEscalation(e.id)}><Icon name="check" size={14} /> Resolve</button>
               </div>
             ))}
           </div>
@@ -790,7 +792,7 @@ export default function JedidaCommandCenter() {
             {reports.length === 0 && <div className="jcc-empty-hint">No reports on file.</div>}
             {reports.map((r) => (
               <div className="jcc-list-item" key={r.id}>
-                <div className="jcc-list-item-icon" style={{ background: 'var(--jcc-amber-dim)' }}>🚩</div>
+                <div className="jcc-list-item-icon" style={{ background: 'var(--jcc-amber-dim)' }}><Icon name="flag" size={16} /></div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, color: '#fff', fontSize: 13 }}>{r.reason}</div>
                   <div style={{ fontSize: 12, color: 'var(--jcc-text-dim)' }}>{r.message_body || r.details || 'No message text'}</div>
@@ -818,7 +820,7 @@ export default function JedidaCommandCenter() {
                 <div className="jcc-list-title">Unassigned Conversations</div>
                 <div className="jcc-list-sub">Waiting for an agent — claim one to start responding.</div>
               </div>
-              <button className="jcc-ghost-btn" onClick={loadUnassigned}>↻ Refresh</button>
+              <button className="jcc-ghost-btn" onClick={loadUnassigned}><Icon name="refresh" size={14} /> Refresh</button>
             </div>
             {unassignedLoading && <div className="jcc-empty-hint">Loading…</div>}
             {!unassignedLoading && unassigned.length === 0 && <div className="jcc-empty-hint">Nothing waiting right now — inbox is clear.</div>}
@@ -833,7 +835,7 @@ export default function JedidaCommandCenter() {
                     {c.sector_name && <Pill tone="sky">{c.sector_name}</Pill>}
                   </div>
                 </div>
-                <button className="jcc-ghost-btn on" onClick={() => claimConversation(c.id)}>✋ Take Chat</button>
+                <button className="jcc-ghost-btn on" onClick={() => claimConversation(c.id)}><Icon name="hand" size={14} /> Take Chat</button>
               </div>
             ))}
           </div>
@@ -851,13 +853,13 @@ export default function JedidaCommandCenter() {
             {groups.length === 0 && <div className="jcc-empty-hint">No agent groups created yet.</div>}
             {groups.map((g) => (
               <div className="jcc-list-item" key={g.id} style={{ alignItems: 'flex-start' }}>
-                <div className="jcc-list-item-icon" style={{ background: 'var(--jcc-lime-dim)' }}>🧭</div>
+                <div className="jcc-list-item-icon" style={{ background: 'var(--jcc-lime-dim)' }}><Icon name="compass" size={16} /></div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, color: '#fff', fontSize: 13 }}>{g.name}</div>
                   <div style={{ fontSize: 12, color: 'var(--jcc-text-dim)' }}>{g.sector_name || 'No sector'} · {g.member_count} agent{g.member_count === '1' ? '' : 's'}</div>
                   {g.description && <div style={{ fontSize: 11.5, color: 'var(--jcc-text-faint)', marginTop: 3 }}>{g.description}</div>}
                 </div>
-                <button className="jcc-ghost-btn" onClick={() => openInternalGroup(g.id)}>💬 Team Chat</button>
+                <button className="jcc-ghost-btn" onClick={() => openInternalGroup(g.id)}><Icon name="message" size={14} /> Team Chat</button>
               </div>
             ))}
           </div>
@@ -890,7 +892,7 @@ export default function JedidaCommandCenter() {
                     <div className="jcc-sidebar-label" style={{ padding: '10px 14px 4px' }}>Team Rooms</div>
                     {internalConversations.filter((c) => c.is_group).map((c) => (
                       <button key={c.id} className={`jcc-conv ${activeInternalId === c.id ? 'active' : ''}`} onClick={() => setActiveInternalId(c.id)}>
-                        <div className="jcc-avatar">🧭</div>
+                        <div className="jcc-avatar"><Icon name="compass" size={16} /></div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div className="jcc-conv-name">{c.display_name}</div>
                           <div className="jcc-conv-msg">{c.last_message || 'No messages yet'}</div>
@@ -908,7 +910,7 @@ export default function JedidaCommandCenter() {
               {activeInternalId && (
                 <>
                   <div className="jcc-chat-head">
-                    <div style={{ fontWeight: 700, color: '#fff', fontSize: 13.5 }}>🔒 Internal Chat</div>
+                    <div style={{ fontWeight: 700, color: '#fff', fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="lock" size={14} /> Internal Chat</div>
                   </div>
                   <div className="jcc-messages jcc-scroll">
                     {internalMessages.length === 0 && <div className="jcc-empty">No messages yet.</div>}
@@ -934,7 +936,7 @@ export default function JedidaCommandCenter() {
                         onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendInternalMessage(); } }}
                       />
                       <div className="jcc-composer-row">
-                        <button className="jcc-send-btn" disabled={!internalText.trim()} onClick={sendInternalMessage}>➤ Send</button>
+                        <button className="jcc-send-btn" disabled={!internalText.trim()} onClick={sendInternalMessage}><Icon name="send" size={13} /> Send</button>
                       </div>
                     </div>
                   </div>
@@ -954,7 +956,7 @@ export default function JedidaCommandCenter() {
               </div>
             </div>
             <div className="jcc-card jcc-card-glow" style={{ maxWidth: 480, marginBottom: 20 }}>
-              <div className="jcc-section-label">📣 New Broadcast</div>
+              <div className="jcc-section-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="megaphone" size={14} /> New Broadcast</div>
               <label style={{ fontSize: 11.5, color: 'var(--jcc-text-dim)' }}>Send to</label>
               <select
                 value={broadcastForm.audienceType}
@@ -995,7 +997,7 @@ export default function JedidaCommandCenter() {
               />
               <div className="jcc-empty-hint" style={{ marginBottom: 10 }}>Each recipient will receive this as an individual, private message.</div>
               <button className="jcc-send-btn" disabled={broadcastSending || !broadcastForm.message.trim()} onClick={sendBroadcast}>
-                {broadcastSending ? 'Sending…' : '📣 Send Broadcast'}
+                {broadcastSending ? 'Sending…' : (<><Icon name="megaphone" size={14} /> Send Broadcast</>)}
               </button>
             </div>
 
@@ -1003,7 +1005,7 @@ export default function JedidaCommandCenter() {
             {broadcasts.length === 0 && <div className="jcc-empty-hint">No broadcasts sent yet.</div>}
             {broadcasts.map((b) => (
               <div className="jcc-list-item" key={b.id}>
-                <div className="jcc-list-item-icon" style={{ background: 'var(--jcc-sky-dim)' }}>📣</div>
+                <div className="jcc-list-item-icon" style={{ background: 'var(--jcc-sky-dim)' }}><Icon name="megaphone" size={16} /></div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, color: '#fff', fontSize: 13 }}>{b.group_name || b.sector_name || 'All Customers'}</div>
                   <div style={{ fontSize: 12, color: 'var(--jcc-text-dim)' }}>{b.message_body}</div>
@@ -1016,11 +1018,11 @@ export default function JedidaCommandCenter() {
         )}
 
         {/* ---------- floating AI insight panel ---------- */}
-        <button className="jcc-fab" onClick={() => setAiOpen(!aiOpen)}>{aiOpen ? '✕' : '✨'}</button>
+        <button className="jcc-fab" onClick={() => setAiOpen(!aiOpen)}>{aiOpen ? <Icon name="close" size={18} /> : <Icon name="sparkle" size={18} />}</button>
         {aiOpen && (
           <div className="jcc-fab-panel">
             <div className="jcc-fab-head">
-              <div style={{ fontWeight: 700, color: '#fff', fontSize: 13 }}>🤖 AI Operations</div>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="bot" size={14} /> AI Operations</div>
               <div style={{ fontSize: 11, color: 'var(--jcc-text-dim)', marginTop: 2 }}>Live figures from the moderation &amp; AI assistant engine.</div>
             </div>
             <div className="jcc-fab-body">
@@ -1062,7 +1064,7 @@ export default function JedidaCommandCenter() {
         {transferOpen && (
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 40 }}>
             <div className="jcc-card jcc-card-glow" style={{ width: 320 }}>
-              <div className="jcc-section-label">⇄ Transfer Conversation</div>
+              <div className="jcc-section-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="swap" size={14} /> Transfer Conversation</div>
               <label style={{ fontSize: 11.5, color: 'var(--jcc-text-dim)' }}>Transfer to</label>
               <select
                 value={transferTo.type}
@@ -1091,7 +1093,7 @@ export default function JedidaCommandCenter() {
         )}
 
         {/* ---------- toast ---------- */}
-        {toast && <div className={`jcc-toast ${toast.tone === 'error' ? 'error' : ''}`}>{toast.tone === 'error' ? '⚠️' : '✓'} {toast.message}</div>}
+        {toast && <div className={`jcc-toast ${toast.tone === 'error' ? 'error' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{toast.tone === 'error' ? <Icon name="alertTriangle" size={14} /> : <Icon name="check" size={14} />} {toast.message}</div>}
       </div>
     </div>
   );

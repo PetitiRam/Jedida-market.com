@@ -3,6 +3,7 @@ import { invalidateSettingsCache } from './ordersController.js';
 import { logSecurityEvent } from '../services/securityLogService.js';
 import { ADMIN_ROLE_PERMISSIONS, isSuperAdminAccount, roleWithinGrantersScope } from '../middleware/auth.js';
 import { ROLE_LABELS, ROLE_DESCRIPTIONS, ROLE_RISK, AREA_LABELS } from '../constants/adminRoleMeta.js';
+import { getAuthorizedRoles } from './profileController.js';
 
 export async function listUsers(req, res) {
   const { role, status, search, page = 1, pageSize = 50 } = req.query;
@@ -40,8 +41,20 @@ export async function listUsers(req, res) {
   res.json({ users: result.rows, total: Number(countResult.rows[0].count), page: Number(page), pageSize: limit });
 }
 
-// Full profile for the admin user-detail view: core record + their shop (if
-// any), upgrade history, and KYC documents in one call.
+// Full profile for the admin user-detail view: core record, roles,
+// verification, trust/reputation, shop + orders/products summary,
+// moderation-relevant communication signals, and the security/audit
+// trail — everything the profile spec asks admins to be able to see,
+// scoped to this one internal, permission-gated endpoint (see route:
+// requirePermission('users')). Never exposed on the public profile.
+//
+// Deliberately NOT included, per the spec's "never expose" list even to
+// admins on this view: KYC document images/national ID (kycDocuments
+// below returns status/type/reviewer notes only, same as before — no
+// document URLs), wallet account numbers, or raw chat message content
+// (message moderation already has its own dedicated surface —
+// AdminChatPanel/AdminChatBridgePanel — this view only surfaces
+// moderation-relevant *counts*, not message bodies).
 export async function getUserDetail(req, res) {
   const { userId } = req.params;
   const [userResult, shopResult, upgradesResult, kycResult] = await Promise.all([
@@ -66,13 +79,76 @@ export async function getUserDetail(req, res) {
     return res.status(404).json({ error: 'User not found.' });
   }
 
+  const [
+    authorizedRoles, walletResult, buyerStatsResult, shopStatsResult, driverResult,
+    reportsAgainstResult, reportsFiledResult, blocksAgainstResult, openConversationsResult,
+    securityEventsResult, auditTrailResult
+  ] = await Promise.all([
+    getAuthorizedRoles(userId, targetUser.primary_role),
+    query(`SELECT balance, currency FROM wallets WHERE owner_id = $1 AND type = 'user'`, [userId]),
+    query(
+      `SELECT COUNT(*) AS orders_placed, COUNT(*) FILTER (WHERE status = 'completed') AS orders_completed
+       FROM orders WHERE buyer_id = $1`,
+      [userId]
+    ),
+    shopResult.rows[0] ? query(
+      `SELECT
+         (SELECT COUNT(*) FROM orders WHERE shop_id = $1) AS orders_received,
+         (SELECT COUNT(*) FROM products WHERE shop_id = $1) AS products_total,
+         (SELECT COUNT(*) FROM products WHERE shop_id = $1 AND status = 'active') AS products_active,
+         (SELECT COALESCE(AVG(r.rating), 0) FROM product_reviews r JOIN products p ON p.id = r.product_id WHERE p.shop_id = $1) AS rating,
+         (SELECT COUNT(*) FROM product_reviews r JOIN products p ON p.id = r.product_id WHERE p.shop_id = $1) AS review_count`,
+      [shopResult.rows[0].id]
+    ) : Promise.resolve({ rows: [] }),
+    query('SELECT id, vehicle_type, is_available, rating FROM drivers WHERE user_id = $1', [userId]),
+    query(`SELECT id, reason, status, created_at FROM user_reports WHERE reported_user_id = $1 ORDER BY created_at DESC LIMIT 20`, [userId]),
+    query(`SELECT COUNT(*) AS count FROM user_reports WHERE reporter_id = $1`, [userId]),
+    query(`SELECT COUNT(*) AS count FROM chat_blocks WHERE blocked_id = $1`, [userId]),
+    query(`SELECT COUNT(*) AS count FROM chat_conversations WHERE (user_id = $1 OR seller_id = $1) AND status = 'open'`, [userId]),
+    query(
+      `SELECT id, event_type, severity, summary, resolved, created_at FROM security_events
+       WHERE user_id = $1 ORDER BY created_at DESC LIMIT 25`,
+      [userId]
+    ),
+    query(
+      `SELECT id, actor_id, actor_role, event_type, metadata, created_at FROM platform_security_log
+       WHERE entity_type = 'user' AND entity_id = $1 ORDER BY created_at DESC LIMIT 25`,
+      [userId]
+    )
+  ]);
+
   res.json({
     user: targetUser,
     shop: shopResult.rows[0] || null,
     upgrades: upgradesResult.rows,
     kycDocuments: kycResult.rows,
+    authorizedRoles,
+    wallet: walletResult.rows[0] || null,
+    trust: {
+      buyer: {
+        ordersPlaced: Number(buyerStatsResult.rows[0].orders_placed),
+        ordersCompleted: Number(buyerStatsResult.rows[0].orders_completed)
+      },
+      shop: shopStatsResult.rows[0] ? {
+        ordersReceived: Number(shopStatsResult.rows[0].orders_received),
+        productsTotal: Number(shopStatsResult.rows[0].products_total),
+        productsActive: Number(shopStatsResult.rows[0].products_active),
+        rating: Number(shopStatsResult.rows[0].rating),
+        reviewCount: Number(shopStatsResult.rows[0].review_count)
+      } : null,
+      driver: driverResult.rows[0] || null
+    },
+    communications: {
+      openConversations: Number(openConversationsResult.rows[0].count),
+      reportsAgainstThisUser: reportsAgainstResult.rows,
+      reportsFiledByThisUser: Number(reportsFiledResult.rows[0].count),
+      timesBlockedByOthers: Number(blocksAgainstResult.rows[0].count)
+    },
+    securityEvents: securityEventsResult.rows,
+    auditTrail: auditTrailResult.rows
   });
 }
+
 
 export async function updateUserStatus(req, res) {
   const { userId } = req.params;

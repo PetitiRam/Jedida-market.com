@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import client, { normalizeError } from '../../api/client';
+import Icon from '../../components/icons/icon';
 import '../../styles/mobile-agent-console.css';
 
 /* -------------------------------------------------------------------------
@@ -244,7 +245,7 @@ export default function MobileAgentConsole() {
           </div>
         </div>
         <div className="mac-search">
-          🔎 <input placeholder="Search conversations…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Icon name="search" size={15} /> <input placeholder="Search conversations…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         {tab === 'inbox' && (
           <div className="mac-segmented">
@@ -285,7 +286,7 @@ export default function MobileAgentConsole() {
     return (
       <div className="mac-screen">
         <div className="mac-header">
-          <button className="mac-back-btn" onClick={pop}>←</button>
+          <button className="mac-back-btn" onClick={pop} aria-label="Back"><Icon name="chevronLeft" size={18} /></button>
           <div className="mac-header-title" onClick={() => push('customer', { conversationId: current.conversationId })}>
             <b>{selectedConv?.customer_name || 'Conversation'}</b>
             <div className="mac-header-sub">
@@ -312,7 +313,7 @@ export default function MobileAgentConsole() {
               <div style={{ fontSize: 10.5, color: 'var(--mac-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 4 }}>Internal Notes</div>
               {notes.map((n) => (
                 <div key={n.id} className="mac-bubble note">
-                  <div style={{ fontSize: 10, opacity: 0.75, marginBottom: 2 }}>📝 {n.author_name}</div>
+                  <div style={{ fontSize: 10, opacity: 0.75, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 3 }}><Icon name="note" size={11} /> {n.author_name}</div>
                   {n.body}
                 </div>
               ))}
@@ -322,25 +323,25 @@ export default function MobileAgentConsole() {
 
         {routing && !routing.assigned_agent_id && (
           <div style={{ padding: '0 12px 10px' }}>
-            <button className="mac-primary-btn" style={{ marginTop: 0 }} onClick={() => claimConversation(current.conversationId)}>✋ Take This Chat</button>
+            <button className="mac-primary-btn" style={{ marginTop: 0 }} onClick={() => claimConversation(current.conversationId)}><Icon name="hand" size={15} /> Take This Chat</button>
           </div>
         )}
 
         <div className="mac-composer">
           <div className="mac-composer-modes">
-            <button className={`mac-segchip ${composerMode === 'reply' ? 'active' : ''}`} onClick={() => setComposerMode('reply')}>💬 Reply</button>
-            <button className={`mac-segchip ${composerMode === 'note' ? 'active' : ''}`} onClick={() => setComposerMode('note')}>📝 Internal Note</button>
+            <button className={`mac-segchip ${composerMode === 'reply' ? 'active' : ''}`} onClick={() => setComposerMode('reply')}><Icon name="message" size={13} /> Reply</button>
+            <button className={`mac-segchip ${composerMode === 'note' ? 'active' : ''}`} onClick={() => setComposerMode('note')}><Icon name="note" size={13} /> Internal Note</button>
           </div>
           <div className="mac-composer-box" style={composerMode === 'note' ? { background: 'var(--mac-amber-dim)', borderColor: 'rgba(224,169,62,0.3)' } : undefined}>
             {composerMode === 'reply' ? (
               <>
                 <textarea rows={1} placeholder="Reply…" value={text} onChange={(e) => setText(e.target.value)} />
-                <button className="mac-send-btn" disabled={sending || !text.trim()} onClick={sendMessage}>➤</button>
+                <button className="mac-send-btn" disabled={sending || !text.trim()} onClick={sendMessage} aria-label="Send"><Icon name="send" size={15} /></button>
               </>
             ) : (
               <>
                 <textarea rows={1} placeholder="Internal note — customer never sees this…" value={noteText} onChange={(e) => setNoteText(e.target.value)} />
-                <button className="mac-send-btn" style={{ background: 'var(--mac-amber)' }} disabled={!noteText.trim()} onClick={submitNote}>📝</button>
+                <button className="mac-send-btn" style={{ background: 'var(--mac-amber)' }} disabled={!noteText.trim()} onClick={submitNote} aria-label="Add note"><Icon name="note" size={15} /></button>
               </>
             )}
           </div>
@@ -350,8 +351,8 @@ export default function MobileAgentConsole() {
           <div className="mac-sheet-overlay" onClick={() => setActionSheetConv(null)}>
             <div className="mac-sheet" onClick={(e) => e.stopPropagation()}>
               <div className="mac-sheet-handle" />
-              <button className="mac-sheet-item" onClick={() => { setActionSheetConv(null); push('customer', { conversationId: current.conversationId }); }}>👤 View Customer Details</button>
-              <button className="mac-sheet-item" onClick={() => { setActionSheetConv(null); setTransferTo({ type: 'group', id: '' }); push('transfer', { conversationId: current.conversationId }); }}>⇄ Transfer Chat</button>
+              <button className="mac-sheet-item" onClick={() => { setActionSheetConv(null); push('customer', { conversationId: current.conversationId }); }}><Icon name="user" size={15} /> View Customer Details</button>
+              <button className="mac-sheet-item" onClick={() => { setActionSheetConv(null); setTransferTo({ type: 'group', id: '' }); push('transfer', { conversationId: current.conversationId }); }}><Icon name="swap" size={15} /> Transfer Chat</button>
             </div>
           </div>
         )}
@@ -370,7 +371,7 @@ export default function MobileAgentConsole() {
     return (
       <div className="mac-screen">
         <div className="mac-header">
-          <button className="mac-back-btn" onClick={pop}>←</button>
+          <button className="mac-back-btn" onClick={pop} aria-label="Back"><Icon name="chevronLeft" size={18} /></button>
           <div className="mac-header-title"><b>Customer Details</b></div>
         </div>
         <div className="mac-body mac-form">
@@ -404,7 +405,7 @@ export default function MobileAgentConsole() {
     return (
       <div className="mac-screen">
         <div className="mac-header">
-          <button className="mac-back-btn" onClick={pop}>←</button>
+          <button className="mac-back-btn" onClick={pop} aria-label="Back"><Icon name="chevronLeft" size={18} /></button>
           <div className="mac-header-title"><b>Transfer Conversation</b></div>
         </div>
         <div className="mac-body mac-form">
@@ -439,7 +440,7 @@ export default function MobileAgentConsole() {
           {groups.length === 0 && <div className="mac-empty">No agent groups yet.</div>}
           {groups.map((g) => (
             <button key={g.id} className="mac-row" onClick={() => openGroupRoom(g.id, g.name)}>
-              <div className="mac-avatar">🧭</div>
+              <div className="mac-avatar"><Icon name="compass" size={16} /></div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="mac-row-name">{g.name}</div>
                 <div className="mac-row-msg">{g.sector_name || 'No sector'} · {g.member_count} agent{g.member_count === '1' ? '' : 's'}</div>
@@ -485,8 +486,8 @@ export default function MobileAgentConsole() {
     return (
       <div className="mac-screen">
         <div className="mac-header">
-          <button className="mac-back-btn" onClick={pop}>←</button>
-          <div className="mac-header-title"><b>🔒 {current.title}</b><div className="mac-header-sub">Internal — customers never see this</div></div>
+          <button className="mac-back-btn" onClick={pop} aria-label="Back"><Icon name="chevronLeft" size={18} /></button>
+          <div className="mac-header-title"><b style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="lock" size={14} /> {current.title}</b><div className="mac-header-sub">Internal — customers never see this</div></div>
         </div>
         <div className="mac-messages" style={{ flex: 1 }}>
           {internalMessages.length === 0 && <div className="mac-empty">No messages yet.</div>}
@@ -505,7 +506,7 @@ export default function MobileAgentConsole() {
         <div className="mac-composer">
           <div className="mac-composer-box">
             <textarea rows={1} placeholder="Message…" value={internalText} onChange={(e) => setInternalText(e.target.value)} />
-            <button className="mac-send-btn" disabled={!internalText.trim()} onClick={sendInternalMessage}>➤</button>
+            <button className="mac-send-btn" disabled={!internalText.trim()} onClick={sendInternalMessage} aria-label="Send"><Icon name="send" size={15} /></button>
           </div>
         </div>
       </div>
@@ -519,7 +520,7 @@ export default function MobileAgentConsole() {
     return (
       <div className="mac-screen">
         <div className="mac-header">
-          <button className="mac-back-btn" onClick={pop}>←</button>
+          <button className="mac-back-btn" onClick={pop} aria-label="Back"><Icon name="chevronLeft" size={18} /></button>
           <div className="mac-header-title"><b>Group Broadcast</b></div>
         </div>
         <div className="mac-body mac-form">
@@ -551,7 +552,7 @@ export default function MobileAgentConsole() {
           <textarea className="mac-textarea" rows={5} placeholder="Dear customer, …" value={broadcastForm.message} onChange={(e) => setBroadcastForm({ ...broadcastForm, message: e.target.value })} />
           <div className="mac-hint">Each recipient receives this as an individual, private message — no one sees who else got it.</div>
           <button className="mac-primary-btn" disabled={broadcastSending || !broadcastForm.message.trim()} onClick={sendBroadcast}>
-            {broadcastSending ? 'Sending…' : '📣 Send Broadcast'}
+            {broadcastSending ? 'Sending…' : (<><Icon name="megaphone" size={14} /> Send Broadcast</>)}
           </button>
         </div>
       </div>
@@ -579,16 +580,16 @@ export default function MobileAgentConsole() {
       {showTabBar && (
         <div className="mac-tabbar">
           <button className={`mac-tab ${tab === 'inbox' ? 'active' : ''}`} onClick={() => resetTo('inbox')}>
-            <span className="mac-tab-icon">📥</span>Inbox
+            <span className="mac-tab-icon"><Icon name="inbox" size={18} /></span>Inbox
           </button>
           <button className={`mac-tab ${tab === 'chats' ? 'active' : ''}`} onClick={() => resetTo('chats')}>
-            <span className="mac-tab-icon">💬</span>Chats
+            <span className="mac-tab-icon"><Icon name="message" size={18} /></span>Chats
           </button>
           <button className={`mac-tab ${tab === 'groups' ? 'active' : ''}`} onClick={() => resetTo('groups')}>
-            <span className="mac-tab-icon">🧭</span>Groups
+            <span className="mac-tab-icon"><Icon name="compass" size={18} /></span>Groups
           </button>
           <button className={`mac-tab ${tab === 'agents' ? 'active' : ''}`} onClick={() => resetTo('agents')}>
-            <span className="mac-tab-icon">👥</span>Agents
+            <span className="mac-tab-icon"><Icon name="users" size={18} /></span>Agents
           </button>
           <button className="mac-tab" onClick={() => setMoreOpen(true)}>
             <span className="mac-tab-icon">⋯</span>More
@@ -601,13 +602,13 @@ export default function MobileAgentConsole() {
         <div className="mac-sheet-overlay" onClick={() => setMoreOpen(false)}>
           <div className="mac-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="mac-sheet-handle" />
-            <button className="mac-sheet-item" onClick={() => { setMoreOpen(false); push('broadcast'); }}>📣 Group Broadcast</button>
-            <button className="mac-sheet-item" onClick={() => { setMoreOpen(false); resetTo('inbox'); setConvFilter('unassigned'); }}>📥 Unassigned Queue ({unassignedCount})</button>
+            <button className="mac-sheet-item" onClick={() => { setMoreOpen(false); push('broadcast'); }}><Icon name="megaphone" size={15} /> Group Broadcast</button>
+            <button className="mac-sheet-item" onClick={() => { setMoreOpen(false); resetTo('inbox'); setConvFilter('unassigned'); }}><Icon name="inbox" size={15} /> Unassigned Queue ({unassignedCount})</button>
           </div>
         </div>
       )}
 
-      {toast && <div className={`mac-toast ${toast.tone === 'error' ? 'error' : ''}`}>{toast.tone === 'error' ? '⚠️' : '✓'} {toast.message}</div>}
+      {toast && <div className={`mac-toast ${toast.tone === 'error' ? 'error' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{toast.tone === 'error' ? <Icon name="alertTriangle" size={14} /> : <Icon name="check" size={14} />} {toast.message}</div>}
     </div>
   );
 }

@@ -26,12 +26,14 @@ import LegalDocument from './pages/LegalDocument';
 
 import UpgradePage from './pages/upgrade/UpgradePage';
 import SellerDashboard from './pages/seller/SellerDashboard';
+import BuyerDashboard from './pages/buyer/BuyerDashboard';
 import PartnerPortalDashboard from './pages/partner-portal/PartnerPortalDashboard';
 
 import DeliveryDashboard from './pages/delivery/DeliveryDashboard';
 import DriverDashboard from './pages/delivery/DriverDashboard';
 
 import Marketplace from './pages/buyer/Marketplace';
+import LiveEventPage from './pages/buyer/LiveEventPage';
 import SectionProducts from './pages/buyer/SectionProducts';
 import TrendingProducts from './pages/buyer/TrendingProducts';
 import ProductDetail from './pages/buyer/ProductDetail';
@@ -41,12 +43,15 @@ import NotificationsPage from './pages/buyer/NotificationsPage';
 import DocumentCenter from './pages/buyer/DocumentCenter';
 import VerifyDocument from './pages/VerifyDocument';
 import KycWizard from './pages/kyc/KycWizard';
+import PosTerminalPage from './pages/pos/PosTerminalPage';
 import MyQuoteRequests from './pages/buyer/MyQuoteRequests';
 import JedidaWanted from './pages/buyer/JedidaWanted';
 import SupplierTradeProfile from './pages/buyer/SupplierTradeProfile';
 import LogisticsHub from './pages/buyer/LogisticsHub';
 import MyAgreements from './pages/buyer/MyAgreements';
 import MyProfile from './pages/MyProfile';
+import ProfileSettings from './pages/ProfileSettings';
+import FollowListPage from './pages/FollowListPage';
 import AccountSecurity from './pages/AccountSecurity';
 import PublicProfile from './pages/PublicProfile';
 import MySupplyContracts from './pages/buyer/MySupplyContracts';
@@ -122,16 +127,20 @@ export default function App() {
 
         {/* Buyer / Main Marketplace */}
         <Route path="/marketplace" element={<Marketplace />} />
+        <Route path="/live/:id" element={<LiveEventPage />} />
         <Route path="/marketplace/section/:key" element={<SectionProducts />} />
         <Route path="/trending" element={<TrendingProducts />} />
         <Route path="/feed" element={<ProtectedRoute><ForYouFeed /></ProtectedRoute>} />
-        <Route path="/product/:id" element={<ProductDetail />} />
+
+<Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/checkout/:productId" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
         <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
+        <Route path="/buyer" element={<ProtectedRoute><BuyerDashboard /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         <Route path="/documents" element={<ProtectedRoute><DocumentCenter /></ProtectedRoute>} />
         <Route path="/verify/:code" element={<VerifyDocument />} />
         <Route path="/verify-identity" element={<ProtectedRoute><KycWizard /></ProtectedRoute>} />
+        <Route path="/partner-apps/pos" element={<ProtectedRoute><PosTerminalPage /></ProtectedRoute>} />
         <Route path="/my-quotes" element={<ProtectedRoute><MyQuoteRequests /></ProtectedRoute>} />
         <Route path="/wanted" element={<ProtectedRoute><JedidaWanted /></ProtectedRoute>} />
         <Route path="/suppliers/:businessProfileId" element={<ProtectedRoute><SupplierTradeProfile /></ProtectedRoute>} />
@@ -139,6 +148,9 @@ export default function App() {
         <Route path="/my-agreements" element={<ProtectedRoute><MyAgreements /></ProtectedRoute>} />
         <Route path="/my-supply-contracts" element={<ProtectedRoute><MySupplyContracts /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><MyProfile /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+        <Route path="/u/:userId/followers" element={<FollowListPage />} />
+        <Route path="/u/:userId/following" element={<FollowListPage />} />
         <Route path="/account/security" element={<ProtectedRoute><AccountSecurity /></ProtectedRoute>} />
         <Route path="/u/:userId" element={<PublicProfile />} />
 

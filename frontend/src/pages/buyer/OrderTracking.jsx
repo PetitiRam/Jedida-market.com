@@ -4,6 +4,7 @@ import { io } from 'socket.io-client';
 import client from '../../api/client';
 import MarketplaceHeader from '../../components/MarketplaceHeader';
 import TrackingTimeline from '../../components/TrackingTimeline';
+import BuyerPackagingGallery from '../../components/BuyerPackagingGallery';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL
   ? import.meta.env.VITE_API_URL.replace('/api', '')
@@ -59,6 +60,12 @@ export default function OrderTracking() {
       <MarketplaceHeader />
       <div className="dash-body" style={{ maxWidth: 600 }}>
         <h2>Track your order</h2>
+
+        {/* Independent of delivery-tracking data existing yet — a buyer
+            should see packaging photos as soon as the seller uploads them,
+            even before a delivery record exists (spec #22/#25). */}
+        <BuyerPackagingGallery orderId={orderId} />
+
         {error ? <div className="empty-state">{error}</div> : !delivery ? (
           <div className="empty-state">Loading…</div>
         ) : (

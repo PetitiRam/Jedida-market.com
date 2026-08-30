@@ -1,3 +1,5 @@
+import Icon from '../icons/icon';
+
 const STATUS_LABELS = {
   pending_payment: 'Payment pending', paid_escrow: 'Paid — in escrow', shipped: 'Shipped',
   delivered_confirmed: 'Delivered', completed: 'Completed', cancelled: 'Cancelled', disputed: 'Disputed',
@@ -16,7 +18,7 @@ function TextBody({ m, displayBody }) {
   if (m.message_type === 'document') {
     return (
       <a href={m.attachment_url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'inherit' }}>
-        📄 <span style={{ textDecoration: 'underline' }}>{m.attachment_meta?.originalName || 'Document'}</span>
+        <Icon name="document" size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> <span style={{ textDecoration: 'underline' }}>{m.attachment_meta?.originalName || 'Document'}</span>
       </a>
     );
   }
@@ -75,12 +77,12 @@ export default function MessageCard({ m, mine, displayBody, onViewProduct, actio
   } else {
     body = (
       <div className="cw-msg-card">
-        {isAi && <div className="cw-ai-badge">🤖 Jedida AI Assistant</div>}
-        {isSupport && <div className="cw-support-badge">✔️ Jedida Representative</div>}
+        {isAi && <div className="cw-ai-badge" style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="bot" size={13} /> Jedida AI Assistant</div>}
+        {isSupport && <div className="cw-support-badge" style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="check" size={13} /> Jedida Representative</div>}
         <TextBody m={m} displayBody={displayBody} />
         {m.moderation_status === 'masked' && (
           <div style={{ fontSize: '0.7rem', color: '#B0790E', marginTop: 6 }}>
-            🛡️ Part of this message was hidden to keep communication inside Jedida.
+            <Icon name="checkShield" size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Part of this message was hidden to keep communication inside Jedida.
           </div>
         )}
       </div>
@@ -92,7 +94,7 @@ export default function MessageCard({ m, mine, displayBody, onViewProduct, actio
       {body}
       <div className="cw-msg-foot">
         <span>{timeOf(m)}</span>
-        {m.status === 'read' && <span className="read">✓✓ Read</span>}
+        {m.status === 'read' && <span className="read" style={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}><Icon name="check" size={11} /><Icon name="check" size={11} style={{ marginLeft: -6 }} /> Read</span>}
         {actions}
       </div>
     </div>

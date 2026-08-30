@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import client from '../api/client';
 import MediaUploader from './MediaUploader';
 import PaymentMethodSelector from './PaymentMethodSelector';
+import Icon from './icons/icon';
 import '../styles/wallet.css';
 
 const REFERENCE_LABELS = {
@@ -120,14 +121,184 @@ function KycGate({ kycStatus, onSubmitted }) {
 
       <div style={{ marginBottom: 10 }}>
         <MediaUploader label="📄 Upload ID document" accept="image/*" onUploaded={(m) => setIdDocumentUrl(m.url)} />
-        {idDocumentUrl && <p className="product-card-meta" style={{ marginTop: 4 }}>✔ ID document attached</p>}
+        {idDocumentUrl && <p className="product-card-meta" style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="check" size={13} /> ID document attached</p>}
       </div>
       <div style={{ marginBottom: 14 }}>
-        <MediaUploader label="🤳 Upload selfie (optional)" accept="image/*" onUploaded={(m) => setSelfieUrl(m.url)} />
-        {selfieUrl && <p className="product-card-meta" style={{ marginTop: 4 }}>✔ Selfie attached</p>}
+        <MediaUploader label="Upload selfie (optional)" accept="image/*" onUploaded={(m) => setSelfieUrl(m.url)} />
+        {selfieUrl && <p className="product-card-meta" style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="check" size={13} /> Selfie attached</p>}
       </div>
       <button className="btn-primary" onClick={submit} disabled={busy}>{busy ? 'Submitting…' : 'Submit for verification'}</button>
     </div>
+  );
+}
+
+function FeePreview({ type, amount }) {
+  const [preview, setPreview] = useState(null);
+  useEffect(() => {
+    const n = Number(amount);
+    if (!n || n <= 0) { setPreview(null); return; }
+    const timer = setTimeout(() => {
+      client.get('/wallet/fees/preview', { params: { type, amount: n } })
+        .then(({ data }) => setPreview(data))
+        .catch(() => setPreview(null));
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [type, amount]);
+
+  if (!preview) return null;
+  return (
+    <div style={{ fontSize: '0.82rem', color: '#5B6760', background: '#F7F8F7', borderRadius: 8, padding: '8px 10px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Fee</span><span>{preview.feeAmount.toLocaleString()}</span></div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: 'var(--ink)' }}>
+        <span>You {type === 'deposit' ? 'receive' : 'get'}</span><span>{preview.netAmount.toLocaleString()}</span>
+      </div>
+    </div>
+  );
+}
+
+function DepositForm({ wallet, onDone }) {
+  const [methods, setMethods] = useState([]);
+  const [methodCode, setMethodCode] = useState('');
+  const [amount, setAmount] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [pendingDeposit, setPendingDeposit] = useState(null);
+
+  useEffect(() => {
+    client.get('/wallet/deposit-methods').then(({ data }) => {
+      setMethods(data.methods);
+      setMethodCode(data.methods[0]?.code || '');
+    });
+  }, []);
+
+  const selected = methods.find((m) => m.code === methodCode);
+  const needsPhone = selected?.requires_fields?.includes('phoneNumber');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError(''); setBusy(true);
+    try {
+      const { data } = await client.post('/wallet/deposits', {
+        methodCode, amount: Number(amount), fields: needsPhone ? { phoneNumber } : {},
+        // Required by the backend (see INTEGRATION_DECISION_REPORT.md
+        // section 3) so a retried/double-tapped Deposit can't charge the
+        // provider twice — one key per submit attempt, reused if this
+        // exact request is retried by the browser.
+        idempotencyKey: crypto.randomUUID(),
+      });
+      if (data.checkoutUrl) {
+        window.open(data.checkoutUrl, '_blank');
+        onDone();
+      } else {
+        // No redirect URL — this is a sandbox-style provider reference;
+        // the deposit stays pending until confirmDeposit is called (which
+        // itself refuses to run for anything that isn't a sandbox
+        // reference — see walletsController.js).
+        setPendingDeposit(data.deposit);
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not start this deposit.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmSandbox = async () => {
+    setBusy(true);
+    try {
+      await client.post(`/wallet/deposits/${pendingDeposit.id}/confirm`);
+      setPendingDeposit(null); setAmount('');
+      onDone();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not confirm this deposit.');
+    } finally { setBusy(false); }
+  };
+
+  if (pendingDeposit) {
+    return (
+      <div className="card-surface" style={{ marginTop: 20 }}>
+        <h4>Complete your deposit</h4>
+        <p style={{ fontSize: '0.85rem', color: '#5B6760' }}>
+          Follow the prompt from your payment provider to complete this {wallet.currency} {pendingDeposit.amount} deposit.
+        </p>
+        <button className="btn-secondary" disabled={busy} onClick={confirmSandbox}>
+          {busy ? 'Confirming…' : "I've completed the payment"}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="card-surface" style={{ marginTop: 20 }}>
+      <h4>Deposit funds</h4>
+      {error && <div className="alert alert-error">{error}</div>}
+      <div className="field-group">
+        <label>Amount ({wallet.currency})</label>
+        <input type="number" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+      </div>
+      <FeePreview type="deposit" amount={amount} />
+      <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block', marginBottom: 8 }}>Payment method</label>
+      <div style={{ marginBottom: 14 }}>
+        <select value={methodCode} onChange={(e) => setMethodCode(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid var(--line)' }}>
+          {methods.map((m) => <option key={m.code} value={m.code}>{m.name}</option>)}
+          {methods.length === 0 && <option value="">No providers connected yet</option>}
+        </select>
+      </div>
+      {needsPhone && (
+        <div className="field-group">
+          <label>Mobile money number</label>
+          <input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="e.g. +256 7XX XXX XXX" required />
+        </div>
+      )}
+      <button className="btn-primary" disabled={busy || !methodCode}>{busy ? 'Starting…' : 'Deposit'}</button>
+    </form>
+  );
+}
+
+function TransferForm({ wallet, onDone }) {
+  const [recipient, setRecipient] = useState('');
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError(''); setBusy(true);
+    try {
+      const isEmail = recipient.includes('@');
+      await client.post('/wallet/transfers', {
+        [isEmail ? 'recipientEmail' : 'recipientPhone']: recipient.trim(),
+        amount: Number(amount), note: note || undefined,
+        idempotencyKey: crypto.randomUUID(),
+      });
+      setRecipient(''); setAmount(''); setNote('');
+      onDone();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not complete this transfer.');
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <form onSubmit={submit} className="card-surface" style={{ marginTop: 20 }}>
+      <h4>Transfer funds</h4>
+      {error && <div className="alert alert-error">{error}</div>}
+      <div className="field-group">
+        <label>Recipient (email or phone)</label>
+        <input value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="name@example.com" required />
+      </div>
+      <div className="field-group">
+        <label>Amount ({wallet.currency})</label>
+        <input type="number" min="1" max={wallet.balance} value={amount} onChange={(e) => setAmount(e.target.value)} required />
+      </div>
+      <FeePreview type="transfer" amount={amount} />
+      <div className="field-group">
+        <label>Note (optional)</label>
+        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="What's this for?" />
+      </div>
+      <button className="btn-primary" disabled={busy}>{busy ? 'Sending…' : 'Send transfer'}</button>
+    </form>
   );
 }
 
@@ -160,6 +331,7 @@ function WithdrawForm({ wallet, onDone }) {
         <label>Amount ({wallet.currency})</label>
         <input type="number" min="1" max={wallet.balance} value={amount} onChange={(e) => setAmount(e.target.value)} required />
       </div>
+      <FeePreview type="withdrawal" amount={amount} />
       <div className="field-group">
         <label>Payout destination (phone / account number)</label>
         <input value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="e.g. +256 7XX XXX XXX" required />
@@ -178,6 +350,7 @@ export default function WalletKycPanel() {
   const [kycStatus, setKycStatus] = useState(null);
   const [withdrawals, setWithdrawals] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [activeAction, setActiveAction] = useState('deposit'); // deposit | withdraw | transfer
 
   const load = async () => {
     const [walletRes, kycRes, withdrawalsRes, txRes] = await Promise.all([
@@ -204,17 +377,17 @@ export default function WalletKycPanel() {
     <div>
       <div className="wp-summary-grid">
         <div className="wp-card wp-card-primary">
-          <div className="wp-card-label">💰 Available Funds</div>
+          <div className="wp-card-label"><Icon name="wallet" size={14} /> Available Funds</div>
           <div className="wp-card-value">{wallet.currency} {available.toLocaleString()}</div>
           <div className="wp-card-sub">Ready to withdraw right now</div>
         </div>
         <div className="wp-card">
-          <div className="wp-card-label">🔒 Pending Release (Escrow)</div>
+          <div className="wp-card-label"><Icon name="lock" size={14} /> Pending Release (Escrow)</div>
           <div className="wp-card-value" style={{ color: 'var(--forest)' }}>{wallet.currency} {pendingRelease.toLocaleString()}</div>
           <div className="wp-card-sub">Delivery confirmed, awaiting admin release</div>
         </div>
         <div className="wp-card">
-          <div className="wp-card-label">⏳ Pending Withdrawal</div>
+          <div className="wp-card-label"><Icon name="clock" size={14} /> Pending Withdrawal</div>
           <div className="wp-card-value" style={{ color: 'var(--terracotta)' }}>{wallet.currency} {pendingWithdrawal.toLocaleString()}</div>
           <div className="wp-card-sub">Requested, awaiting admin review</div>
         </div>
@@ -232,7 +405,30 @@ export default function WalletKycPanel() {
       </div>
 
       {!canWithdraw && <KycGate kycStatus={kycStatus} onSubmitted={load} />}
-      {canWithdraw && <WithdrawForm wallet={{ ...wallet, balance: available }} onDone={load} />}
+
+      {/* Quick actions (spec #33/#34) — Deposit, Withdraw, Transfer */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+        <button
+          className={activeAction === 'deposit' ? 'btn-primary' : 'btn-secondary'}
+          style={{ flex: 1 }}
+          onClick={() => setActiveAction('deposit')}
+        >Deposit</button>
+        <button
+          className={activeAction === 'withdraw' ? 'btn-primary' : 'btn-secondary'}
+          style={{ flex: 1 }}
+          disabled={!canWithdraw}
+          onClick={() => setActiveAction('withdraw')}
+        >Withdraw</button>
+        <button
+          className={activeAction === 'transfer' ? 'btn-primary' : 'btn-secondary'}
+          style={{ flex: 1 }}
+          onClick={() => setActiveAction('transfer')}
+        >Transfer</button>
+      </div>
+
+      {activeAction === 'deposit' && <DepositForm wallet={{ ...wallet, balance: available }} onDone={load} />}
+      {activeAction === 'withdraw' && canWithdraw && <WithdrawForm wallet={{ ...wallet, balance: available }} onDone={load} />}
+      {activeAction === 'transfer' && <TransferForm wallet={{ ...wallet, balance: available }} onDone={load} />}
 
       {withdrawals.length > 0 && (
         <div style={{ marginTop: 20 }}>

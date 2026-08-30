@@ -17,7 +17,7 @@ const PAYMENT_METHODS = [
   { value: 'airtel_money', label: 'Airtel Money' }
 ];
 
-export default function MyQuoteRequests() {
+export default function MyQuoteRequests({ embedded = false } = {}) {
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [acceptingId, setAcceptingId] = useState(null);
@@ -56,7 +56,7 @@ export default function MyQuoteRequests() {
 
   return (
     <div>
-      <MarketplaceHeader />
+      {!embedded && <MarketplaceHeader />}
       <div className="dash-body">
         <h2>My Quote Requests</h2>
         <Link to="/my-agreements" className="btn-link" style={{ display: 'inline-block', marginBottom: 12 }}>View my purchase agreements</Link>

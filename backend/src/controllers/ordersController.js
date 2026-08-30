@@ -1,6 +1,8 @@
 import { query, withTransaction } from '../config/db.js';
 import { logSecurityEvent } from '../services/securityLogService.js';
 import { ADAPTERS, verifyPesajetPayment } from '../services/paymentProviders.js';
+import { payForOrder } from './walletsController.js';
+import { postTransaction, setOrderFinancialState, setOrderReleaseState } from '../services/ledgerService.js';
 import crypto from 'crypto';
 import { cached, cacheDel } from '../utils/cache.js';
 import { creditSaleCommission, alertHeldSaleCommission } from '../services/affiliateService.js';
@@ -19,7 +21,7 @@ async function safeGenerateDocument(fn, label) {
   }
 }
 
-async function logWalletTransaction(client, { walletId, direction, amount, balanceAfter, referenceType, referenceId, note, createdBy }) {
+export async function logWalletTransaction(client, { walletId, direction, amount, balanceAfter, referenceType, referenceId, note, createdBy }) {
   await client.query(
     `INSERT INTO wallet_transactions (wallet_id, direction, amount, balance_after, reference_type, reference_id, note, created_by)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
@@ -54,6 +56,17 @@ function isCashOnDelivery(method) {
   return method === 'cash_on_delivery';
 }
 
+// Wallet payment never touches an external adapter — the "charge" is an
+// internal, atomic wallet debit (walletsController.payForOrder), and the
+// "confirmation" is calling applyPaymentConfirmation() directly and
+// synchronously right after, instead of waiting on a provider webhook.
+// See BUYER_WALLET.txt's Pay section: validate balance -> reserve/debit
+// funds -> create financial transaction -> connect to order -> apply
+// escrow rules -> commit transaction.
+function isWalletPayment(method) {
+  return method === 'wallet';
+}
+
 // Accepts either the pool-level `query` or a transaction's `client.query`
 // — both share the same (sql, params) => Promise signature.
 async function insertCodPayment(queryFn, { orderId, amount, currency }) {
@@ -78,6 +91,13 @@ const METHOD_SETTINGS_FLAG = {
   airtel_money: 'enableMobileMoney',
   stripe: 'enableCardPayments',
   dpo: 'enableCardPayments',
+  // 'wallet' is deliberately absent here, same as flutterwave/coinbase
+  // below it in METHOD_PROVIDER_CODE — it isn't a third-party provider a
+  // shop connects on their Payments page, it's the platform's own
+  // internal balance, so there's no settings flag or provider_registry
+  // row to gate it against. assertPaymentMethodAllowed()'s existing
+  // "methods with no registry mapping yet aren't gated by this layer"
+  // fallback already covers it correctly without any change there.
 };
 const METHOD_PROVIDER_CODE = {
   pesajet: 'pesajet',
@@ -166,6 +186,7 @@ export async function createOrder(req, res) {
 
   try {
     const cod = isCashOnDelivery(method);
+    const walletPay = isWalletPayment(method);
     const settings = await getSettings();
     // Cheap upfront shop_id lookup so the payment-method gate can run
     // before any charge or DB write, for COD as well as real methods
@@ -200,11 +221,14 @@ export async function createOrder(req, res) {
     }
 
     const adapter = ADAPTERS[method];
-    if (!cod && !adapter) return res.status(400).json({ error: 'Unsupported payment method.' });
+    if (!cod && !walletPay && !adapter) return res.status(400).json({ error: 'Unsupported payment method.' });
 
-    // For any real payment method (never for COD, which has no such step),
-    // the order must not be written to the database unless the payer has
-    // actually been prompted to pay — i.e. the provider accepted the charge
+    // For any real payment method (never for COD, which has no such step,
+    // and never for wallet, whose "charge" is an internal atomic debit
+    // that happens after the order exists — see the walletPay branch
+    // below applyPaymentConfirmation), the order must not be written to
+    // the database unless the payer has actually been prompted to pay —
+    // i.e. the provider accepted the charge
     // request (for PesaJet: the customer gets the PIN prompt). So the
     // charge happens FIRST, against a lightweight read-only preview of the
     // price (product + coupon validated but not yet locked/redeemed — that
@@ -213,7 +237,7 @@ export async function createOrder(req, res) {
     // succeeds does the real order-creation transaction run.
     let candidateOrderId = null;
     let charge = null;
-    if (!cod) {
+    if (!cod && !walletPay) {
       // Wanted-bridge products (products.wanted_quote_id — see phase87) stay
       // 'draft' so they never surface in browse/home/search, but they ARE
       // orderable: they only exist because a buyer already accepted a
@@ -357,6 +381,18 @@ export async function createOrder(req, res) {
         // two can never exist independently of each other.
         if (cod) {
           await insertCodPayment(client.query.bind(client), { orderId: newOrder.id, amount: newOrder.total_amount, currency: newOrder.currency });
+        } else if (walletPay) {
+          // 'initiated' here too, same as the external-provider branch —
+          // the debit + escrow confirmation happens right after this
+          // transaction commits (see below), which is what flips this to
+          // 'succeeded'. Kept as two steps rather than one so a failed
+          // debit leaves a normal, already-understood 'pending_payment'
+          // order behind instead of a half-written one.
+          await client.query(
+            `INSERT INTO payments (order_id, method, amount, currency, status, provider_reference, raw_response)
+             VALUES ($1,'wallet',$2,$3,'initiated',NULL,$4)`,
+            [newOrder.id, newOrder.total_amount, newOrder.currency, { note: 'Jedida Wallet payment' }]
+          );
         } else {
           await client.query(
             `INSERT INTO payments (order_id, method, amount, currency, status, provider_reference, raw_response)
@@ -390,12 +426,50 @@ export async function createOrder(req, res) {
       throw txErr;
     }
 
+    // Order exists now, in 'pending_payment' with a 'wallet' payment row
+    // in 'initiated' — mirrors exactly where a real order sits right
+    // after an external charge succeeds but before its webhook arrives.
+    // The difference is there's no webhook to wait for: the debit is
+    // internal, so it happens here, synchronously, and on success
+    // reuses the SAME applyPaymentConfirmation() every other payment
+    // method's webhook calls — same escrow credit, ledger entry, stock
+    // decrement, and seller notification, not a parallel copy of them.
+    if (walletPay) {
+      try {
+        await payForOrder(req.user.id, order.id, order.total_amount, order.currency);
+      } catch (debitErr) {
+        if (debitErr.code === 'INSUFFICIENT_FUNDS') {
+          return res.status(400).json({
+            error: 'Insufficient wallet balance for this order. Your order was created and is waiting for payment — choose another payment method to complete it.',
+            order
+          });
+        }
+        console.error('Wallet debit failed after order creation:', debitErr);
+        return res.status(500).json({ error: 'Could not charge your wallet. Your order was created but is not yet paid — please try again.', order });
+      }
+      try {
+        order = await applyPaymentConfirmation(order.id, { userId: req.user.id, confirmedVia: 'wallet' });
+      } catch (confirmErr) {
+        // The wallet was already debited above but escrow confirmation
+        // failed — same "money moved, order not finalized" situation the
+        // comment above this catch block already documents for external
+        // charges, just with a wallet reference instead of a provider one.
+        console.error(`Wallet debited for order ${order.id} but confirmation failed:`, confirmErr.message);
+        return res.status(500).json({
+          error: 'Your wallet was charged but we could not finalize the order. Please contact support — do not pay again.',
+          order
+        });
+      }
+    }
+
     await safeGenerateDocument(() => createOrderConfirmation(order.id), 'order_confirmation:createOrder');
 
     return res.status(201).json({
       message: cod
         ? 'Order created. Pay the delivery agent in cash when your order arrives.'
-        : 'Order created. Complete payment to move funds into escrow.',
+        : walletPay
+          ? 'Order paid from your Jedida Wallet and moved into escrow.'
+          : 'Order created. Complete payment to move funds into escrow.',
       order, codPending: cod, checkoutUrl: charge?.checkoutUrl, providerReference: charge?.providerReference
     });
   } catch (err) {
@@ -459,6 +533,41 @@ export async function applyPaymentConfirmation(orderId, { userId, confirmedVia }
     );
 
     const shopResult = await client.query('SELECT owner_id FROM shops WHERE id = $1', [order.shop_id]);
+
+    // Unified ledger record (phase 94): the same event that just moved
+    // wallet balances/escrow_ledger above is also recorded here in the
+    // omnichannel shape, so this order shows up in the same transaction
+    // feed a future POS sale or wallet deposit would. Keyed on order_id
+    // so a retried webhook (already blocked above by the pending_payment
+    // status-flip) can never double-post even if this were ever called
+    // twice for one order. Covers every caller of applyPaymentConfirmation
+    // — including this session's wallet-pay branch in createOrder() below
+    // — since they all flow through this one shared function.
+    const paymentRowForLedger = await client.query('SELECT method, provider_reference FROM payments WHERE order_id = $1 LIMIT 1', [orderId]);
+    await postTransaction(client, {
+      idempotencyKey: `order_payment:${order.id}`,
+      transactionType: 'order_payment',
+      status: 'succeeded',
+      source: 'marketplace',
+      amount: order.total_amount,
+      feeAmount: order.platform_fee_amount || 0,
+      currency: order.currency,
+      orderId: order.id,
+      orderPublicRef: order.public_ref,
+      buyerId: order.buyer_id,
+      sellerId: shopResult.rows[0]?.owner_id || null,
+      shopId: order.shop_id,
+      actorId: userId || order.buyer_id,
+      destinationWalletId: escrowWallet.rows[0].id,
+      paymentMethod: paymentRowForLedger.rows[0]?.method || null,
+      providerReference: paymentRowForLedger.rows[0]?.provider_reference || null,
+      metadata: { confirmedVia: confirmedVia || 'unknown' },
+      createdBy: userId || order.buyer_id,
+    });
+    // Funds now sit under JEDIDA financial control, not yet releasable —
+    // release eligibility is decided by the fulfillment/release-rules
+    // engine (a later phase), not by this payment-confirmation step.
+    await setOrderFinancialState(client, { orderId: order.id, financialState: 'funds_controlled' });
     await client.query(
       `INSERT INTO notifications (user_id, type, title, body) VALUES ($1,'new_order','New order received','You have a new paid order waiting to be fulfilled.')`,
       [shopResult.rows[0].owner_id]
@@ -549,6 +658,13 @@ export async function confirmDelivery(req, res) {
 
     if (allConfirmed && o.status !== 'completed') {
       await query(`UPDATE orders SET status = 'completed' WHERE id = $1`, [orderId]);
+      // Financial release_state now reflects that this order satisfies
+      // JEDIDA's completion condition (spec #17) — releasable, not yet
+      // released. releaseFunds()/autoReleaseExpiredEscrow() are still the
+      // only things that actually move money; this just makes the order
+      // visible in the Financial Control Center's "Releasable" tile
+      // before an admin/settlement officer acts on it.
+      await query(`UPDATE orders SET release_state = 'eligible', financial_state = 'releasable' WHERE id = $1`, [orderId]);
       await query(
         `INSERT INTO notifications (user_id, type, title, body) VALUES ($1,'system_announcement','Order ready for payout','All parties confirmed delivery — awaiting admin fund release.')`,
         [order.seller_id]
@@ -615,6 +731,34 @@ async function payOutClaimedOrder(client, order, releasedBy, releaseNote) {
     `INSERT INTO notifications (user_id, type, title, body, sent_by) VALUES ($1,'payout_released','Funds released',$2,$3)`,
     [order.seller_id, `${sellerAmount} ${order.currency} has been released to your wallet for order ${order.id}.`, releasedBy]
   );
+
+  // Unified ledger record (phase 94) — mirrors the wallet moves above in
+  // the omnichannel shape, keyed on the order so this can never
+  // double-post even if payOutClaimedOrder were ever reached twice for
+  // one order (both callers already guard that with the funds_released_at
+  // atomic claim above, but idempotency_key makes it true at the DB layer
+  // too, not just by caller discipline).
+  await postTransaction(client, {
+    idempotencyKey: `release:${order.id}`,
+    transactionType: 'release',
+    status: 'succeeded',
+    source: 'marketplace',
+    amount: sellerAmount,
+    feeAmount: order.platform_fee_amount || 0,
+    netAmount: sellerAmount,
+    currency: order.currency,
+    orderId: order.id,
+    orderPublicRef: order.public_ref,
+    sellerId: order.seller_id,
+    shopId: order.shop_id,
+    actorId: releasedBy,
+    sourceWalletId: escrowWallet.rows[0].id,
+    destinationWalletId: sellerWallet.rows[0].id,
+    metadata: { note: releaseNote },
+    createdBy: releasedBy,
+  });
+  await setOrderFinancialState(client, { orderId: order.id, financialState: 'released' });
+  await setOrderReleaseState(client, { orderId: order.id, releaseState: 'released' });
 
   // Never throws — a failure here must not undo a real payout that already
   // happened above in this same transaction.
@@ -934,8 +1078,9 @@ export async function assignDelivery(req, res) {
 export async function checkoutCart(req, res) {
   const { method, shippingAddress, phoneNumber, network } = req.body;
   const cod = isCashOnDelivery(method);
+  const walletPay = isWalletPayment(method);
   const adapter = ADAPTERS[method];
-  if (!cod && !adapter) return res.status(400).json({ error: 'Unsupported payment method.' });
+  if (!cod && !walletPay && !adapter) return res.status(400).json({ error: 'Unsupported payment method.' });
 
   try {
     const settings = await query('SELECT * FROM platform_settings WHERE id = 1');
@@ -982,7 +1127,7 @@ export async function checkoutCart(req, res) {
     // under FOR UPDATE locks exactly as before and is what actually
     // creates the orders.
     let charge = null;
-    if (!cod) {
+    if (!cod && !walletPay) {
       const preview = await query(
         `SELECT ci.quantity, p.price, p.currency, p.quantity_available, p.minimum_order_quantity, u.primary_role AS shop_owner_role
          FROM cart_items ci JOIN products p ON p.id = ci.product_id JOIN shops s ON s.id = p.shop_id
@@ -1068,6 +1213,12 @@ export async function checkoutCart(req, res) {
         for (const order of orders) {
           if (cod) {
             await insertCodPayment(client.query.bind(client), { orderId: order.id, amount: order.total_amount, currency: order.currency });
+          } else if (walletPay) {
+            await client.query(
+              `INSERT INTO payments (order_id, method, amount, currency, status, provider_reference, raw_response)
+               VALUES ($1,'wallet',$2,$3,'initiated',NULL,$4)`,
+              [order.id, order.total_amount, order.currency, { note: 'Jedida Wallet payment' }]
+            );
           } else {
             await client.query(
               `INSERT INTO payments (order_id, method, amount, currency, status, provider_reference, raw_response)
@@ -1095,6 +1246,37 @@ export async function checkoutCart(req, res) {
       throw txErr;
     }
 
+    // Same reasoning as createOrder()'s wallet branch: orders exist now,
+    // still 'pending_payment', with 'wallet' payment rows in 'initiated'.
+    // Debit the buyer's wallet ONCE for the combined total, then confirm
+    // every order in the group through the exact same
+    // confirmCheckoutGroupOrders() a real provider's webhook would
+    // eventually trigger via confirmCartPayment — not a separate copy of
+    // that escrow/stock/cart-clearing logic.
+    if (walletPay) {
+      try {
+        await payForOrder(req.user.id, checkoutGroupId, combinedTotal, currency, 'cart_checkout_payment');
+      } catch (debitErr) {
+        if (debitErr.code === 'INSUFFICIENT_FUNDS') {
+          return res.status(400).json({
+            error: 'Insufficient wallet balance for this order. Your orders were created and are waiting for payment — choose another payment method to complete checkout.',
+            orders: createdOrders, checkoutGroupId, combinedTotal
+          });
+        }
+        console.error('Wallet debit failed after cart order creation:', debitErr);
+        return res.status(500).json({ error: 'Could not charge your wallet. Your orders were created but are not yet paid — please try again.', orders: createdOrders, checkoutGroupId });
+      }
+      try {
+        await confirmCheckoutGroupOrders(checkoutGroupId, req.user.id, { confirmedVia: 'wallet' });
+      } catch (confirmErr) {
+        console.error(`Wallet debited for checkout group ${checkoutGroupId} but confirmation failed:`, confirmErr.message);
+        return res.status(500).json({
+          error: 'Your wallet was charged but we could not finalize your orders. Please contact support — do not pay again.',
+          checkoutGroupId
+        });
+      }
+    }
+
     for (const order of createdOrders) {
       await safeGenerateDocument(() => createOrderConfirmation(order.id), 'order_confirmation:checkoutCart');
     }
@@ -1102,8 +1284,10 @@ export async function checkoutCart(req, res) {
     return res.status(201).json({
       message: cod
         ? `Created ${createdOrders.length} order(s) from your cart. Pay the delivery agent in cash when your order arrives.`
-        : `Created ${createdOrders.length} order(s) from your cart. Complete payment to move funds into escrow.`,
-      orders: createdOrders, checkoutGroupId, codPending: cod,
+        : walletPay
+          ? `Paid for ${createdOrders.length} order(s) from your Jedida Wallet and moved into escrow.`
+          : `Created ${createdOrders.length} order(s) from your cart. Complete payment to move funds into escrow.`,
+      orders: createdOrders, checkoutGroupId, codPending: cod, walletPaid: walletPay,
       combinedTotal, checkoutUrl: charge?.checkoutUrl, providerReference: charge?.providerReference
     });
   } catch (err) {
@@ -1116,20 +1300,116 @@ export async function checkoutCart(req, res) {
 }
 
 // Confirms payment for every order in a checkout group at once, and clears
-// the cart of the items that were just purchased.
+// the cart of the items that were just purchased. Extracted from the HTTP
+// handler below so checkoutCart()'s wallet branch can call the exact same
+// per-order confirmation logic synchronously (no webhook to wait on for an
+// internal debit) instead of a parallel copy of it.
+async function confirmCheckoutGroupOrders(checkoutGroupId, buyerId, { confirmedVia } = {}) {
+  const orders = await query(`SELECT id FROM orders WHERE checkout_group_id = $1 AND buyer_id = $2`, [checkoutGroupId, buyerId]);
+  let confirmedCount = 0;
+  for (const { id: orderId } of orders.rows) {
+    const confirmed = await withTransaction(async (client) => {
+      const settingsResult = await client.query('SELECT escrow_protection_days FROM platform_settings WHERE id = 1');
+      const protectionDays = settingsResult.rows[0]?.escrow_protection_days ?? 7;
+
+      const flipped = await client.query(
+        `UPDATE orders SET status = 'paid_escrow', protection_period_ends_at = now() + ($2 || ' days')::interval
+         WHERE id = $1 AND status = 'pending_payment' RETURNING *`,
+        [orderId, protectionDays]
+      );
+      if (flipped.rows.length === 0) return null; // already confirmed or in a later state — skip, not an error
+      const order = flipped.rows[0];
+
+      await client.query(`UPDATE payments SET status = 'succeeded' WHERE order_id = $1`, [orderId]);
+
+      const escrowWallet = await client.query(
+        `UPDATE wallets SET balance = balance + $1 WHERE type = 'escrow' RETURNING *`,
+        [order.total_amount]
+      );
+      await logWalletTransaction(client, {
+        walletId: escrowWallet.rows[0].id, direction: 'credit', amount: order.total_amount, balanceAfter: escrowWallet.rows[0].balance,
+        referenceType: 'order_escrow', referenceId: order.id, note: `Cart checkout — buyer payment held in escrow (confirmed via ${confirmedVia || 'unknown'})`, createdBy: buyerId
+      });
+      await client.query(
+        `INSERT INTO escrow_ledger (order_id, direction, amount, note, created_by) VALUES ($1,'in',$2,$3,$4)`,
+        [order.id, order.total_amount, `Cart checkout — buyer payment held in escrow (confirmed via ${confirmedVia || 'unknown'})`, buyerId]
+      );
+      await client.query(
+        `UPDATE products SET quantity_available = quantity_available - $1, orders_count = orders_count + 1 WHERE id = $2`,
+        [order.quantity, order.product_id]
+      );
+      await client.query('DELETE FROM cart_items WHERE user_id = $1 AND product_id = $2', [buyerId, order.product_id]);
+
+      const shop = await client.query('SELECT owner_id FROM shops WHERE id = $1', [order.shop_id]);
+
+      // Same unified ledger record as the single-order path above
+      // (applyPaymentConfirmation) — this function is the cart-checkout
+      // equivalent and has its own separate escrow-crediting logic (see
+      // module comment at its definition), so it needs its own ledger
+      // hook rather than inheriting one from applyPaymentConfirmation.
+      const paymentRowForLedger = await client.query('SELECT method, provider_reference FROM payments WHERE order_id = $1 LIMIT 1', [orderId]);
+      await postTransaction(client, {
+        idempotencyKey: `order_payment:${order.id}`,
+        transactionType: 'order_payment',
+        status: 'succeeded',
+        source: 'marketplace',
+        amount: order.total_amount,
+        feeAmount: order.platform_fee_amount || 0,
+        currency: order.currency,
+        orderId: order.id,
+        orderPublicRef: order.public_ref,
+        buyerId: order.buyer_id,
+        sellerId: shop.rows[0]?.owner_id || null,
+        shopId: order.shop_id,
+        actorId: buyerId,
+        destinationWalletId: escrowWallet.rows[0].id,
+        paymentMethod: paymentRowForLedger.rows[0]?.method || null,
+        providerReference: paymentRowForLedger.rows[0]?.provider_reference || null,
+        metadata: { confirmedVia: confirmedVia || 'unknown', checkoutGroupId },
+        createdBy: buyerId,
+      });
+      await setOrderFinancialState(client, { orderId: order.id, financialState: 'funds_controlled' });
+
+      if (shop.rows[0]) {
+        await client.query(
+          `INSERT INTO notifications (user_id, type, title, body) VALUES ($1,'new_order','New order received','You have a new paid order waiting to be fulfilled.')`,
+          [shop.rows[0].owner_id]
+        );
+      }
+      return order;
+    });
+    if (confirmed) {
+      confirmedCount += 1;
+      const paymentRow = await query('SELECT method FROM payments WHERE order_id = $1 LIMIT 1', [orderId]);
+      await safeGenerateDocument(
+        () => createDigitalReceipt(orderId, { paymentMethod: paymentRow.rows[0]?.method || null }),
+        'digital_receipt:confirmCartPayment'
+      );
+      await safeGenerateDocument(
+        () => createPaymentConfirmation(orderId, {
+          direction: 'escrow_hold', amount: confirmed.total_amount, recipientId: confirmed.buyer_id,
+          note: 'Buyer payment received and held in Jedida escrow.'
+        }),
+        'payment_confirmation:confirmCartPayment'
+      );
+    }
+  }
+  return confirmedCount;
+}
+
 export async function confirmCartPayment(req, res) {
   const { checkoutGroupId } = req.params;
 
   try {
-    const orders = await query(`SELECT id FROM orders WHERE checkout_group_id = $1 AND buyer_id = $2`, [checkoutGroupId, req.user.id]);
-    if (orders.rows.length === 0) return res.status(404).json({ error: 'Checkout group not found.' });
+    const orderCheck = await query(`SELECT id FROM orders WHERE checkout_group_id = $1 AND buyer_id = $2`, [checkoutGroupId, req.user.id]);
+    if (orderCheck.rows.length === 0) return res.status(404).json({ error: 'Checkout group not found.' });
 
     // Same sandbox-only restriction as confirmPayment() above: this is a
     // manual dev-flow endpoint, not a real payment confirmation. Any
     // order in the group that was charged through a real (non-sandbox)
     // provider key can only be confirmed by that provider's
     // signature-verified webhook.
-    const orderIds = orders.rows.map((o) => o.id);
+    const orderIds = orderCheck.rows.map((o) => o.id);
     const paymentRefs = await query(
       `SELECT order_id, provider_reference FROM payments WHERE order_id = ANY($1::uuid[])`,
       [orderIds]
@@ -1141,70 +1421,7 @@ export async function confirmCartPayment(req, res) {
       });
     }
 
-    // Each order in the group is confirmed in its own guarded transaction —
-    // same pattern as the single-item confirmPayment(): the status flip out
-    // of pending_payment only succeeds once per order, so a retried webhook,
-    // a double-tapped "I've paid" button, or two concurrent requests for the
-    // same checkout group can never credit escrow twice for the same order.
-    let confirmedCount = 0;
-    for (const { id: orderId } of orders.rows) {
-      const confirmed = await withTransaction(async (client) => {
-        const settingsResult = await client.query('SELECT escrow_protection_days FROM platform_settings WHERE id = 1');
-        const protectionDays = settingsResult.rows[0]?.escrow_protection_days ?? 7;
-
-        const flipped = await client.query(
-          `UPDATE orders SET status = 'paid_escrow', protection_period_ends_at = now() + ($2 || ' days')::interval
-           WHERE id = $1 AND status = 'pending_payment' RETURNING *`,
-          [orderId, protectionDays]
-        );
-        if (flipped.rows.length === 0) return null; // already confirmed or in a later state — skip, not an error
-        const order = flipped.rows[0];
-
-        await client.query(`UPDATE payments SET status = 'succeeded' WHERE order_id = $1`, [orderId]);
-
-        const escrowWallet = await client.query(
-          `UPDATE wallets SET balance = balance + $1 WHERE type = 'escrow' RETURNING *`,
-          [order.total_amount]
-        );
-        await logWalletTransaction(client, {
-          walletId: escrowWallet.rows[0].id, direction: 'credit', amount: order.total_amount, balanceAfter: escrowWallet.rows[0].balance,
-          referenceType: 'order_escrow', referenceId: order.id, note: 'Cart checkout — buyer payment held in escrow', createdBy: req.user.id
-        });
-        await client.query(
-          `INSERT INTO escrow_ledger (order_id, direction, amount, note, created_by) VALUES ($1,'in',$2,'Cart checkout — buyer payment held in escrow',$3)`,
-          [order.id, order.total_amount, req.user.id]
-        );
-        await client.query(
-          `UPDATE products SET quantity_available = quantity_available - $1, orders_count = orders_count + 1 WHERE id = $2`,
-          [order.quantity, order.product_id]
-        );
-        await client.query('DELETE FROM cart_items WHERE user_id = $1 AND product_id = $2', [req.user.id, order.product_id]);
-
-        const shop = await client.query('SELECT owner_id FROM shops WHERE id = $1', [order.shop_id]);
-        if (shop.rows[0]) {
-          await client.query(
-            `INSERT INTO notifications (user_id, type, title, body) VALUES ($1,'new_order','New order received','You have a new paid order waiting to be fulfilled.')`,
-            [shop.rows[0].owner_id]
-          );
-        }
-        return order;
-      });
-      if (confirmed) {
-        confirmedCount += 1;
-        const paymentRow = await query('SELECT method FROM payments WHERE order_id = $1 LIMIT 1', [orderId]);
-        await safeGenerateDocument(
-          () => createDigitalReceipt(orderId, { paymentMethod: paymentRow.rows[0]?.method || null }),
-          'digital_receipt:confirmCartPayment'
-        );
-        await safeGenerateDocument(
-          () => createPaymentConfirmation(orderId, {
-            direction: 'escrow_hold', amount: confirmed.total_amount, recipientId: confirmed.buyer_id,
-            note: 'Buyer payment received and held in Jedida escrow.'
-          }),
-          'payment_confirmation:confirmCartPayment'
-        );
-      }
-    }
+    const confirmedCount = await confirmCheckoutGroupOrders(checkoutGroupId, req.user.id, { confirmedVia: 'sandbox_manual' });
 
     return res.json({
       message: confirmedCount > 0

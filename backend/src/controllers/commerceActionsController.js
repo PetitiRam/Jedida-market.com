@@ -50,6 +50,30 @@ export async function getShopFollowInfo(req, res) {
   res.json({ following: followStatus.rows.length > 0, followerCount: Number(followerCount.rows[0].count) });
 }
 
+// Shops the signed-in user follows — same shop-card shape as
+// shopsController.js's listFeaturedShops (rating/follower_count computed
+// the same way) so the buyer Following tab can render it with the
+// existing ShopCard-style presentation instead of a bespoke row.
+export async function listMyFollowedShops(req, res) {
+  const result = await query(
+    `SELECT s.id, s.name, s.slug, s.description, s.logo_url, s.banner_url,
+            s.status, s.is_verified, f.created_at AS followed_at,
+            COALESCE(AVG(r.rating), 0) AS rating,
+            COUNT(DISTINCT r.id) AS review_count,
+            COUNT(DISTINCT sf.user_id) AS follower_count
+     FROM shop_follows f
+     JOIN shops s ON s.id = f.shop_id
+     LEFT JOIN products p ON p.shop_id = s.id
+     LEFT JOIN product_reviews r ON r.product_id = p.id
+     LEFT JOIN shop_follows sf ON sf.shop_id = s.id
+     WHERE f.user_id = $1
+     GROUP BY s.id, f.created_at
+     ORDER BY f.created_at DESC`,
+    [req.user.id]
+  );
+  res.json({ shops: result.rows });
+}
+
 // ===== Cart =====
 export async function addToCart(req, res) {
   const { productId, quantity } = req.body;

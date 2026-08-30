@@ -35,6 +35,9 @@ const PATHS = {
   plus: 'M12 5v14M5 12h14',
   arrowUp: 'M12 19V5M6 11l6-6 6 6',
   arrowDown: 'M12 5v14M6 13l6 6 6-6',
+  cart: 'M3 3h2l2.6 12.4a2 2 0 002 1.6h8.8a2 2 0 002-1.6L21 8H6M9 21a1 1 0 100-2 1 1 0 000 2zm9 0a1 1 0 100-2 1 1 0 000 2z',
+  following: 'M20.8 8.6a5.5 5.5 0 00-9.3-4A5.5 5.5 0 002 8.6c0 6.4 9.5 11.4 9.5 11.4s9.3-5 9.3-11.4z',
+  home: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10',
 };
 
 export default function JdIcon({ name, size = 18, strokeWidth = 1.8, className = '' }) {

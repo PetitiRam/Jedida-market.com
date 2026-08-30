@@ -33,19 +33,33 @@ import { query } from '../config/db.js';
 const router = express.Router();
 
 
-// Buyer opens marketplace contact
+// Buyer opens marketplace contact. `productId` starts/finds a
+// product-scoped conversation (shop pages). `sellerId` alone starts/finds
+// a direct conversation with that person with no product context — this is
+// what the profile page's Message button uses, so it isn't a second
+// messaging system, just this same endpoint reused without a product.
 router.post('/contact-product', requireAuth, async (req,res)=>{
 try {
 
   const {
     productId,
+    sellerId,
     message
   } = req.body;
 
+  if (sellerId) {
+    if (sellerId === req.user.id) {
+      return res.status(400).json({ error: 'You cannot start a conversation with yourself.' });
+    }
+    if (await isBlockedEitherWay(req.user.id, sellerId)) {
+      return res.status(403).json({ error: 'You cannot message this user.' });
+    }
+  }
 
   const conversation = await getOrCreateConversation({
     userId:req.user.id,
-    productId
+    productId,
+    sellerId: sellerId || null
   });
 
 

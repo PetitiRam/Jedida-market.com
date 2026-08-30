@@ -25,7 +25,7 @@ const TYPE_LABELS = {
   agriculture_bulk_invoice: 'Agriculture Bulk Invoice'
 };
 
-export default function BuyerDocumentCenter() {
+export default function BuyerDocumentCenter({ embedded = false } = {}) {
   const [activeTab, setActiveTab] = useState('history');
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +45,7 @@ export default function BuyerDocumentCenter() {
 
   return (
     <div>
-      <MarketplaceHeader />
+      {!embedded && <MarketplaceHeader />}
       <div className="dash-body">
         <h2>Document Center</h2>
         <p style={{ color: '#5B6760', marginBottom: 12 }}>

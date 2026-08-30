@@ -16,6 +16,7 @@ import LanguageMenu from './header/LanguageMenu';
 import DeliveryLocationMenu from './header/DeliveryLocationMenu';
 import UserMenu from './header/UserMenu';
 import { isAuthenticated } from '../utils/auth';
+import { subscribeToProfilePhotoUpdates } from '../utils/profileSync';
 import '../styles/header.css';
 
 // Marketing/utility nav row shown under the main bar — distinct from the
@@ -64,6 +65,18 @@ export default function MarketplaceHeader() {
     client.get('/auth/me').then(({ data }) => setUser(data.user)).catch(() => {});
     client.get('/site/theme').then(({ data }) => setLogoOverride(data?.theme?.logo_url || null)).catch(() => {});
   }, []);
+
+  // Header is mounted on nearly every page, so this is the highest-traffic
+  // place to reflect a profile photo change instantly — no refetch, no
+  // page reload. See utils/profileSync.js for what this does and doesn't
+  // cover (same-tab only; other tabs/devices rely on the backend's socket
+  // event on surfaces that keep a live connection open, e.g. chat).
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    return subscribeToProfilePhotoUpdates(user.id, (patch) => {
+      setUser((prev) => prev && ({ ...prev, ...patch }));
+    });
+  }, [user?.id]);
 
   const openHelp = () => {
     // No dedicated Help Center page yet — the fastest real help is the

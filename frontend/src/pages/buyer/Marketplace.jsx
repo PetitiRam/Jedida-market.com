@@ -17,6 +17,7 @@ import CategoryIconRow from '../../components/home/CategoryIconRow';
 import FlashDeals from '../../components/home/FlashDeals';
 import BottomBannerGrid from '../../components/home/BottomBannerGrid';
 import DealsStrip from '../../components/home/DealsStrip';
+import LiveNowStrip from '../../components/home/LiveNowStrip';
 import ProductSection from '../../components/home/ProductSection';
 import ShopsSection from '../../components/home/ShopsSection';
 import DiscoveryFeedSection from '../../components/home/DiscoveryFeedSection';
@@ -291,6 +292,8 @@ export default function Marketplace() {
 
         <RightRail stats={feed?.stats} brands={feed?.popularBrands} />
       </div>
+
+      <LiveNowStrip />
 
       <DealsStrip dealBanners={feed?.dealBanners} />
 

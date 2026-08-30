@@ -48,13 +48,15 @@ SELECT *
 FROM chat_conversations
 WHERE user_id=$1
 AND product_id IS NOT DISTINCT FROM $2
+AND seller_id IS NOT DISTINCT FROM $3
 AND status='open'
 ORDER BY created_at DESC
 LIMIT 1
 `,
 [
  userId,
- productId
+ productId,
+ sellerId
 ]
 );
 

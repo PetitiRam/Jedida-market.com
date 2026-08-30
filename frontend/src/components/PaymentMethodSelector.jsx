@@ -24,6 +24,7 @@ const LOGOS = {
 };
 
 const DESCRIPTIONS = {
+  wallet: "Pay instantly from your Jedida Wallet balance",
   pesajet: "Instant mobile money via PesaJet",
   cash_on_delivery: "Pay when your order arrives",
   mtn_mobile_money: "Pay via MTN MoMo",
@@ -35,6 +36,7 @@ const DESCRIPTIONS = {
 };
 
 const PROCESSING_TIME = {
+  wallet: "Instant",
   pesajet: "Instant",
   cash_on_delivery: "On delivery",
   mtn_mobile_money: "Instant – 5 mins",
@@ -151,6 +153,13 @@ export default function PaymentMethodPicker({ value, onChange, shopId }) {
   }, [shopId]);
 
   const isAvailable = (method) => {
+    // Wallet is the platform's own internal balance, not a third-party
+    // provider a shop connects on their Payments page — there's no
+    // admin toggle or per-shop connection for it to depend on (same
+    // reasoning as ordersController.js's METHOD_SETTINGS_FLAG comment).
+    // The real balance check happens server-side at order creation;
+    // showing it here is just "you have a wallet, you can try it."
+    if (method.id === 'wallet') return true;
     const key = AVAILABILITY_KEY[method.id];
     if (!key) return false; // no admin control for this one yet — never claim it's live
     if (!settings) return false; // still loading — don't flash a false "available" state

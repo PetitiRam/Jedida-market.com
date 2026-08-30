@@ -1,3 +1,5 @@
+import Icon from '../icons/icon';
+
 const ROLE_LABELS = {
   manufacturer: 'Manufacturer',
   supplier: 'Supplier',
@@ -36,7 +38,7 @@ export default function ChatHeader({
           <div className="cw-header-name-row">
             <span className="cw-header-name">{name}</span>
             {participant?.isVerified && (
-              <span className="cw-verified-badge">✓ Verified {roleLabel}</span>
+              <span className="cw-verified-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon name="check" size={12} /> Verified {roleLabel}</span>
             )}
           </div>
           <div className="cw-header-meta-row">
@@ -46,22 +48,22 @@ export default function ChatHeader({
               <span>★ {participant.rating.average.toFixed(1)} ({participant.rating.count})</span>
             )}
           </div>
-          <div className="cw-security-line">🔒 Secure Jedida Chat</div>
+          <div className="cw-security-line" style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="lock" size={12} /> Secure Jedida Chat</div>
         </div>
 
         {hasPanel && (
-          <button type="button" className="cw-header-action-btn" onClick={onTogglePanel} title="Business panel">
-            ☰
+          <button type="button" className="cw-header-action-btn" onClick={onTogglePanel} title="Business panel" aria-label="Business panel">
+            <Icon name="menu" size={16} />
           </button>
         )}
       </div>
 
       <div className="cw-header-actions">
         {participant?.shop && (
-          <button type="button" className="cw-header-action-btn primary" onClick={onViewStore}>🏬 View Store</button>
+          <button type="button" className="cw-header-action-btn primary" onClick={onViewStore}><Icon name="building" size={14} /> View Store</button>
         )}
-        <button type="button" className="cw-header-action-btn" onClick={onSecurity}>🛡️ Security</button>
-        <button type="button" className="cw-header-action-btn danger" onClick={onReport}>🚩 Report</button>
+        <button type="button" className="cw-header-action-btn" onClick={onSecurity}><Icon name="checkShield" size={14} /> Security</button>
+        <button type="button" className="cw-header-action-btn danger" onClick={onReport}><Icon name="flag" size={14} /> Report</button>
       </div>
     </div>
   );

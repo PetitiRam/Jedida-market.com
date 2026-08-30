@@ -42,7 +42,10 @@ export const ADMIN_ROLE_PERMISSIONS = {
   staff: ['orders', 'delivery', 'products'],
   moderator: ['products', 'shops', 'users', 'wanted'],
   support: ['chat', 'users'],
-  finance: ['wallets', 'withdrawals', 'payments', 'orders', 'affiliates', 'disputes', 'ai_handler'],
+  // Broad legacy finance role — kept exactly as-is so no existing admin
+  // account loses access. The granular Financial Control Center
+  // workspaces below (spec #15) sit alongside it, not instead of it.
+  finance: ['wallets', 'withdrawals', 'payments', 'orders', 'affiliates', 'disputes', 'ai_handler', 'ledger'],
   marketing: ['ads', 'campaigns', 'marketplace'],
   approvals: ['products', 'shops', 'upgrades', 'withdrawals', 'partners', 'affiliates', 'representatives', 'developer_platform'],
   ai_manager: ['ai', 'ai_handler'],
@@ -55,6 +58,18 @@ export const ADMIN_ROLE_PERMISSIONS = {
   // escalations, alongside PETITI's automated moderation. Stage 3 adds the
   // formal disputes/fraud-flags/security-log areas to this same role.
   security_agent: ['chat', 'users', 'products', 'disputes', 'fraud', 'security', 'wanted'],
+
+  // ===== Financial Control Center workspaces (spec #15) =====
+  // Deliberately narrower than 'finance' — each covers only the areas
+  // that role needs, so a Refund Officer account can't touch provider
+  // credentials and a Finance Viewer can't approve anything.
+  finance_admin:            ['ledger', 'wallets', 'withdrawals', 'payments', 'orders', 'providers', 'reconciliation', 'finance_team', 'releases', 'refunds', 'audit'],
+  payment_operations:       ['ledger', 'payments', 'providers'],
+  settlement_officer:       ['ledger', 'orders', 'releases'],
+  refund_officer:           ['ledger', 'orders', 'refunds'],
+  reconciliation_officer:   ['ledger', 'providers', 'reconciliation'],
+  finance_auditor:          ['ledger', 'audit'],
+  finance_viewer:           ['ledger'],
 };
 
 // Every functional area a given admin sub-role's permissions cover.

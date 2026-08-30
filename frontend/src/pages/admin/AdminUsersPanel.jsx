@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import client from '../../api/client';
+import Icon from '../../components/icons/icon';
 
 const ADMIN_ROLES = [
   { value: '', label: 'Full admin (all access)' },
@@ -41,8 +42,8 @@ function UserDetailModal({ userId, onClose }) {
       onClick={onClose}
       style={{ position: 'fixed', inset: 0, background: 'rgba(20,24,22,0.55)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '5vh 16px', overflowY: 'auto', zIndex: 1000 }}
     >
-      <div onClick={(e) => e.stopPropagation()} className="card-surface" style={{ maxWidth: 560, width: '100%', position: 'relative' }}>
-        <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, width: 34, height: 34, borderRadius: '50%', border: 'none', background: '#f3f3f3', cursor: 'pointer' }}>✕</button>
+      <div onClick={(e) => e.stopPropagation()} className="card-surface" style={{ maxWidth: 680, width: '100%', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
+        <button onClick={onClose} aria-label="Close" style={{ position: 'absolute', top: 12, right: 12, width: 34, height: 34, borderRadius: '50%', border: 'none', background: '#f3f3f3', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="close" size={16} /></button>
         {error ? <div className="empty-state" style={{ color: '#b42318' }}>{error}</div> : !detail ? <div className="empty-state">Loading…</div> : (
           <>
             <h3>{detail.user.full_name}</h3>
@@ -50,17 +51,82 @@ function UserDetailModal({ userId, onClose }) {
               User #{detail.user.user_number} · @{detail.user.username} · {detail.user.email} · {detail.user.phone_number || 'no phone'}
             </p>
             <p className="product-card-meta">
-              {detail.user.primary_role} · {detail.user.is_verified ? 'Verified' : 'Not verified'} · KYC: {detail.user.kyc_status} · Status: {detail.user.status}
+              {detail.user.is_verified ? 'Platform verified' : 'Not platform verified'} · KYC: {detail.user.kyc_status} · Status: {detail.user.status}
             </p>
+            {detail.authorizedRoles?.length > 0 && (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '6px 0' }}>
+                {detail.authorizedRoles.map((r) => (
+                  <span key={r.role} className="product-card-badge">{r.role}{r.verification?.level && r.verification.level !== 'unverified' ? ` · ${r.verification.level}` : ''}</span>
+                ))}
+              </div>
+            )}
             <p className="product-card-meta">
               {detail.user.location_city}{detail.user.location_city && detail.user.location_country ? ', ' : ''}{detail.user.location_country}
             </p>
             <p className="product-card-meta">Registered {new Date(detail.user.created_at).toLocaleDateString()}</p>
+            {detail.wallet && (
+              <p className="product-card-meta">Wallet balance: {detail.wallet.currency} {Number(detail.wallet.balance).toFixed(2)}</p>
+            )}
+
+            <div style={{ marginTop: 12 }}>
+              <h4>Trust &amp; reputation</h4>
+              <p className="product-card-meta">
+                Buyer: {detail.trust.buyer.ordersPlaced} orders placed, {detail.trust.buyer.ordersCompleted} completed
+              </p>
+              {detail.trust.shop && (
+                <p className="product-card-meta">
+                  Shop: {detail.trust.shop.rating.toFixed(1)}★ ({detail.trust.shop.reviewCount} reviews) · {detail.trust.shop.ordersReceived} orders received ·
+                  {' '}{detail.trust.shop.productsActive}/{detail.trust.shop.productsTotal} products active
+                </p>
+              )}
+              {detail.trust.driver && (
+                <p className="product-card-meta">Driver rating: {Number(detail.trust.driver.rating || 0).toFixed(1)}★ ({detail.trust.driver.is_available ? 'available' : 'offline'})</p>
+              )}
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <h4>Communications</h4>
+              <p className="product-card-meta">
+                {detail.communications.openConversations} open conversations · reported {detail.communications.reportsAgainstThisUser.length} time(s) ·
+                {' '}filed {detail.communications.reportsFiledByThisUser} report(s) · blocked by {detail.communications.timesBlockedByOthers} user(s)
+              </p>
+              {detail.communications.reportsAgainstThisUser.length > 0 && (
+                <div style={{ marginTop: 4 }}>
+                  {detail.communications.reportsAgainstThisUser.slice(0, 5).map((r) => (
+                    <p key={r.id} className="product-card-meta">→ {r.reason.replace(/_/g, ' ')} — {r.status} ({new Date(r.created_at).toLocaleDateString()})</p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {detail.securityEvents.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <h4>Security events</h4>
+                {detail.securityEvents.slice(0, 8).map((e) => (
+                  <p key={e.id} className="product-card-meta">
+                    [{e.severity}] {e.event_type.replace(/_/g, ' ')} — {e.summary} ({new Date(e.created_at).toLocaleDateString()}){e.resolved ? ' · resolved' : ''}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {detail.auditTrail.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <h4>Audit trail (admin actions on this account)</h4>
+                {detail.auditTrail.slice(0, 8).map((e) => (
+                  <p key={e.id} className="product-card-meta">
+                    {e.event_type.replace(/_/g, ' ')} by {e.actor_role || 'admin'} ({new Date(e.created_at).toLocaleDateString()})
+                  </p>
+                ))}
+              </div>
+            )}
 
             {detail.shop && (
               <div style={{ marginTop: 12 }}>
                 <h4>Shop</h4>
-                <p className="product-card-meta">{detail.shop.name} ({detail.shop.status})</p>
+                <p className="product-card-meta">
+                  {detail.shop.name} ({detail.shop.status}) · <a href={`/s/${detail.shop.slug}`} target="_blank" rel="noreferrer">View storefront →</a>
+                </p>
               </div>
             )}
 
@@ -294,7 +360,7 @@ export default function AdminUsersPanel() {
                   <td style={{ padding: '8px 10px' }}>{u.phone_number || '—'}</td>
                   <td style={{ padding: '8px 10px' }}>{u.location_country || '—'}</td>
                   <td style={{ padding: '8px 10px' }}>{u.primary_role}</td>
-                  <td style={{ padding: '8px 10px' }}>{u.is_verified ? '✅' : '—'}</td>
+                  <td style={{ padding: '8px 10px' }}>{u.is_verified ? <Icon name="check" size={15} aria-label="Verified" /> : '—'}</td>
                   <td style={{ padding: '8px 10px' }}><span className={`status-chip status-${u.status}`}>{u.status}</span></td>
                   <td style={{ padding: '8px 10px' }}>{u.kyc_status}</td>
                   <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>{new Date(u.created_at).toLocaleDateString()}</td>
@@ -336,7 +402,7 @@ export default function AdminUsersPanel() {
               <span className={`status-chip status-${u.status}`}>{u.status}</span>
             </div>
             <div className="jd-row-card-fields">
-              <div><b>#{u.user_number}</b> · {u.primary_role} · {u.is_verified ? '✅ Verified' : 'Not verified'}</div>
+              <div><b>#{u.user_number}</b> · {u.primary_role} · {u.is_verified ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon name="check" size={13} /> Verified</span> : 'Not verified'}</div>
               <div>{u.email}</div>
               <div>{u.phone_number || '—'} · {u.location_country || '—'}</div>
               <div>KYC: {u.kyc_status} · Registered {new Date(u.created_at).toLocaleDateString()}</div>

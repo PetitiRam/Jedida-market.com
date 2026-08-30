@@ -13,6 +13,7 @@ import AdminSettingsPanel from './AdminSettingsPanel';
 import JedidaCommandCenter from './JedidaCommandCenter';
 import MobileAgentConsole from './MobileAgentConsole';
 import useIsMobile from '../../hooks/useIsMobile';
+import { subscribeToProfilePhotoUpdates } from '../../utils/profileSync';
 import AICommandCenter from './AICommandCenter';
 import AdminSettingsCenter from './settings/AdminSettingsCenter';
 import AdminChatBridgePanel from './AdminChatBridgePanel';
@@ -45,46 +46,46 @@ import AdminVerifiedShopsPanel from './AdminVerifiedShopsPanel';
 import AdminMarketplaceBuilder from './AdminMarketplaceBuilder';
 import SecurityOperationsDashboard from './SecurityOperationsDashboard';
 const TABS = [
-  { key: 'dashboard', label: '📊 Dashboard', area: 'dashboard' },
-  { key: 'upgrades', label: '🆙 Upgrades', area: 'upgrades' },
+  { key: 'dashboard', label: 'Dashboard', area: 'dashboard' },
+  { key: 'upgrades', label: 'Upgrades', area: 'upgrades' },
   { key: 'shops', label: 'Shops', area: 'shops' },
   { key: 'products', label: 'Products', area: 'products' },
   { key: 'users', label: 'Users', area: 'users' },
-  { key: 'assignmentEngine', label: '🗂️ Customer Groups & Assignment', area: 'users' },
+  { key: 'assignmentEngine', label: 'Customer Groups & Assignment', area: 'users' },
   { key: 'orders', label: 'Orders & Payouts', area: 'orders' },
-  { key: 'analytics', label: '📊 Analytics', area: 'orders' },
+  { key: 'analytics', label: 'Analytics', area: 'orders' },
   { key: 'delivery', label: 'Delivery', area: 'delivery' },
   { key: 'withdrawals', label: 'Withdrawals', area: 'withdrawals' },
   { key: 'ads', label: 'Ads', area: 'ads' },
-  { key: 'marketplaceBuilder', label: '🧩 Marketplace Builder', area: 'marketplace' },
-  { key: 'securityOps', label: '🛡 Security Ops', area: 'security' },
+  { key: 'marketplaceBuilder', label: 'Marketplace Builder', area: 'marketplace' },
+  { key: 'securityOps', label: 'Security Ops', area: 'security' },
   { key: 'settings', label: 'Settings', area: null }, // super admin only
   { key: 'roles', label: 'Roles & Permissions', area: null }, // super admin only
-  { key: 'chat', label: '🛰️ Command Center', area: 'chat' },
-  { key: 'agentGroups', label: '🧭 Agent Groups & Sectors', area: 'chat' },
-  { key: 'ai', label: '🤖 AI Command Center', area: 'ai' },
-  { key: 'aiTraining', label: '🎓 AI Training Center', area: 'ai' },
-  { key: 'settingsCenter', label: '⚙️ Settings Center', area: null }, // super admin only
-  { key: 'chatBridge', label: '🔗 Chat Bridging', area: 'chat' },
-  { key: 'omnichannel', label: '📨 Omnichannel Inbox', area: 'chat' },
-  { key: 'questions', label: '❓ Product Questions', area: 'products' },
+  { key: 'chat', label: 'Command Center', area: 'chat' },
+  { key: 'agentGroups', label: 'Agent Groups & Sectors', area: 'chat' },
+  { key: 'ai', label: 'AI Command Center', area: 'ai' },
+  { key: 'aiTraining', label: 'AI Training Center', area: 'ai' },
+  { key: 'settingsCenter', label: 'Settings Center', area: null }, // super admin only
+  { key: 'chatBridge', label: 'Chat Bridging', area: 'chat' },
+  { key: 'omnichannel', label: 'Omnichannel Inbox', area: 'chat' },
+  { key: 'questions', label: 'Product Questions', area: 'products' },
   { key: 'quotes', label: 'Quote Requests', area: 'products' },
-  { key: 'categoryAttributes', label: '🏷️ Category Attributes', area: 'products' },
-  { key: 'payments', label: '💳 Payments', area: 'withdrawals' },
-  { key: 'providerRegistry', label: '🏦 Provider Registry', area: 'withdrawals' },
-  { key: 'featureEngine', label: '⚙️ Feature Control Center', area: 'upgrades' },
-  { key: 'partners', label: '🤝 Partner Management', area: 'partners' },
-  { key: 'affiliates', label: '🔗 Affiliate Program', area: 'affiliates' },
-  { key: 'disputes', label: '⚖️ Disputes', area: 'disputes' },
-  { key: 'fraud', label: '🚨 Fraud Signals', area: 'fraud' },
-  { key: 'wanted', label: '📣 Jedida Wanted', area: 'wanted' },
-  { key: 'verification', label: '✅ Verification Levels', area: 'upgrades' },
-  { key: 'verifiedShops', label: '🛡️ Verified Shops', area: 'shops' },
-  { key: 'kycReview', label: '🪪 KYC Verification Center', area: 'upgrades' },
-  { key: 'factoryVerification', label: '🏭 Factory Verification', area: 'upgrades' },
-  { key: 'inspections', label: '🔍 Inspections', area: 'upgrades' },
-  { key: 'logisticsHub', label: '🚚 Logistics Hub', area: 'upgrades' },
-  { key: 'apiCentre', label: '🔌 API Centre', area: null } // super admin only
+  { key: 'categoryAttributes', label: 'Category Attributes', area: 'products' },
+  { key: 'payments', label: 'Payments', area: 'withdrawals' },
+  { key: 'providerRegistry', label: 'Provider Registry', area: 'withdrawals' },
+  { key: 'featureEngine', label: 'Feature Control Center', area: 'upgrades' },
+  { key: 'partners', label: 'Partner Management', area: 'partners' },
+  { key: 'affiliates', label: 'Affiliate Program', area: 'affiliates' },
+  { key: 'disputes', label: 'Disputes', area: 'disputes' },
+  { key: 'fraud', label: 'Fraud Signals', area: 'fraud' },
+  { key: 'wanted', label: 'Jedida Wanted', area: 'wanted' },
+  { key: 'verification', label: 'Verification Levels', area: 'upgrades' },
+  { key: 'verifiedShops', label: 'Verified Shops', area: 'shops' },
+  { key: 'kycReview', label: 'KYC Verification Center', area: 'upgrades' },
+  { key: 'factoryVerification', label: 'Factory Verification', area: 'upgrades' },
+  { key: 'inspections', label: 'Inspections', area: 'upgrades' },
+  { key: 'logisticsHub', label: 'Logistics Hub', area: 'upgrades' },
+  { key: 'apiCentre', label: 'API Centre', area: null } // super admin only
 ];
 
 // Mirrors the backend's ADMIN_ROLE_PERMISSIONS in middleware/auth.js — kept
@@ -118,6 +119,13 @@ export default function AdminPanel() {
   useEffect(() => {
     client.get('/auth/me').then(({ data }) => setUser(data.user)).finally(() => setChecked(true));
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    return subscribeToProfilePhotoUpdates(user.id, (patch) => {
+      setUser((prev) => prev && ({ ...prev, ...patch }));
+    });
+  }, [user?.id]);
 
   if (checked && user && !user.is_admin) return <Navigate to="/marketplace" replace />;
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import client from '../../api/client';
+import { subscribeToProfilePhotoUpdates } from '../../utils/profileSync';
 import JdDashboardShell from '../../components/layout/JdDashboardShell';
 // change this import:
 import EmbeddedSupportChat from '../../components/chat/EmbeddedSupportChat';
@@ -12,6 +13,7 @@ import NotificationsPanel from './NotificationsPanel';
 import OrdersPanel from './OrdersPanel';
 import InvoicesPanel from './InvoicesPanel';
 import WalletPanel from './WalletPanel';
+import LiveDashboardPanel from './LiveDashboardPanel';
 import SellerPaymentsPanel from './SellerPaymentsPanel';
 import SellerShippingPanel from './SellerShippingPanel';
 import SellerFeaturesPanel from './SellerFeaturesPanel';
@@ -50,6 +52,7 @@ const BASE_TABS = [
   { key: 'shipping', label: 'Shipping' },
   { key: 'payments', label: 'Payments' },
   { key: 'wallet', label: 'Wallet' },
+  { key: 'live', label: 'Live Shopping' },
   { key: 'notifications', label: 'Notifications' },
   { key: 'verification', label: 'Verification' },
   { key: 'shopFeed', label: 'Shop Feed' },
@@ -192,6 +195,13 @@ export default function SellerDashboard() {
     });
   }, []);
 
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    return subscribeToProfilePhotoUpdates(user.id, (patch) => {
+      setUser((prev) => prev && ({ ...prev, ...patch }));
+    });
+  }, [user?.id]);
+
   if (checked && user && !SHARED_DASHBOARD_ROLES.includes(user.primary_role)) {
     return <Navigate to="/seller/upgrade" replace />;
   }
@@ -210,6 +220,7 @@ export default function SellerDashboard() {
       subtitle="Manage your shop, listings and orders."
       userName={user?.name}
       userRoleLabel={roleLabel}
+      avatarUrl={user?.avatar_url}
       notificationCount={unread}
       primaryAction={role !== 'delivery' ? { label: 'Add Product', icon: 'plus', onClick: () => setTab('add') } : undefined}
     >
@@ -240,6 +251,7 @@ export default function SellerDashboard() {
       {tab === 'shipping' && <SellerShippingPanel />}
       {tab === 'payments' && <SellerPaymentsPanel />}
       {tab === 'wallet' && <WalletPanel />}
+      {tab === 'live' && <LiveDashboardPanel />}
       {tab === 'notifications' && <NotificationsPanel />}
       {tab === 'verification' && <SellerVerificationStatus />}
       {tab === 'shopFeed' && <SellerFeedComposer />}
