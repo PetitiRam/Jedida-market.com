@@ -1,0 +1,160 @@
+name: CI
+
+# Runs on every push/PR to main. Separate from ci/.github/workflows/build-shell.yml
+# (native app installers, tag-triggered) — this one is fast, everyday
+# correctness checking: does it install, build, vet, and pass tests.
+#
+# NOTE: build-shell.yml currently lives at ci/.github/workflows/build-shell.yml,
+# which GitHub Actions does NOT read (only the repo's top-level
+# .github/workflows/ is auto-discovered). That workflow has likely never
+# run automatically. Worth moving it to .github/workflows/build-shell.yml
+# separately if it's meant to be live — left untouched here since that's
+# a separate decision, not something to bundle into this change silently.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  backend:
+    name: Backend (install, syntax, unit tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: npm ci
+        working-directory: backend
+        run: npm ci
+      - name: Syntax check all .js files
+        working-directory: backend
+        run: |
+          find src -name '*.js' -print0 | xargs -0 -n1 node --check
+      # Real DB-backed tests (broadcastIsolation.test.js etc.) need a live
+      # Postgres. Spun up here as a plain service container — NOT the
+      # production Neon database — so these can run on every PR without
+      # any chance of touching real data. Point DATABASE_URL at this
+      # ephemeral instance only.
+      - name: Run backend test suite
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jedida_ci
+        run: npm test
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: jedida_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+  frontend:
+    name: Frontend (install, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: npm ci
+        working-directory: frontend
+        run: npm ci
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+      - name: Upload build output (for inspection, 7-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 7
+
+  go-live-shopping:
+    name: Go — services/live-go (vet, build, test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/live-go
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      # go.sum was never generated (written offline, no network access at
+      # the time) — `go mod tidy` resolves and verifies every dependency
+      # against the real module proxy and produces it fresh each run.
+      # Once this job has run clean, commit the resulting go.sum so
+      # future builds are pinned/reproducible instead of re-resolving
+      # every time.
+      - run: go mod tidy
+      - run: go vet ./...
+      - run: go build ./...
+      - run: go test ./...
+
+  go-chat-services:
+    name: Go — services/go-services (vet, build, test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/go-services
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - run: go mod tidy
+      - run: go vet ./...
+      - run: go build ./...
+      - run: go test ./...
+
+  migration-dry-run:
+    name: Migrations — dry run against ephemeral Neon branch
+    runs-on: ubuntu-latest
+    # Only meaningful with real Neon credentials configured as repo
+    # secrets (Settings -> Secrets and variables -> Actions):
+    #   NEON_API_KEY, NEON_PROJECT_ID
+    # Until those are added, this job is skipped rather than failing —
+    # see the `if:` guard below.
+    if: ${{ vars.NEON_PROJECT_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Create ephemeral Neon branch from main
+        id: neon-branch
+        uses: neondatabase/create-branch-action@v5
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_name: ci-migration-check-${{ github.run_id }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+      - name: Run every pending migration against the branch
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ steps.neon-branch.outputs.db_url }}
+        run: npm run migrate
+      - name: Delete ephemeral branch
+        if: always()
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_id: ${{ steps.neon-branch.outputs.branch_id }}
+          api_key: ${{ secrets.NEON_API_KEY }}
