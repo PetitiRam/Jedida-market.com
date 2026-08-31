@@ -481,6 +481,49 @@ export async function createDeposit(req, res) {
   }
 }
 
+// Called from paymentWebhooksController.confirmByProviderReference() for a
+// signature-verified provider webhook (Stripe/Flutterwave/Coinbase) whose
+// provider_reference matches a wallet_deposits row instead of an order
+// payment. Same credit logic as confirmDeposit() below, but keyed by
+// provider_reference (all a webhook has) rather than deposit id + req.user,
+// and with no HTTP request/response involved — this is a plain async
+// function, not an Express handler. Idempotent the same way: the
+// status = 'pending' guard means a provider's automatic webhook retries
+// are always safe (throws ALREADY_PROCESSED on a second delivery).
+export async function applyDepositConfirmation(providerReference, { confirmedVia } = {}) {
+  const depositResult = await query('SELECT * FROM wallet_deposits WHERE provider_reference = $1', [providerReference]);
+  const deposit = depositResult.rows[0];
+  if (!deposit) {
+    const err = new Error('No wallet deposit matches this provider reference.');
+    err.code = 'DEPOSIT_NOT_FOUND';
+    throw err;
+  }
+
+  return withTransaction(async (client) => {
+    const flipped = await client.query(
+      `UPDATE wallet_deposits SET status = 'succeeded' WHERE id = $1 AND status = 'pending' RETURNING *`,
+      [deposit.id]
+    );
+    if (flipped.rows.length === 0) {
+      const err = new Error('ALREADY_PROCESSED'); err.code = 'ALREADY_PROCESSED'; throw err;
+    }
+    const walletResult = await client.query('SELECT * FROM wallets WHERE id = $1 FOR UPDATE', [deposit.wallet_id]);
+    const wallet = walletResult.rows[0];
+    const newBalance = Number(wallet.balance) + Number(deposit.net_amount);
+    await client.query('UPDATE wallets SET balance = $1 WHERE id = $2', [newBalance, wallet.id]);
+    await logWalletTransaction(client, {
+      walletId: wallet.id, direction: 'credit', amount: deposit.net_amount, balanceAfter: newBalance,
+      referenceType: 'deposit', referenceId: deposit.id,
+      note: confirmedVia ? `Wallet deposit (${confirmedVia})` : 'Wallet deposit', createdBy: null,
+    });
+    const ledgerRow = await client.query('SELECT id FROM financial_transactions WHERE idempotency_key = $1', [`wallet_deposit:${deposit.id}`]);
+    if (ledgerRow.rows[0]) {
+      await updateTransactionStatus(client, { transactionId: ledgerRow.rows[0].id, newStatus: 'succeeded', actorId: null });
+    }
+    return flipped.rows[0];
+  });
+}
+
 // POST /api/wallet/deposits/:id/confirm
 // Sandbox-only manual confirmation, mirroring confirmPayment() in
 // ordersController.js exactly — for a live provider reference, funds are
