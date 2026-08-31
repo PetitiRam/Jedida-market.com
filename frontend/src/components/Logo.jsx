@@ -1,3 +1,10 @@
+import defaultLogoMark from '../assets/logo-mark.png';
+
+// Set to false to fall back to the original hand-drawn SVG mark below
+// (kept in place, unused by default, in case brand assets ever need to
+// revert without a code change beyond this flag).
+const USE_RASTER_MARK = true;
+
 export default function Logo({ size = 40, withWordmark = true, light = false, tagline = false, overrideUrl = null }) {
   const inkColor = light ? '#F6FBF7' : '#10241A';
   const forest = '#0B3D24';
@@ -6,8 +13,12 @@ export default function Logo({ size = 40, withWordmark = true, light = false, ta
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      {overrideUrl ? (
-        <img src={overrideUrl} alt="Jedida Market" style={{ width: size, height: size, borderRadius: size * 0.25, objectFit: 'cover' }} />
+      {overrideUrl || USE_RASTER_MARK ? (
+        <img
+          src={overrideUrl || defaultLogoMark}
+          alt="Jedida Market"
+          style={{ width: size, height: size, borderRadius: size * 0.25, objectFit: 'cover' }}
+        />
       ) : (
         <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
